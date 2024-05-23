@@ -1,0 +1,41 @@
+<form>
+    <field>
+        <id>general.name</id>
+        <label>Name</label>
+        <type>text</type>
+        <help><![CDATA[The name of the service.]]></help>
+    </field>
+    <field>
+        <id>otherConfigs.securityOrder</id>
+        <label>Security</label>
+        <type>dropdown</type>
+        <help><![CDATA[The service check type.]]></help>
+    </field>
+    <field>
+        <id>otherConfigs.hnet</id>
+        <label>Home net Certificates</label>
+        <type>dropdown</type>
+        <help><![CDATA[The option describes where to get certificates from.]]></help>
+    </field>
+    <field>
+        <id>otherConfigs.tls</id>
+        <label>No_TLS Certificates</label>
+        <type>dropdown</type>
+        <help><![CDATA[The option describes where to get certificates from.]]></help>
+    </field>
+    <field>
+        <id>otherConfigs.dburl</id>
+        <label>Mongodb url</label>
+        <readonly>1</readonly>
+<type>text</type>
+    </field>
+    <field>
+        <id>otherConfigs.freediameter</id>
+        <label>FreeDiameter</label>
+
+       <type>text</type>
+        <readonly>1</readonly>
+        <help>Free diameter path</help>
+    </field>
+
+</form>

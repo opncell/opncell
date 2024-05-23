@@ -1,0 +1,67 @@
+<model>
+    <mount>//OPNsense/OPNCore/General</mount>
+    <description>EPC configuration</description>
+    <version>1.0.3</version>
+    <items>
+        <enablemmed type="BooleanField">
+            <default>1</default>
+            <Required>Y</Required>
+        </enablemmed>
+        <enablehssd type="BooleanField">
+            <default>1</default>
+            <Required>Y</Required>
+        </enablehssd>
+        <enablenrfd type="BooleanField">
+            <default>1</default>
+            <Required>Y</Required>
+        </enablenrfd>
+        <enablescpd type="BooleanField">
+            <default>1</default>
+            <Required>Y</Required>
+        </enablescpd>
+        <enableamfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enableamfd>
+        <enablesmfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablesmfd>
+        <enableupfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enableupfd>
+        <enablesausfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablesausfd>
+        <enableudmd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enableudmd>
+        <enablepcfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablepcfd>
+        <enablenssfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablenssfd>
+        <enablebsfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablebsfd>
+        <enablepcrfd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablepcrfd>
+        <enablesgwud type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablesgwud>
+        <enablesgwcd type="BooleanField">
+            <default>0</default>
+            <Required>Y</Required>
+        </enablesgwcd>
+    </items>
+</model>

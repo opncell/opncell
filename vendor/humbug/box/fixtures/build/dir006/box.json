@@ -1,0 +1,6 @@
+{
+    "alias": "test.phar",
+    "compression": "GZ",
+    "files": ["test.php"],
+    "main": "test.php"
+}

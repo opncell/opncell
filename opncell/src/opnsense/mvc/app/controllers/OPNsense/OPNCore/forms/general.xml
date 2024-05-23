@@ -1,0 +1,52 @@
+<form>
+        <field>
+            <id>general.mcc</id>
+            <label>MCC</label>
+            <type>text</type>
+            <allownew>true</allownew>
+        </field>
+        <field>
+            <id>general.mnc</id>
+            <label>MNC</label>
+            <type>text</type>
+            <allownew>true</allownew>
+        </field>
+        <field>
+            <id>general.tac</id>
+            <label>TAC</label>
+            <type>text</type>
+        </field>
+        <field>
+            <id>general.network_name</id>
+            <label>Network Name</label>
+            <type>text</type>
+        </field>
+        <field>
+            <id>general.sst</id>
+            <label>Slice/Service Type</label>
+            <type>text</type>
+        </field>
+        <field>
+            <id>general.s1ap</id>
+            <label>s1ap</label>
+            <type>text</type>
+        </field>
+    <field>
+        <id>general.enablefour</id>
+        <label>4G</label>
+        <type>checkbox</type>
+    </field>
+    <field>
+        <id>general.enablefiveSA</id>
+        <label>5G</label>
+        <type>checkbox</type>
+    </field>
+    <field>
+        <id>general.enablefiveNSA</id>
+        <label>5G NSA</label>
+        <type>checkbox</type>
+    </field>
+
+
+
+</form>

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<psalm
+    name="Pharaoh Type Safety Automated Analysis"
+    useDocblockTypes="true"
+    totallyTyped="true"
+>
+    <projectFiles>
+        <directory name="src/Pharaoh" />
+    </projectFiles>
+
+    <issueHandlers>
+    </issueHandlers>
+</psalm>

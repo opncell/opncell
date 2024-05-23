@@ -1,0 +1,65 @@
+<model>
+    <mount>//OPNsense/opncore/general</mount>
+    <description>EPC configuration</description>
+    <version>1.0.3</version>
+    <items>
+        <mcc type="TextField">
+            <Required>Y</Required>
+            <MinimumValue>100</MinimumValue>
+            <MaximumValue>999</MaximumValue>
+            <ValidationMessage>Should be three digits from 001 to 999</ValidationMessage>
+        </mcc>
+
+        <mnc type="TextField">
+            <Required>Y</Required>
+            <MinimumValue>001</MinimumValue>
+            <MaximumValue>999</MaximumValue>
+            <ValidationMessage>Should be three digits from 001 to 999</ValidationMessage>
+        </mnc>
+        <tac type="TextField">
+            <default>1</default>
+            <Required>Y</Required>
+            <MaximumValue>999</MaximumValue>
+        </tac>
+        <network_name type="TextField">
+            <Required>Y</Required>
+            <default>OPNCore</default>
+            <mask>/^([0-9a-zA-Z._\- ]){1,99}$/</mask>
+            <ValidationMessage>
+                The name should be 1 to 99 characters and contain only alphanumeric characters,
+                dashes, underscores, dot or space.
+            </ValidationMessage>
+        </network_name>
+        <s1ap type="NetworkField">
+            <Required>Y</Required>
+            <default>127.0.0.2</default>
+        </s1ap>
+<!--        <ngap type="NetworkField">-->
+<!--            <Required>Y</Required>-->
+<!--            <default>127.0.0.5</default>-->
+<!--        </ngap>-->
+        <sst type="TextField">
+            <Required>Y</Required>
+            <default>1</default>
+        </sst>
+<!--        <dns type="NetworkField">-->
+<!--            <default>0.0.0.0</default>-->
+<!--            <FieldSeparator>,</FieldSeparator>-->
+<!--            <Required>Y</Required>-->
+<!--            <asList>Y</asList>-->
+<!--        </dns>-->
+        <enablefour type="BooleanField">
+            <Required>Y</Required>
+            <default>0</default>
+        </enablefour>
+        <enablefiveSA type="BooleanField">
+            <Required>Y</Required>
+            <default>0</default>
+        </enablefiveSA>
+        <enablefiveNSA type="BooleanField">
+            <Required>Y</Required>
+            <default>0</default>
+        </enablefiveNSA>
+
+    </items>
+</model>

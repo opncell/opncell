@@ -1,0 +1,23 @@
+<model>
+    <mount>//OPNsense/opncore/user</mount>
+    <description>User Management</description>
+    <version>1.0.3</version>
+    <items>
+        <bulks>
+        <bulk type="ArrayField">
+            <profile type="ModelRelationField">
+                <Model>
+                    <template>
+                        <source>OPNsense.OPNCore.Profile</source>
+                        <items>profiles.profile</items>
+                        <display>apn</display>
+                        <default>Not Assigned</default>
+                    </template>
+                </Model>
+                <Multiple>Y</Multiple>
+                <Required>Y</Required>
+            </profile>
+        </bulk>
+        </bulks>
+    </items>
+</model>

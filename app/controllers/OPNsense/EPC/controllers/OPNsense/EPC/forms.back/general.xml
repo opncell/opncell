@@ -1,0 +1,94 @@
+<form>
+    <field>
+        <id>general.enablemmed</id>
+        <label>Enable MME</label>
+        <type>checkbox</type>
+        <help>This will activate the MME Function.</help>
+    </field>
+
+    <field>
+        <id>general.enablenrfd</id>
+        <label>Enable Nrfd</label>
+        <type>checkbox</type>
+        <help>This will activate the nrfd</help>
+    </field>
+    <field>
+        <id>general.enablehssd</id>
+        <label>Enable HSS</label>
+        <type>checkbox</type>
+        <help>This will activate HSS.</help>
+    </field>
+    <field>
+        <id>general.enablescpd</id>
+        <label>Enable Scpd</label>
+        <type>checkbox</type>
+        <help>This will activate scpd.</help>
+    </field>
+    <field>
+        <id>general.enableamfd</id>
+        <label>Enable amfd</label>
+        <type>checkbox</type>
+        <help>This will activate AMF.</help>
+    </field>
+    <field>
+        <id>general.enablesmfd</id>
+        <label>Enable SMF</label>
+        <type>checkbox</type>
+        <help>This will activate SMF.</help>
+    </field>
+    <field>
+        <id>general.enableupfd</id>
+        <label>Enable upfd</label>
+        <type>checkbox</type>
+        <help>This will activate upfd.</help>
+    </field>
+    <field>
+        <id>general.enableausfd</id>
+        <label>Enable aus</label>
+        <type>checkbox</type>
+        <help>This will activate ausf.</help>
+    </field>
+    <field>
+        <id>general.enableudmd</id>
+        <label>Enable udmd</label>
+        <type>checkbox</type>
+        <help>This will activate udmd.</help>
+    </field>
+    <field>
+        <id>general.enablepcfd</id>
+        <label>Enable pcfd</label>
+        <type>checkbox</type>
+        <help>This will activate pcfd.</help>
+    </field>
+    <field>
+        <id>general.enablenssfd</id>
+        <label>Enable nssfd</label>
+        <type>checkbox</type>
+        <help>This will activate nssfd.</help>
+    </field>
+    <field>
+        <id>general.enablebsfd</id>
+        <label>Enable bsfd</label>
+        <type>checkbox</type>
+        <help>This will activate bsfd.</help>
+    </field>
+    <field>
+        <id>general.enablepcrfd</id>
+        <label>Enable pcrf</label>
+        <type>checkbox</type>
+        <help>This will activate pcrf.</help>
+    </field>
+    <field>
+        <id>general.enablesgwud</id>
+        <label>Enable sgwud</label>
+        <type>checkbox</type>
+        <help>This will activate sgwud.</help>
+    </field>
+    <field>
+        <id>general.enablesgwcd</id>
+        <label>Enable sgwcd</label>
+        <type>checkbox</type>
+        <help>This will activate sgwcd.</help>
+    </field>
+
+</form>

@@ -1,0 +1,71 @@
+<model>
+    <mount>//OPNsense/opncore</mount>
+    <description>EPC configuration</description>
+    <version>1.0.3</version>
+    <items>
+        <enablemmed type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablemmed>
+        <enablehssd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablehssd>
+        <enablenrfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablenrfd>
+        <enablescpd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablescpd>
+        <enableamfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enableamfd>
+        <enablesmfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablesmfd>
+        <enableupfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enableupfd>
+        <enableausfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enableausfd>
+        <enableudmd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enableudmd>
+        <enableudrd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enableudrd>
+        <enablepcfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablepcfd>
+        <enablenssfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablenssfd>
+        <enablebsfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablebsfd>
+        <enablepcrfd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablepcrfd>
+        <enablesgwud type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablesgwud>
+        <enablesgwcd type="BooleanField">
+            <default>1</default>
+            <Required>N</Required>
+        </enablesgwcd>
+    </items>
+</model>

@@ -1,0 +1,91 @@
+
+<form>
+    <field>
+        <id>4G-Standalone.generalFourGSA.Enabled</id>
+        <label>enabled</label>
+        <type>checkbox</type>
+        <help>Enable this feature</help>
+    </field>
+    <field>
+        <id>4G-Standalone.generalFourGSA.SMTPHost</id>
+        <label>SMTPHost</label>
+        <type>text</type>
+        <help><![CDATA[ip address of the mail host]]></help>
+        <hint>choose a valid IPv4/v6 address</hint>
+    </field>
+    <field>
+        <id>4G-Standalone.generalFourGSA.FromEmail</id>
+        <label>Email (from)</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>4G-Standalone.generalFourGSA.ToEmail</id>
+        <label>Email (to)</label>
+        <type>text</type>
+        <help>This is email info</help>
+    </field>
+    <field>
+        <id>4G-Standalone.generalFourGSA.Description</id>
+        <label>Description</label>
+        <type>text</type>
+        <help>This is email info</help>
+    </field>
+    <field>
+        <id>4G-Standalone.generalFourGSA.Interface</id>
+        <label>Interface</label>
+        <type>text</type>
+    </field>
+</form>
+
+<!--<form>-->
+<!--    <field>-->
+<!--        <id>HSS</id>-->
+<!--        <label>HSS</label>-->
+<!--        <type>info</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>UE</id>-->
+<!--        <label>UE</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.eNB</id>-->
+<!--        <label>eNB</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.SGW</id>-->
+<!--        <label>SGW</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.PGW</id>-->
+<!--        <label>PGW</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.PCRF</id>-->
+<!--        <label>PCRF</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.MME</id>-->
+<!--        <label>MME</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.PDN</id>-->
+<!--        <label>PDN</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>4g.OCS</id>-->
+<!--        <label>OCS</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+<!--</form>-->
+
+
+
+
+

@@ -1,0 +1,16 @@
+{
+    "timeout": 10,
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "logs": {
+        "text": "dist/infection-log.txt"
+    },
+    "mutators": {
+        "@default": true,
+        "IdenticalEqual": true,
+        "NotIdenticalNotEqual": true
+    }
+}

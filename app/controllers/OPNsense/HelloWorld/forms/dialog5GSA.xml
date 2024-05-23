@@ -1,0 +1,33 @@
+<form>
+    <field>
+        <id>helloworld.dialog5GSA.Enabled</id>
+        <label>enabled</label>
+        <type>checkbox</type>
+        <help>Enable this feature</help>
+    </field>
+    <field>
+        <id>helloworld.dialog5GSA.HSS</id>
+        <label>SMTPHost</label>
+        <type>text</type>
+        <help>Home subscriber system</help>
+        <hint>choose a valid HSS</hint>
+    </field>
+    <field>
+        <id>helloworld.dialog5GSA.MME</id>
+        <label>MME</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>helloworld.dialog5GSA.PCRF</id>
+        <label>PCRF</label>
+        <type>text</type>
+        <help>This is Packet charging facility</help>
+    </field>
+    <field>
+        <id>helloworld.dialog5GSA.PDN</id>
+        <label>PDN</label>
+        <type>text</type>
+        <help>This is Public Domain Network info</help>
+    </field>
+
+</form>

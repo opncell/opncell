@@ -1,0 +1,41 @@
+run.config:
+  engine: php
+  engine.config:
+    runtime: php-7.3
+    document_root: public
+    allow_url_fopen: 'On'
+    disable_functions:
+      - exec
+      - shell_exec
+      - system
+    expose_php: 'Off'
+    max_execution_time: 30
+    max_input_time: 60
+    memory_limit: '128M'
+    error_reporting: E_ALL
+    display_errors: 'stderr'
+    register_globals: 'Off'
+    register_argc_argv: 'Off'
+    default_mimetype: 'text/html'
+    default_locale: 'en_US'
+    date_timezone: 'UTC'
+    iconv_internal_encoding: 'UTF-8'
+    extensions:
+      - curl
+      - ctype
+      - dom
+      - json
+      - iconv
+      - mbstring
+      - phalcon
+      - simplexml
+      - tokenizer
+      - xml
+      - xmlwriter
+    zend_extensions:
+      - opcache
+    dev_zend_extensions:
+      add:
+        - xdebug
+      rm:
+        - opcache

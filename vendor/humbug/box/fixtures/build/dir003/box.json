@@ -1,0 +1,7 @@
+{
+    "alias": "test.phar",
+    "banner-file": "banner",
+    "files": ["test.php"],
+    "main": "test.php"
+}
+

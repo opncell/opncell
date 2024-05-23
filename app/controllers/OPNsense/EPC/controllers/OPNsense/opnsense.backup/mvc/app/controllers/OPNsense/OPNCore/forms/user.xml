@@ -1,0 +1,46 @@
+<form>
+<!--    <field>-->
+<!--        <label>Command Details</label>-->
+<!--        <type>header</type>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>user.command</id>-->
+<!--        <label>Select how to add the user</label>-->
+<!--        <type>dropdown</type>-->
+<!--        <help>Select how the user should be added to the hss database.</help>-->
+<!--    </field>-->
+    <field>
+        <label>User Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>user.imsi</id>
+        <label>IMSI</label>
+        <type>text</type>
+        <allownew>true</allownew>
+    </field>
+
+    <field>
+        <id>user.ki</id>
+        <label>Subscriber Key</label>
+        <type>text</type>
+        <help>Subscriber Key for how the UE connects to a network.</help>
+    </field>
+    <field>
+        <id>user.opc</id>
+        <label>OPc</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>user.profile</id>
+        <label>Service Type</label>
+        <type>dropdown</type>
+        <help>Define the profile to be associated with the user.</help>
+    </field>
+    <field>
+        <id>user.name</id>
+        <label>Name</label>
+        <type>text</type>
+    </field>
+
+</form>

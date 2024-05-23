@@ -1,0 +1,6 @@
+<menu>
+  <OPNCore cssClass="fa fa-map-signs" order="45">
+    <General VisibleName="General" cssClass="fa fa-cog fa-fw" url="/ui/epc/general/index" order="1"/>
+      <Networks VisibleName="Networks" url="/ui/epc/opncore" order="2"/>
+  </OPNCore>
+</menu>

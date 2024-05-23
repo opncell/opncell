@@ -1,0 +1,7 @@
+<menu>
+  <OPNCore cssClass="fas fa-broadcast-tower"  order="45">
+      <Network url="/ui/opncore/general"/>
+      <Users url = "/ui/opncore/user"/>
+  </OPNCore>
+</menu>
+<!--    fa-regular fa-tower-cell-->

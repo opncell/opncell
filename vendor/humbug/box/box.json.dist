@@ -1,0 +1,24 @@
+{
+    "banner": [
+        "This file is part of the box project.",
+        "",
+        "(c) Kevin Herrera <kevin@herrera.io>",
+        "Théo Fidry <theo.fidry@gmail.com>",
+        "",
+        "This source file is subject to the MIT license that is bundled",
+        "with this source code in the file LICENSE."
+    ],
+
+    "files": [
+        "res/schema.json"
+    ],
+    "directories-bin": [".requirement-checker"],
+
+    "compression": "GZ",
+    "compactors": [
+        "KevinGH\\Box\\Compactor\\Php",
+        "KevinGH\\Box\\Compactor\\PhpScoper",
+        "KevinGH\\Box\\Compactor\\Json"
+    ],
+    "datetime": "release-date"
+}

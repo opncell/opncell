@@ -1,0 +1,6 @@
+{% if OPNsense.OPNCore.opncore.enablefour == "1" or OPNsense.opncore.general.enablefiveNSA == "1"  %}
+epcsgwcd_enable="YES"
+epcsgwcd_setup="/usr/local/opnsense/scripts/opncore/epcsgwcd_setup.sh"
+{% else %}
+epcsgwcd_enable="NO"
+{% endif %}

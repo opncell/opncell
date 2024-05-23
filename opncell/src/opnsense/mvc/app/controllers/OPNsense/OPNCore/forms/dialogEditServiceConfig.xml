@@ -1,0 +1,9 @@
+<form>
+
+    <field>
+        <id>addr</id>
+        <label>Bind to IP</label>
+        <type>text</type>
+        <allownew>false</allownew>
+    </field>
+</form>

@@ -1,0 +1,75 @@
+sudo: required
+dist: xenial
+
+language: php
+php:
+  - 'master'
+  - '8.0'
+  - '7.4'
+  - '7.3'
+
+matrix:
+   fast_finish: true
+   allow_failures:
+    - php: 'master'
+
+addons:
+  apt:
+    packages:
+      - libzip4
+
+git:
+  depth: 1
+
+branches:
+  only:
+    - master
+    - development
+
+cache:
+  apt: true
+  timeout: 604800
+  directories:
+    - $HOME/.composer/cache
+
+env:
+  global:
+    - DEFAULT_COMPOSER_FLAGS="--no-interaction --no-ansi --no-progress --no-suggest"
+
+before_install:
+  - if [ -n "$GH_TOKEN" ]; then composer config github-oauth.github.com $GH_TOKEN; fi;
+
+install:
+  - travis_retry composer install $DEFAULT_COMPOSER_FLAGS
+
+before_script:
+  - phpenv which php
+  - php -v
+  - composer diagnose || true
+
+script:
+  - ./vendor/bin/phpunit --disallow-test-output
+
+after_success:
+  - if [[ ! -z "${CODECOV_TOKEN}" ]]; then (bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"); fi;
+
+jobs:
+  include:
+  - stage: Static Code Analysis
+    php: 7.3
+    env: PHPStan
+    before_script:
+      - phpenv config-rm xdebug.ini || true
+      - travis_retry composer require phpstan/phpstan
+    script:
+      - ./vendor/bin/phpstan analyse -l max src
+  - stage: Static Code Analysis
+    php: 7.3
+    env: PHP_CodeSniffer
+    before_script:
+      - phpenv config-rm xdebug.ini || true
+    script:
+      - ./vendor/bin/phpcs
+
+notifications:
+  email: false

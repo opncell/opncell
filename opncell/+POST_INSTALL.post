@@ -1,0 +1,131 @@
+#!/bin/sh
+
+echo "=====> Enabling SCTP support ..."
+
+touch /boot/loader.conf.local
+# shellcheck disable=SC2129
+
+if ! grep -q "DEVELOPER=yes" /etc/make.conf; then
+    echo "DEVELOPER=yes" >> /etc/make.conf
+fi
+
+values='hw.ixgbe.unsupported_sfp=1 hw.ix.unsupported_sfp=1 hw.if_ix_updated.unsupported_sfp=1 if_ix_updated_load="YES" sctp_load="YES"'
+
+for val in $values; do
+    if ! grep -q "$val" /boot/loader.conf.local; then
+        echo "$val" >> /boot/loader.conf.local
+    fi
+done
+
+kldload sctp.ko
+
+if ! grep -q "DEVELOPER=yes" /etc/make.conf; then
+    echo "DEVELOPER=yes" >> /etc/make.conf
+fi
+
+export LIBRARY_PATH=/usr/local/lib
+export C_INCLUDE_PATH=/usr/local/include
+
+echo "=====> Disabling the packet filter ..."
+pfctl -d
+
+cd /usr/local/opnsense/mvc/app/tmp || exit 1
+
+cp -r fonts/. /usr/local/opnsense/www/fonts/
+cp -r css/. /usr/local/opnsense/www/css/
+cp ControllerBase.php /usr/local/opnsense/mvc/app/controllers/OPNsense/Base/
+
+cd -
+#rm -r /usr/local/opnsense/mvc/app/tmp
+cd /usr/local/www || exit 1
+rm head.inc
+mv head_tmp.inc head.inc
+
+checkMongo() {
+
+    command="ps aux | grep mongod | awk '\$8 == \"I+\" || \$8 == \"Is\" || \$8 == \"T\" {print \$8}'"
+    status=$(eval "$command")
+    if test "$status" == "T"; then
+       pid_command="ps aux | grep mongod | awk '\$8 == \"T\" {print \$2}'"
+       pid=$(eval "$pid_command")
+       kill -9 "$pid"
+      mongo_binary_path=$(which mongod)
+      directory_path=$(dirname "$mongo_binary_path")
+      cd "$directory_path" || exit 1
+      mongod --dbpath ./data/db &
+      if pgrep open5gs-hssd; then
+         pid_hss=$(pgrep open5gs-hssd)
+         kill -9 ${pid_hss}
+      fi
+      sleep 5
+      cd /usr/ports/open5gs/ || exit 1
+      #/usr/ports/open5gs/install/bin/open5gs-hssd &
+      configctl hssd start
+      sleep 2
+    fi
+
+   if test -z  "$status" ; then
+      mongo_binary_path=$(which mongod)
+      directory_path=$(dirname "$mongo_binary_path")
+      cd "$directory_path" || exit 1
+      mkdir -p ./data/db
+      mongod --dbpath ./data/db &
+      sleep 5
+       if pgrep open5gs-hssd; then
+         pid_hss=$(pgrep open5gs-hssd)
+         kill -9 ${pid_hss}
+       fi
+       cd /usr/ports/open5gs/ || exit 1
+     # /usr/ports/open5gs/install/bin/open5gs-hssd &
+       configctl hssd start
+sleep 2
+ fi
+}
+
+  echo "=====> Installation complete."
+  echo "=====> The below Virtual IPs should be enabled on the loopback address via the GUI. These are required for the smooth running of open5gs services."
+  echo "=====> To add them ----> Interfaces ----->Virtual IPs "
+  echo "MongoDB   = 127.0.0.1 (subscriber data) - http://localhost:3000"
+  echo "MME-s1ap  = 127.0.0.2 :36412 for S1-MME"
+  echo "MME-gtpc  = 127.0.0.2 :2123 for S11"
+  echo "MME-frDi  = 127.0.0.2 :3868 for S6a"
+  echo "SGWC-gtpc = 127.0.0.3 :2123 for S11"
+  echo "SGWC-pfcp = 127.0.0.3 :8805 for Sxa"
+  echo "SMF-gtpc  = 127.0.0.4 :2123 for S5c, N11"
+  echo "SMF-gtpu  = 127.0.0.4 :2152 for N4u (Sxu)"
+  echo "SMF-pfcp  = 127.0.0.4 :8805 for N4 (Sxb)"
+  echo "SMF-frDi  = 127.0.0.4 :3868 for Gx auth"
+  echo "SMF-sbi   = 127.0.0.4 :7777 for 5G SBI (N7,N10,N11)"
+  echo "AMF-ngap  = 127.0.0.5 :38412 for N2"
+  echo "AMF-sbi   = 127.0.0.5 :7777 for 5G SBI (N8,N12,N11)"
+  echo "SGWU-pfcp = 127.0.0.6 :8805 for Sxa"
+  echo "SGWU-gtpu = 127.0.0.6 :2152 for S1-U, S5u"
+  echo "UPF-pfcp  = 127.0.0.7 :8805 for N4 (Sxb)"
+  echo "UPF-gtpu  = 127.0.0.7 :2152 for S5u, N3, N4u (Sxu) (needs to be changed to the interface hosting the xNBs)"
+  echo "HSS-frDi  = 127.0.0.8 :3868 for S6a, Cx"
+  echo "PCRF-frDi = 127.0.0.9 :3868 for Gx"
+  echo "NRF-sbi   = 127.0.0.10:7777 for 5G SBI"
+  echo "SCP-sbi   = 127.0.0.200:7777 for 5G SBI"
+  echo "SEPP-sbi  = 127.0.0.250:7777 for 5G SBI"
+  echo "SEPP-n32  = 127.0.0.251:7777 for 5G N32"
+  echo "SEPP-n32f = 127.0.0.252:7777 for 5G N32-f"
+  echo "AUSF-sbi  = 127.0.0.11:7777 for 5G SBI"
+  echo "UDM-sbi   = 127.0.0.12:7777 for 5G SBI"
+  echo "PCF-sbi   = 127.0.0.13:7777 for 5G SBI"
+  echo "NSSF-sbi  = 127.0.0.14:7777 for 5G SBI"
+  echo "BSF-sbi   = 127.0.0.15:7777 for 5G SBI"
+  echo "UDR-sbi   = 127.0.0.20:7777 for 5G SBI"
+
+values='epcmmed_enable="YES" epcamfd_enable="YES" epchssd_enable="YES" epcnrfd_enable="YES" epcnssfd_enable="YES" epcpcfd_enable="YES" epcbsfd_enable="YES" epcsmfd_enable="YES" epcupfd_enable="YES" epcsgwcd_enable="YES" epcsgwud_enable="YES" epcpcrfd_enable="YES" epcausfd_enable="YES" epcudmd_enable="YES" epcupfd_enable="YES" epcudrd_enable="YES" epcscpd_enable="YES"'
+
+for val in $values; do
+    if ! grep -q "$val" /etc/rc.conf; then
+        echo "$val" >> /etc/rc.conf
+    fi
+done
+
+mkdir -p /root/data/db
+echo "=====> Starting MongoDB and HSS service"
+checkMongo
+
+exit 0

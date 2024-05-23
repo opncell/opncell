@@ -1,0 +1,2 @@
+epc.conf:/usr/local/etc/epc/epc.conf
+epc:/etc/rc.conf.d/epc

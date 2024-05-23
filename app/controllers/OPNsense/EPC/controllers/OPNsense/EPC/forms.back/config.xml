@@ -1,0 +1,43 @@
+<form>
+    <field>
+        <id>config.plmnid_mcc</id>
+        <label>MCC</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>config.plmnid_mnc</id>
+        <label>MNC</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>config.TAC</id>
+        <label>TAC</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>config.networkname</id>
+        <label>Network Name</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>config.sst</id>
+        <label>Slice/Service Type</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>general.dns</id>
+        <label>DNS IP</label>
+        <style>tokenize</style>
+        <default>0.0.0.0</default>
+        <type>select_multiple</type>
+        <allownew>true</allownew>
+        <help>Set the DNS ipS</help>
+    </field>
+    <field>
+        <id>config.ca</id>
+        <label>CA Certificate</label>
+        <type>dropdown</type>
+        <help><![CDATA[The option describes where to get certificates from.]]></help>
+    </field>
+
+</form>

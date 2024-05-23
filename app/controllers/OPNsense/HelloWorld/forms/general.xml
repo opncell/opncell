@@ -1,0 +1,22 @@
+<form>
+    <field>
+        <id>general.mmeEnabled</id>
+        <label>Enable MME</label>
+        <type>checkbox</type>
+        <help>This is mobile mobility Entity</help>
+    </field>
+
+    <field>
+        <id>general.smfEnabled</id>
+        <label>Enable SMF </label>
+        <type>checkbox</type>
+        <help>This is Service Communication Function</help>
+    </field>
+    <field>
+        <id>general.upfEnabled</id>
+        <label>Enable upf</label>
+        <type>checkbox</type>
+<help>This is User plane Function</help>
+    </field>
+
+ </form>

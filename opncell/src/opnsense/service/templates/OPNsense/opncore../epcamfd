@@ -1,0 +1,6 @@
+{% if helpers.exists('OPNsense.opncore.general.enablefiveSA') and OPNsense.opncore.general.enablefiveSA == '1' %}
+epcamfd_enable="YES"
+epcamfd_setup="/usr/local/opnsense/scripts/opncore/epcausfd_setup.sh"
+{% else %}
+epcamfd_enable="NO"
+{% endif %}

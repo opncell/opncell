@@ -1,0 +1,6 @@
+{% if helpers.exists('OPNsense.opncore.general.enablefiveSA') and OPNsense.opncore.general.enablefiveSA == '1' %}
+epcudmd_enable="YES"
+epcudmd_setup="/usr/local/opnsense/scripts/opncore/epcudmd_setup.sh"
+{% else %}
+epcudmd_enable="NO"
+{% endif %}

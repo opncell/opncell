@@ -1,0 +1,47 @@
+<model>
+    <mount>//OPNsense/opncore/user</mount>
+    <description>User Management</description>
+    <version>1.0.3</version>
+    <items>
+        <users>
+        <user type="ArrayField">
+                <imsi type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a number</ValidationMessage>
+                    <Constraints>
+                        <check001>
+                            <ValidationMessage>A User with this imsi already exists.</ValidationMessage>
+                            <type>UniqueConstraint</type>
+                        </check001>
+                    </Constraints>
+                </imsi>
+
+                <ki type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a character</ValidationMessage>
+
+                </ki>
+            <ip type="NetworkField">
+                <Required>N</Required>
+            </ip>
+                <opc type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a character</ValidationMessage>
+                </opc>
+
+            <profile type="ModelRelationField">
+                <Model>
+                    <template>
+                        <source>OPNsense.OPNCore.Profile</source>
+                        <items>profiles.profile</items>
+                        <display>apn</display>
+                    </template>
+                </Model>
+<!--                <asList>Y</asList>-->
+                <Multiple>Y</Multiple>
+                <Required>Y</Required>
+            </profile>
+        </user>
+        </users>
+    </items>
+</model>

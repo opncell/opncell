@@ -1,0 +1,46 @@
+<model>
+    <mount>//OPNsense/EPCore/general</mount>
+    <description>General configuration</description>
+    <version>1.0.5</version>
+    <items>
+
+        <plmnid_mcc type="IntegerField">
+            <Required>Y</Required>
+        </plmnid_mcc>
+        <plmnid_mnc type="IntegerField">
+            <Required>Y</Required>
+        </plmnid_mnc>
+        <TAC type="IntegerField">
+            <default>0</default>
+            <Required>Y</Required>
+        </TAC>
+        <networkname type="TextField">
+            <Required>Y</Required>
+        </networkname>
+        <sst type="TextField">
+            <Required>Y</Required>
+        </sst>
+        <dns type="NetworkField">
+            <default>0.0.0.0</default>
+            <FieldSeparator>,</FieldSeparator>
+            <Required>Y</Required>
+            <asList>Y</asList>
+        </dns>
+        <ca type="OptionField">
+            <Required>N</Required>
+            <OptionValues>
+                <process>Process</process>
+                <file>File</file>
+                <fifo>Fifo</fifo>
+                <filesystem>Filesystem</filesystem>
+                <directory>Directory</directory>
+                <host>Remote Host</host>
+                <system>System</system>
+                <custom>Custom</custom>
+                <network>Network</network>
+            </OptionValues>
+            <Type>cert</Type>
+            <ValidationMessage>Should be a valid certificate.</ValidationMessage>
+        </ca>
+    </items>
+</model>

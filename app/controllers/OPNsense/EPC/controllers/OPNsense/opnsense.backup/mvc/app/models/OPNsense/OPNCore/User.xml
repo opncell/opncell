@@ -1,0 +1,49 @@
+<model>
+    <mount>//OPNsense/opncore/user</mount>
+    <description>User Management</description>
+    <version>1.0.3</version>
+    <items>
+<!--                <command type="OptionField">-->
+<!--                    <Required>Y</Required>-->
+<!--                    <default>Add user with given values</default>-->
+<!--                    <OptionValues>-->
+<!--                        <add>Add user with given values</add>-->
+<!--                        <add_ip>Add user with IP for UE</add_ip>-->
+<!--                        <addT1>Add user with 3 APNs</addT1>-->
+<!--                        <adddT1_ip>Add user with 3 APNs having the same IP</adddT1_ip>-->
+<!--                    </OptionValues>-->
+<!--                </command>-->
+        <users>
+        <user type="ArrayField">
+                <imsi type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a number</ValidationMessage>
+                </imsi>
+
+                <ki type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a character</ValidationMessage>
+                </ki>
+                <opc type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a character</ValidationMessage>
+                </opc>
+                <profile type="ModelRelationField">
+                    <Model>
+                        <template>
+                            <source>OPNsense.OPNCore.Profile</source>
+                            <items>profiles.profile</items>
+                            <display>name</display>
+                        </template>
+                    </Model>
+                    <multiple>Y</multiple>
+                    <Required>N</Required>
+                </profile>
+            <name type="TextField">
+                <Required>N</Required>
+                <default>Profile One</default>
+            </name>
+        </user>
+        </users>
+    </items>
+</model>

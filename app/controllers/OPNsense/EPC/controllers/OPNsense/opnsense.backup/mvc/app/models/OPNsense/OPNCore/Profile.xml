@@ -1,0 +1,98 @@
+<model>
+    <mount>//OPNsense/opncore/profile</mount>
+    <description>Profile configuration</description>
+    <version>1.0.0</version>
+    <items>
+        <profiles>
+            <profile type="ArrayField">
+                <name type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a string between 1 and 32 characters. Allowed characters are 0-9, a-z, A-Z, _ and -.</ValidationMessage>
+                    <Constraints>
+                        <check001>
+                            <ValidationMessage>A profile with this name already exists.</ValidationMessage>
+                            <type>UniqueConstraint</type>
+                        </check001>
+                    </Constraints>
+                </name>
+                <enabled type="BooleanField">
+                    <default>0</default>
+                    <Required>Y</Required>
+                </enabled>
+                <ip type="NetworkField">
+                    <Required>N</Required>
+                </ip>
+
+                <apn type="CSVListField">
+                    <default>internet</default>
+                    <FieldSeparator>,</FieldSeparator>
+                    <Required>Y</Required>
+                    <asList>Y</asList>
+                    <ValidationMessage>Should be a string between 1 and 32 characters.</ValidationMessage>
+
+                </apn>
+                <dl type="TextField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a string between 1 and 32 characters.</ValidationMessage>
+
+                </dl>
+                <ul type="TextField">
+                    <Required>N</Required>
+                </ul>
+
+                <QoS type="IntegerField">
+                    <Required>Y</Required>
+                    <ValidationMessage>Should be a character</ValidationMessage>
+                </QoS>
+                <arp_priority type="IntegerField">
+                    <Required>Y</Required>
+                    <default>8</default>
+                    <MinimumValue>1</MinimumValue>
+                    <MaximumValue>15</MaximumValue>
+                </arp_priority>
+
+                <arp_capability type="OptionField">
+                    <Required>Y</Required>
+                    <default>enabled</default>
+                    <OptionValues>
+                        <enabled>enabled</enabled>
+                        <disabled>disabled</disabled>
+                    </OptionValues>
+                </arp_capability>
+
+                <arp_vulnerability type="OptionField">
+                    <Required>Y</Required>
+                    <default>disabled</default>
+                    <OptionValues>
+                        <enabled>enabled</enabled>
+                        <disabled>disabled</disabled>
+                    </OptionValues>
+                </arp_vulnerability>
+                <unit type="OptionField">
+                    <Required>Y</Required>
+                    <default>Mbps</default>
+                    <OptionValues>
+                        <Mbps>Megabytes per second</Mbps>
+                        <bps>Bytes per Second</bps>
+                        <Kbps>Kilobytes per second</Kbps>
+
+                        <Gbps>Gigabytes per second</Gbps>
+                        <Tbps>Terabytes per second</Tbps>
+                    </OptionValues>
+                </unit>
+
+                <sst type="IntegerField">
+                    <Required>Y</Required>
+                    <default>1</default>
+                    <MinimumValue>1</MinimumValue>
+                    <MaximumValue>5</MaximumValue>
+                </sst>
+                <enabled type="BooleanField">
+                    <Required>N</Required>
+                </enabled>
+
+
+            </profile>
+        </profiles>
+    </items>
+</model>

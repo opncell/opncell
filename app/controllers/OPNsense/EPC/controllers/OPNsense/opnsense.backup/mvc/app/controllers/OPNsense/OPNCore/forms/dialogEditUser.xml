@@ -1,0 +1,112 @@
+<form>
+    <!--    <field>-->
+    <!--        <id>user.command</id>-->
+    <!--        <label>Select how to add the user</label>-->
+    <!--        <type>dropdown</type>-->
+    <!--        <help>Select how the user should be added to the hss database.</help>-->
+    <!--    </field>-->
+    <field>
+        <label>Profile Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>user.imsi</id>
+        <label>IMSI</label>
+        <type>text</type>
+        <allownew>true</allownew>
+    </field>
+
+    <field>
+        <id>user.ki</id>
+        <label>Subscriber Key</label>
+        <type>text</type>
+        <help>Subscriber Key for how the UE connects to a network.</help>
+    </field>
+    <field>
+        <id>user.opc</id>
+        <label>OPc</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>user.apn</id>
+        <label>APN</label>
+        <style>tokenize</style>
+        <type>select_multiple</type>
+        <allownew>true</allownew>
+        <help>Set the names of the different apn networks associated with the UE</help>
+        <hint>The default value is internet.</hint>
+    </field>
+    <field>
+        <id>user.sst</id>
+        <label>Slice/Service Type</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>user.enabled</id>
+        <label>Include IP</label>
+        <type>checkbox</type>
+    </field>
+    <field>
+        <id>user.ip</id>
+        <label>IP Address</label>
+        <type>text</type>
+    </field>
+    <field>
+        <label>AMBR-Speed Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>user.dl</id>
+        <label>AMBR-Downlink value</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>user.dl_unit</id>
+        <label>Downlink unit</label>
+        <type>dropdown</type>
+        <help>Choose units for data transmission.</help>
+    </field>
+    <field>
+        <id>user.ul</id>
+        <label>AMBR-Uplink value</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>user.ul_unit</id>
+        <label>Uplink unit</label>
+        <type>dropdown</type>
+        <help>Choose units for data transmission.</help>
+    </field>
+    <field>
+        <label>Quality Of Service Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>user.QoS</id>
+        <label>QoS Index</label>
+        <type>text</type>
+    </field>
+
+    <field>
+        <id>user.arp_priority</id>
+        <label>ARP priority level</label>
+        <type>text</type>
+        <help>This defines the relative importance of a resource request to allow in deciding whether
+            a new QoS Flow may be accepted or needs to be rejected in the case of resource limitations</help>
+    </field>
+    <field>
+        <id>user.arp_capability</id>
+        <label>ARP Pre-emption Capability</label>
+        <type>dropdown</type>
+        <help>This defines whether a service data flow may get resources that were already assigned
+            to another service data flow with a lower ARP priority leve</help>
+    </field>
+    <field>
+        <id>user.arp_vulnerability</id>
+        <label>ARP Pre-emption Vulnerability </label>
+        <type>dropdown</type>
+        <help>defines whether a service data flow may lose the resources assigned to it in order to admit
+            a service data flow with higher ARP priority level</help>
+    </field>
+
+</form>

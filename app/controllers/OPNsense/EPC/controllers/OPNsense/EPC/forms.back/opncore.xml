@@ -1,0 +1,21 @@
+<form>
+    <field>
+        <id>opncore.enablefour</id>
+        <label>4G Network</label>
+        <type>checkbox</type>
+        <help>This will activate the MME Function.</help>
+    </field>
+
+    <field>
+        <id>opncore.enablefiveSA</id>
+        <label>5G Standalone Network</label>
+        <type>checkbox</type>
+        <help>This will activate the nrfd</help>
+    </field>
+    <field>
+        <id>opncore.enablefiveNSA</id>
+        <label>5G Non-standalone Network</label>
+        <type>checkbox</type>
+        <help>This will activate HSS.</help>
+    </field>
+</form>

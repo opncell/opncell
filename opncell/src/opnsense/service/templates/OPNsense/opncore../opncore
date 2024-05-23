@@ -1,0 +1,3 @@
+{% if OPNsense.opncore.general.enablefour == "1" or OPNsense.opncore.general.enablefiveSA == "1" or OPNsense.opncore.general.enablefiveNSA == "1"  %}
+opncore_setup="/usr/local/opnsense/scripts/opncore/setup.sh"
+{% endif %}

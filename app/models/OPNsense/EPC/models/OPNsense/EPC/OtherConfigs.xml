@@ -1,0 +1,79 @@
+<model>
+    <mount>//OPNsense/OPNCore</mount>
+    <description>EPC configuration</description>
+    <version>1.0.3</version>
+    <items>
+
+    <name type="TextField">
+        <Required>Y</Required>
+        <mask>/^([0-9a-zA-Z\._\-\$]){1,255}$/u</mask>
+        <ValidationMessage>Should be a string between 1 and 255 characters. Allowed characters are letters and numbers as well as underscore, minus, dot and the dollar sign.</ValidationMessage>
+        <Constraints>
+            <check001>
+                <ValidationMessage>Service name must be unique.</ValidationMessage>
+                <type>UniqueConstraint</type>
+            </check001>
+        </Constraints>
+    </name>
+    <description type="TextField">
+        <Required>N</Required>
+    </description>
+    <securityOrder type="OptionField">
+        <Required>Y</Required>
+        <OptionValues>
+            <process>Process</process>
+            <file>File</file>
+            <fifo>Fifo</fifo>
+            <filesystem>Filesystem</filesystem>
+            <directory>Directory</directory>
+            <host>Remote Host</host>
+            <system>System</system>
+            <custom>Custom</custom>
+            <network>Network</network>
+        </OptionValues>
+    </securityOrder>
+    <hnet type="OptionField">
+        <Required>N</Required>
+        <OptionValues>
+            <process>Process</process>
+            <file>File</file>
+            <fifo>Fifo</fifo>
+            <filesystem>Filesystem</filesystem>
+            <directory>Directory</directory>
+            <host>Remote Host</host>
+            <system>System</system>
+            <custom>Custom</custom>
+            <network>Network</network>
+        </OptionValues>
+        <ValidationMessage>Should be a valid certificate.</ValidationMessage>
+        <Type>cert</Type>
+    </hnet>
+    <tls type="OptionField">
+        <Required>N</Required>
+        <OptionValues>
+            <process>Process</process>
+            <file>File</file>
+            <fifo>Fifo</fifo>
+            <filesystem>Filesystem</filesystem>
+            <directory>Directory</directory>
+            <host>Remote Host</host>
+            <system>System</system>
+            <custom>Custom</custom>
+            <network>Network</network>
+        </OptionValues>
+        <Type>cert</Type>
+        <ValidationMessage>Should be a valid certificate.</ValidationMessage>
+    </tls>
+    <dburl type="TextField">
+        <Required>N</Required>
+        <default>mongodb://localhost/open5gs</default>
+        <ValidationMessage>Should be a valid path.</ValidationMessage>
+    </dburl>
+    <freediameter type="TextField">
+        <Required>N</Required>
+        <default>/usr/ports/open5gs/install/etc/freeDiameter/mme.conf</default>
+        <ValidationMessage>Should be a valid path.</ValidationMessage>
+    </freediameter>
+
+    </items>
+</model>

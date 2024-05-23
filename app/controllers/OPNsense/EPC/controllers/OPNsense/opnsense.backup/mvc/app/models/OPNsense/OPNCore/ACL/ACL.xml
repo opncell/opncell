@@ -1,0 +1,9 @@
+<acl>
+  <page-OPNCore>
+    <name>opncore</name>
+    <patterns>
+      <pattern>ui/opncore/*</pattern>
+      <pattern>api/opncore/*</pattern>
+    </patterns>
+  </page-OPNCore>
+</acl>

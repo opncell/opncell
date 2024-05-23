@@ -1,0 +1,42 @@
+{
+    "name":         "paragonie/pharaoh",
+    "description":  "Compare PHARs from the Command Line",
+    "keywords": [
+            "tool",
+            "utility",
+            "phar",
+            "security",
+            "auditing",
+            "diff"
+        ],
+    "license":      "MIT",
+    "type":         "library",
+    "authors": [
+            {
+                "name":     "Scott Arciszewski",
+                "email":    "scott@paragonie.com",
+                "homepage": "https://paragonie.com",
+                "role":     "Developer"
+            }
+        ],
+    "require": {
+        "php": "^7|^8",
+        "paragonie/constant_time_encoding": "^2",
+        "paragonie/sodium_compat": "^1.3",
+        "ulrichsg/getopt-php": "^3"
+    },
+    "require-dev": {
+        "vimeo/psalm": "^1|^2|^3"
+    },
+    "support": {
+        "issues":   "https://github.com/paragonie/pharaoh/issues",
+        "email":    "info@paragonie.com",
+        "source":   "https://github.com/paragonie/pharaoh"
+    },
+    "bin": ["pharaoh"],
+    "autoload": {
+        "psr-4": {
+            "ParagonIE\\Pharaoh\\": "src/Pharaoh/"
+        }
+    }
+}

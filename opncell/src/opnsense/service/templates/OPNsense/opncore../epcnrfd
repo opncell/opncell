@@ -1,0 +1,6 @@
+{% if helpers.exists('OPNsense.opncore.general.enablefiveSA') and OPNsense.opncore.general.enablefiveSA == '1' %}
+epcnrfd_enable="YES"
+epcnrfd_setup="/usr/local/opnsense/scripts/opncore/epcnrfd_setup.sh"
+{% else %}
+epcnrfd_enable="NO"
+{% endif %}
