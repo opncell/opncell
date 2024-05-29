@@ -9,7 +9,7 @@ fetch -o /usr/local/etc/pkg/repos/opncell.conf http://repo.opncell.io/cellular.c
 This establishes the repository holding the cellular package installer, plus other necessary pieces of the puzzle
 
 ## Getting into it
-Once you have the repo set up on your machine, you can proceed to install the package by running **pkg install os-cellular-devel**
+Once you have the repo set up on your machine, you can proceed to install the package by running **pkg install os-cellular-devel** <br>
 In the GUI, set up the loop back addresses for each of the open5gs services. To add the addresses; Interfaces ----->Virtual IPs
 
 ## Sponsers
