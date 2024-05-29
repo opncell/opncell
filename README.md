@@ -10,7 +10,7 @@ This establishes the repository holding the cellular package installer, plus oth
 
 ## Getting into it
 Once you have the repo set up on your machine, you can proceed to install the package by running **pkg install os-cellular-devel** <br>
-In the GUI, set up the loop back addresses for each of the open5gs services. To add the addresses; Interfaces ----->Virtual IPs
+In the GUI, set up the loop back addresses for each of the open5gs services.<br> To add the addresses; Interfaces ----->Virtual IPs
 
 ## Sponsers
 If you find Cellular useful for work, please consider supporting this Open Source project by Becoming a sponsor.
