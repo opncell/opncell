@@ -5,7 +5,7 @@ Cellular utilizes [Open5gs](https://open5gs.org/open5gs/docs/) which is a C-lang
 
 ## Installation
 Run the below command in the commandline of the machine running the OPNsense firewall.<br>
-fetch -o /usr/local/etc/pkg/repos/opncell.conf http://repo.opncell.io/cellular.conf && pkg update <br>
+`fetch -o /usr/local/etc/pkg/repos/opncell.conf http://repo.opncell.io/cellular.conf && pkg update` <br>
 This establishes the repository holding the cellular package installer, plus other necessary pieces of the puzzle
 
 ## Getting into it
