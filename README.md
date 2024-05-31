@@ -14,7 +14,7 @@ In the GUI, set up the loop back addresses for each of the open5gs services.<br>
 To add the addresses; <br>
 `Interfaces ----->Virtual IPs`
 
-## Sponsers
+## Sponsors
 If you find Cellular useful for work, please consider supporting this Open Source project by Becoming a sponsor.
 
 
