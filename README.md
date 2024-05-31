@@ -16,7 +16,8 @@ Add the virtual addresses under; <br>
 
 'Interfaces > Virtual IPs'
 
-## Sponsers
+## Sponsors
 If you find OPNcell useful please consider supporting this Open Source project by becoming a sponsor.
+
 
 
