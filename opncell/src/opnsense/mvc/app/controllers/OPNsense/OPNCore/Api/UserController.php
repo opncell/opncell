@@ -102,55 +102,55 @@ class UserController extends ApiMutableModelControllerBase
      */
 
 
-    public function searchSubAction(): array
-    {
-        $backend = new Backend();
-        // fetch query parameters (limit results to prevent out of memory issues)
-        $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
-        $currentPage = $this->request->getPost('current', 'int', 1);
-        $offset = ($currentPage - 1) * $itemsPerPage;
-
-        $response = $backend->configdpRun("opncore showUsers");
-
-        $data = json_decode((string)$response, true);
-        $details = [];
-        if ($data != null) {
-            foreach ($data as $index => $process) {
-                $item = array();
-                $item['uuid']=$index;
-                $item['imsi'] = $process['imsi'];
-                $item['profile'] = $process['apn'];
-                $details[] = $item;
-            }
-        }
-        $entry_keys = array_keys($details);
-        if ($this->request->hasPost('searchPhrase') && $this->request->getPost('searchPhrase') !== '') {
-            $searchPhrase = $this->request->getPost('searchPhrase');
-            $entry_keys = array_filter($entry_keys, function ($key) use ($searchPhrase, $details) {
-                foreach ($details[$key] as $itemval) {
-                    if (strpos($itemval, $searchPhrase) !== false) {
-                        return true;
-                    }
-                }
-                return false;
-            });
-        }
-        $formatted = array_map(function ($value) use (&$details) {
-            $item = ['#' => $value];
-            foreach ($details[$value] as $ekey => $evalue) {
-                $item[$ekey] = $evalue;
-            }
-            return $item;
-        }, array_slice($entry_keys, $offset, $itemsPerPage));
-
-
-        return [
-            'total' => count($entry_keys),
-            'rowCount' => $itemsPerPage,
-            'current' => $currentPage,
-            'rows' => $formatted,
-        ];
-    }
+//    public function searchSubAction(): array
+//    {
+//        $backend = new Backend();
+//        // fetch query parameters (limit results to prevent out of memory issues)
+//        $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
+//        $currentPage = $this->request->getPost('current', 'int', 1);
+//        $offset = ($currentPage - 1) * $itemsPerPage;
+//
+//        $response = $backend->configdpRun("opncore showUsers");
+//
+//        $data = json_decode((string)$response, true);
+//        $details = [];
+//        if ($data != null) {
+//            foreach ($data as $index => $process) {
+//                $item = array();
+//                $item['uuid']=$index;
+//                $item['imsi'] = $process['imsi'];
+//                $item['profile'] = $process['apn'];
+//                $details[] = $item;
+//            }
+//        }
+//        $entry_keys = array_keys($details);
+//        if ($this->request->hasPost('searchPhrase') && $this->request->getPost('searchPhrase') !== '') {
+//            $searchPhrase = $this->request->getPost('searchPhrase');
+//            $entry_keys = array_filter($entry_keys, function ($key) use ($searchPhrase, $details) {
+//                foreach ($details[$key] as $itemval) {
+//                    if (strpos($itemval, $searchPhrase) !== false) {
+//                        return true;
+//                    }
+//                }
+//                return false;
+//            });
+//        }
+//        $formatted = array_map(function ($value) use (&$details) {
+//            $item = ['#' => $value];
+//            foreach ($details[$value] as $ekey => $evalue) {
+//                $item[$ekey] = $evalue;
+//            }
+//            return $item;
+//        }, array_slice($entry_keys, $offset, $itemsPerPage));
+//
+//
+//        return [
+//            'total' => count($entry_keys),
+//            'rowCount' => $itemsPerPage,
+//            'current' => $currentPage,
+//            'rows' => $formatted,
+//        ];
+//    }
 
 
     //Get the correlation between users and profiles.
@@ -207,18 +207,49 @@ class UserController extends ApiMutableModelControllerBase
         return array_merge($user_array, $profile);
     }
 
+
     /**
      * @throws ReflectionException
      * @throws UserException
      */
-    public function deleteSubAction($imsi)
+    public function deleteSubAction($uuid)
     {
+        $verdict = [];
+        $user = $this->getBase('user', 'users.user', $uuid);
+        $imsi = $user['user']['imsi'];
         $backend = new Backend();
         $net['imsi'] = $imsi;
         $values = json_encode($net);
-        return  $backend->configdpRun("opncore deleteUser", array($values));  //remove user from db
+        $db_result = $backend->configdpRun("opncore deleteUser", array($values));  //remove user from db
+        $data = json_decode((string)$db_result, true);
+        if ($data == "deleted") {
+            return $this->delBase('users.user', $uuid);
+        } else {
+            return array("result"=>"failed");
+
+        }
+    }
+    public function deleteSubFromDBAction($imsi)
+    {
+        $verdict = [];
+        $backend = new Backend();
+        $net['imsi'] = $imsi;
+        $values = json_encode($net);
+        $db_result = $backend->configdpRun("opncore deleteUser", array($values));  //remove user from db
+        $data = json_decode((string)$db_result, true);
+        if ($data == "deleted") {
+            return array("result"=>"success");
+        } else {
+            return array("result"=>"failed");
+
+        }
     }
 
+    public function searchSubAction(): array
+    {
+        $profile_array = $this->searchBase('users.user', array("imsi","profile"));
+        return $profile_array;
+    }
     /**
      * @throws ReflectionException
      * @throws UserException
@@ -249,11 +280,14 @@ class UserController extends ApiMutableModelControllerBase
      * @throws UserException
      * @throws Exception
      */
-    public function setSubAction($imsi): array
+    public function setSubAction($uuid): array
     {
+        $this->setBase('user', 'users.user', $uuid);
         $backend = new Backend();
         $result = ["result" => "failed"];
         $userDetails = [];
+        $user = $this->getSubAction($uuid);
+        $imsi = $user['user']['imsi'];
         $imsi_string["imsi"] = $imsi;
         $val = json_encode($imsi_string);
         $updatedUserDetails = $this->request->getPost('user');
@@ -275,7 +309,7 @@ class UserController extends ApiMutableModelControllerBase
         $sub_user['count'] = $numberOfProfiles;
         $sub_result = "";
         if ($profileIDS != "") {
-            $this->deleteSubAction($imsi);
+            $this->deleteSubFromDBAction($imsi);
             foreach ($profileList as $profileID) {
                 $profile = $profileClass->getProfileAction($profileID);
                 $index += 1;
@@ -295,7 +329,7 @@ class UserController extends ApiMutableModelControllerBase
         if ($data != "Success") {
             return array("result"=>"Failed");
         } else {
-            return array("result"=>"Success");
+            return $this->setBase('user', 'users.user', $uuid);
         }
     }
 
@@ -406,52 +440,59 @@ class UserController extends ApiMutableModelControllerBase
      * @throws UserException
      * @throws Exception
      */
-    public function addSubAction(): array
+    public function addSubAction()
     {
         $userDetails = array();
         $backend = new Backend();
-        $userUUID =  $this->addBase('user', 'users.user');
-        $uuid = $userUUID['uuid'];
-        $selected_profile_uuid = [];
-        $sub = [];
-        if ($uuid) {
-            $record = $this->getSubAction($uuid);
-            foreach ($record as $user_record) {
-                $userDetails["imsi"] = $user_record['imsi'];
-                $userDetails["ki"] = $user_record['ki'];
-                $userDetails["opc"] = $user_record['opc'];
-                $userDetails["ip"] = $user_record['ip'];
-                if ($user_record['profile']) {
-                    $selected_profile_uuid = $this->multipart($user_record['profile']);
+
+        $userUUID = $this->addBase('user', 'users.user');
+        if ($userUUID['result'] == 'saved') {
+            $uuid = $userUUID['uuid'];
+            $selected_profile_uuid = [];
+            $sub = [];
+            if ($uuid) {
+                $record = $this->getSubAction($uuid);
+                foreach ($record as $user_record) {
+                    $userDetails["imsi"] = $user_record['imsi'];
+                    $userDetails["ki"] = $user_record['ki'];
+                    $userDetails["opc"] = $user_record['opc'];
+                    $userDetails["ip"] = $user_record['ip'];
+                    if ($user_record['profile']) {
+                        $selected_profile_uuid = $this->multipart($user_record['profile']);
+                    }
                 }
-            }
-            $numberOfProfiles = count($selected_profile_uuid);
-            $profileClass = new ProfileController();
-            $index = 0;
-            $sub['count'] = $numberOfProfiles;
-            foreach ($selected_profile_uuid as $p_uuid) {
-                $profile = $profileClass->getProfileAction($p_uuid);
-                $index+=1;
-                $userDetails['sst'] = $profile['profile']['sst'];
-                $userDetails["dl"] = $profile['profile']['dl'];
-                $userDetails["ul"] = $profile['profile']['ul'];
-                $userDetails["QoS"] = $profile['profile']['QoS'];
-                $userDetails["arp_priority"] = $profile['profile']['arp_priority'];
-                $userDetails["apn"] = $profile['profile']['apn'];
-                $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
-                $sub[$index] = $userDetails;
-            }
-            $val = json_encode($sub);
-            $sub_result = $backend->configdpRun("opncore saveUsers", array($val));
-            $data = json_decode((string)$sub_result, true);
-            if ($data != "Success") {
-                $this->delBase('users.user', $uuid);
-                return array("result"=>"failed");
+                $numberOfProfiles = count($selected_profile_uuid);
+                $profileClass = new ProfileController();
+                $index = 0;
+                $sub['count'] = $numberOfProfiles;
+                foreach ($selected_profile_uuid as $p_uuid) {
+                    $profile = $profileClass->getProfileAction($p_uuid);
+                    $index+=1;
+                    $userDetails['sst'] = $profile['profile']['sst'];
+                    $userDetails["dl"] = $profile['profile']['dl'];
+                    $userDetails["ul"] = $profile['profile']['ul'];
+                    $userDetails["QoS"] = $profile['profile']['QoS'];
+                    $userDetails["arp_priority"] = $profile['profile']['arp_priority'];
+                    $userDetails["apn"] = $profile['profile']['apn'];
+                    $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
+                    $sub[$index] = $userDetails;
+                }
+                $val = json_encode($sub);
+
+                $sub_result = $backend->configdpRun("opncore saveUsers", array($val));
+                $data = json_decode((string)$sub_result, true);
+
+                if ($data != "Success") {
+                    $this->delBase('users.user', $uuid);
+                    return array("result"=>"failed");
+                } else {
+                    return array("result"=>"success");
+                }
             } else {
-                return array("result"=>"success");
+                return array("result"=>"failed");
             }
         } else {
-            return array("result"=>"failed");
+            return $userUUID;
         }
     }
 

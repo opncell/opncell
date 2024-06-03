@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# PROVIDE: epcpcfd
+
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=epcpcfd
+service_name=pcfd
+desc="AMF daemon"
+rcvar=${name}_enable
+command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
+start_cmd="${name}_start"
+command_args="-D > /dev/null 2>&1"
+
+load_rc_config ${name}
+: "${epcpcfd_enable:="NO"}"
+
+epcpcfd_start(){
+        echo "Starting open5gs-${service_name} daemon"
+        
+        mkdir -p /var/run/epc
+        pfile="/var/run/epc/epcpcfd.pid"
+        cd /tmp || exit 1
+
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pfile}; then
+                echo "Started"
+        else
+                echo "Failed to start"
+        fi
+}
+
+run_rc_command "$1"
+

@@ -94,7 +94,7 @@ function epc_services():array
     foreach ($serviceTypes as $type) {
         $service = array(
             'description' => $descriptions[$type],
-            'name' => 'opncore-' . $type,
+            'name' =>  $type,
         );
 
         foreach ($commonServiceData['configd'] as $key => $commands) {

@@ -55,7 +55,7 @@ class ServiceController extends ApiControllerBase
         if ($this->request->isPost()) {
             $backend = new Backend();
             if ($process == "mongodd") {
-                $response = $backend->configdRun("opncore startMongo");
+                $response = $backend->configdRun('mongod' . ' '. 'start');
             } else {
                 $response = $backend->configdRun($process . ' '. 'start');
             }
@@ -69,7 +69,8 @@ class ServiceController extends ApiControllerBase
         if ($this->request->isPost()) {
             $backend = new Backend();
             if ($process == "mongodd") {
-                $response = $backend->configdRun("opncore restartMongo");
+                $backend->configdRun('mongod '. ' '. 'stop');
+                $response = $backend->configdRun('mongod' . ' '. 'start');
             } else {
                 $backend->configdRun($process . ' '. 'stop');
                 $response = $backend->configdRun($process . ' '. 'start');
@@ -84,7 +85,7 @@ class ServiceController extends ApiControllerBase
         if ($this->request->isPost()) {
             $backend = new Backend();
             if ($process == "mongodd") {
-                $response = $backend->configdRun("opncore stopMongo");
+                $response = $backend->configdRun('mongod' . ' '. 'stop');
             } else {
                 $response = $backend->configdRun($process . ' '. 'stop');
             }
@@ -107,7 +108,7 @@ class ServiceController extends ApiControllerBase
             $mdlServices = new Opncore();   // all services as nodes.(makes them easier to work /manipulate this way)
             $backend = new Backend();
             (new GeneralController)->setNetwork($network);
-            $backend->configdRun("opncore startMongo");
+            $backend->configdRun('mongod' . ' '. 'start');
 
             // generate template
             $backend->configdRun('template reload OPNsense/OPNCore');

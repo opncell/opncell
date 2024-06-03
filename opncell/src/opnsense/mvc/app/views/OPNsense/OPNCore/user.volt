@@ -87,9 +87,22 @@ POSSIBILITY OF SUCH DAMAGE.
         <div class="col-md-12 __mt">
             <div id="failedSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
                 {{ lang._('Subscriber not added') }}<br>
-                {{ lang._('NOTE: Check that the mongodb is running then try again.') }}
+            </div> <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
+                {{ lang._('Subscriber added') }}<br>
             </div>
         </div>
+        <div class="col-md-12 __mt">
+            <div  id="failedDelete" class="alert alert-dismissible alert-info" style="display: none" role="alert">
+                {{ lang._('Subscriber not deleted') }}
+            </div>
+            <div id="successfulDelete" class="alert alert-dismissible alert-info" style="display: none" role="alert">
+            {{ lang._('Subscriber deleted successfully') }}
+            </div>
+        </div>
+        <button class="btn btn-danger" style="display: none; margin-left: 6px;text-align: center" id="deleting" type="button">
+            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>
+        </button>
+
         <table id="grid-user-list" class="table table-condensed table-hover table-striped table-responsive"
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
             <thead>
@@ -156,8 +169,9 @@ POSSIBILITY OF SUCH DAMAGE.
     //TODO Reconfigure by restarting mme service.
     function saveUsers() {
         $("#saveAct_users_progress").addClass("fa fa-spinner fa-pulse");
-        saveFormToEndpoint(url = "/api/opncore/user/addSub", formid = 'frm_user_settings', callback_ok = function () {
+        saveFormToEndpoint(url = "/api/opncore/user/addSub", formid = 'frm_user_settings', callback_ok = function (data, status) {
             $("#saveAct_users_progress").removeClass("fa fa-spinner fa-pulse");
+
         }, true);
 
     }
@@ -345,6 +359,8 @@ POSSIBILITY OF SUCH DAMAGE.
                                 $("#" + gridUserId).bootgrid("reload");
                                 if (data.result === "failed") {
                                     $("#failedSave").attr("style", "display:block");
+                                } else if(data.result === "saved"){
+                                    $("#successfulSave").attr("style", "display:block");
                                 }
                             }, true);
                     });
@@ -359,8 +375,19 @@ POSSIBILITY OF SUCH DAMAGE.
                     var uuid = $(this).data("row-id");
                     let imsi = $(this).data("row-imsi");
                     stdDialogConfirm("{{ lang._('Confirm Subscriber Removal') }}", "{{ lang._('Do you want to remove the subscriber') }}" + "{{ lang._('""')}}" + imsi + "{{ lang._('"
-                    "')}}" + "{{ lang._(' ? ')}}", "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", function () {
-                        ajaxCall(url = "/api/opncore/user/deleteSub/" + imsi, sendData = {}, callback = function (data, status) {
+                    "')}}" + "{{ lang._(' ? ')}}", "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", function (data, status) {
+                        $("#deleting").attr("style", "display:block");
+                        $("#deleting_progress").addClass("fa fa-spinner fa-pulse");
+                        ajaxCall(url = "/api/opncore/user/deleteSub/"  + uuid, sendData = {}, callback = function (data, status) {
+                            if (data.result === "failed"){
+                                $("#deleting").attr("style", "display:none");
+                                $("#failedDelete").attr("style", "display:block");
+
+                            } else {
+                                $("#deleting").attr("style", "display:none");
+                                 $("#successfulDelete").attr("style", "display:block");
+                            }
+                            console.log(data.result)
                             updateServiceControlUI('opncore');
                             $("#grid-user-list").bootgrid('reload');
                         });
@@ -378,9 +405,11 @@ POSSIBILITY OF SUCH DAMAGE.
                 // edit dialog id to use
                 if (editDlg !== undefined && gridParams['get'] !== undefined) {
                     let imsi = $(this).data("row-imsi");
+                    let uuid = $(this).data("row-id");
                     let urlMap = {};
 
-                    urlMap['frm_' + editDlg] = '/api/opncore/user/getSingleSub/' + imsi;   //pass the imsi of the row of interest
+                    // urlMap['frm_' + editDlg] = '/api/opncore/user/getSingleSub/' + imsi;   //pass the imsi of the row of interest
+                    urlMap['frm_' + editDlg] = gridParams['get'] + uuid;
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
                         formatTokenizersUI();
@@ -393,8 +422,9 @@ POSSIBILITY OF SUCH DAMAGE.
                     $('#' + editDlg).modal({backdrop: 'static', keyboard: false});
                     // define save action
                     $("#btn_" + editDlg + "_save").unbind('click').click(function () {
+                        $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').addClass("fa fa-spinner")
                         if (gridParams['set'] !== undefined) {
-                            saveFormToEndpoint(url = "/api/opncore/user/setSub/" + imsi, formid = 'frm_' + editDlg, callback_ok = function (data) {
+                            saveFormToEndpoint(url = "/api/opncore/user/setSub/" + uuid, formid = 'frm_' + editDlg, callback_ok = function (data) {
                                 $("#" + editDlg).modal('hide');
                                 std_bootgrid_reload(gridId);
                                 console.log(data)
@@ -445,22 +475,22 @@ POSSIBILITY OF SUCH DAMAGE.
                     stdDialogConfirm('{{ lang._("Confirm User removal") }}', '{{ lang._("Do you want to remove the selected users ? ") }}', '{{ lang._("Yes") }}', '{{ lang._("Cancel") }}', function () {
                             var rows = $("#" + gridId).bootgrid('getSelectedRows');
                             console.log(rows);
-                            // if (rows !== undefined) {
-                            //     let imsi = $(this).data("row-imsi");
-                            //     let uuid = $(this).data("row-uuid");
-                            //     var deferreds = [];
-                            //     $.each(rows, function (key, uuid) {
-                            //         deferreds.push(ajaxCall(url = '/api/opncore/user/deleteSub/' + uuid, sendData = {}, null));
-                            //     });
-                            //     // refresh after load
-                            //     $.when.apply(null, deferreds).done(function () {
-                            //         std_bootgrid_reload(gridId);
-                            //         // updateServiceControlUI('opncore');
-                            //         // grid_users.bootgrid('reload');
-                            //     });
-                            // } else {
-                            //     console.log("undefined")
-                            // }
+                            if (rows !== undefined) {
+                                let imsi = $(this).data("row-imsi");
+                                let uuid = $(this).data("row-uuid");
+                                var deferreds = [];
+                                $.each(rows, function (key, uuid) {
+                                    deferreds.push(ajaxCall(url = '/api/opncore/user/deleteSub/' + uuid, sendData = {}, null));
+                                });
+                                // refresh after load
+                                $.when.apply(null, deferreds).done(function () {
+                                    std_bootgrid_reload(gridId);
+                                    // updateServiceControlUI('opncore');
+                                    // grid_users.bootgrid('reload');
+                                });
+                            } else {
+                                console.log("undefined")
+                            }
                         }
                     )
 
