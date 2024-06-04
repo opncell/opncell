@@ -22,7 +22,7 @@ This establishes the repository holding the cellular package installer, includin
 
 ## Getting into it
 
-Once you have the repo set up on your machine, you can proceed to install the package by simply running `pkg install os-cellular-devel` <br>
+Once you have the repo set up on your machine, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
 
 In the GUI, set up the loop back addresses for each of the open5gs services.<br> 
 Add the virtual addresses under; <br>
