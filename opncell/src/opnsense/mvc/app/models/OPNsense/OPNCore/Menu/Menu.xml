@@ -1,5 +1,5 @@
 <menu>
-  <Cellular cssClass="icon-cellular" VisibleName="Cellular" order="35">
+  <Cellular cssClass="fa fa-mobile fa-lg fa-fw" VisibleName="Cellular" order="35">
       <Network cssClass="fa fa-sitemap" url="/ui/opncore/general" />
       <Users cssClass="fa fa-users fa-fw" url = "/ui/opncore/user"/>
       <FourG VisibleName="Diagnostics" cssClass="fa fa-medkit" order="55">

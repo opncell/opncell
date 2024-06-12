@@ -31,15 +31,9 @@ pfctl -d
 
 cd /usr/local/opnsense/mvc/app/tmp || exit 1
 
-cp -r fonts/. /usr/local/opnsense/www/fonts/
-cp -r css/. /usr/local/opnsense/www/css/
-cp ControllerBase.php /usr/local/opnsense/mvc/app/controllers/OPNsense/Base/
+cp mongod /usr/local/etc/rc.d/
 
 cd -
-#rm -r /usr/local/opnsense/mvc/app/tmp
-cd /usr/local/www || exit 1
-rm head.inc
-mv head_tmp.inc head.inc
 
 checkMongo(){
     if pgrep mongod; then
@@ -133,7 +127,7 @@ checkMongo(){
   echo "BSF-sbi   = 127.0.0.15:7777 for 5G SBI"
   echo "UDR-sbi   = 127.0.0.20:7777 for 5G SBI"
 
-values='epcmmed_enable="YES" epcamfd_enable="YES" epchssd_enable="YES" epcnrfd_enable="YES" epcnssfd_enable="YES" epcpcfd_enable="YES" epcbsfd_enable="YES" epcsmfd_enable="YES" epcupfd_enable="YES" epcsgwcd_enable="YES" epcsgwud_enable="YES" epcpcrfd_enable="YES" epcausfd_enable="YES" epcudmd_enable="YES" epcupfd_enable="YES" epcudrd_enable="YES" epcscpd_enable="YES"'
+values='mongod_enable="YES" epcmmed_enable="YES" epcamfd_enable="YES" epchssd_enable="YES" epcnrfd_enable="YES" epcnssfd_enable="YES" epcpcfd_enable="YES" epcbsfd_enable="YES" epcsmfd_enable="YES" epcupfd_enable="YES" epcsgwcd_enable="YES" epcsgwud_enable="YES" epcpcrfd_enable="YES" epcausfd_enable="YES" epcudmd_enable="YES" epcupfd_enable="YES" epcudrd_enable="YES" epcscpd_enable="YES"'
 
 for val in $values; do
     if ! grep -q "$val" /etc/rc.conf; then

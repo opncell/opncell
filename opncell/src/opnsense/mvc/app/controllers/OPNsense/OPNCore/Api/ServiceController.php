@@ -44,6 +44,18 @@ use Phalcon\Messages\Message;
  */
 class ServiceController extends ApiControllerBase
 {
+    private function manageService($process, $action): array
+    {
+        try {
+            $backend = new Backend();
+            $command = ($process == "mongodd" ? "mongod" : $process) . ' ' . $action;
+            $response = $backend->configdRun($command);
+            return array('response' => $response);
+        } catch (Exception $e) {
+            return array('response' => 'error', 'message' => $e->getMessage());
+        }
+    }
+
     /**
      * start services
      * @param $process
@@ -53,45 +65,66 @@ class ServiceController extends ApiControllerBase
     public function startAction($process): array
     {
         if ($this->request->isPost()) {
-            $backend = new Backend();
-            if ($process == "mongodd") {
-                $response = $backend->configdRun('mongod' . ' '. 'start');
-            } else {
-                $response = $backend->configdRun($process . ' '. 'start');
-            }
-            return array('response' => $response);
-        } else {
-            return array('response' => array());
+            return $this->manageService($process, 'start');
         }
+        return array('response' => array());
     }
     public function restartAction($process): array
     {
         if ($this->request->isPost()) {
-            $backend = new Backend();
-            if ($process == "mongodd") {
-                $backend->configdRun('mongod '. ' '. 'stop');
-                $response = $backend->configdRun('mongod' . ' '. 'start');
-            } else {
-                $backend->configdRun($process . ' '. 'stop');
-                $response = $backend->configdRun($process . ' '. 'start');
-            }
-            return array('response' => $response);
-        } else {
-            return array('response' => array());
+            $this->manageService($process, 'stop');
+            return $this->manageService($process, 'start');
         }
+        return array('response' => array());
     }
     public function stopAction($process): array
     {
         if ($this->request->isPost()) {
-            $backend = new Backend();
-            if ($process == "mongodd") {
-                $response = $backend->configdRun('mongod' . ' '. 'stop');
-            } else {
-                $response = $backend->configdRun($process . ' '. 'stop');
+            return $this->manageService($process, 'stop');
+        }
+        return array('response' => array());
+    }
+
+    private $serviceMapping = [
+        'enablefour' => [
+            "enablehssd" => "hssd", "enablemmed" => "mmed", "enablepcrfd" => "pcrfd",
+            "enablesgwud" => "sgwud", "enablesgwcd" => "sgwcd", "enablesmfd" => "smfd",
+            "enableupfd" => "upfd"
+        ],
+        'enablefiveNSA' => [
+            "enablehssd" => "hssd", "enablemmed" => "mmed", "enablepcrfd" => "pcrfd",
+            "enablesgwud" => "sgwud", "enablesgwcd" => "sgwcd", "enablesmfd" => "smfd",
+            "enableupfd" => "upfd"
+        ],
+        'enablefiveSA' => [
+            "enablenrfd" => "nrfd", "enablescpd" => "scpd", "enableamfd" => "amfd",
+            "enablesmfd" => "smfd", "enableupfd" => "upfd", "enableausfd" => "ausfd",
+            "enableudmd" => "udmd", "enableudrd" => "udrd", "enablepcfd" => "pcfd",
+            "enablenssfd" => "nssfd", "enablebsfd" => "bsfd"
+        ]
+    ];
+
+    private function manageNetworkServices($network): void
+    {
+        $services = $this->serviceMapping[$network] ?? [];
+        $allServices = [];
+        foreach ($this->serviceMapping as $networkServices) {
+            foreach ($networkServices as $daemon) {
+                $allServices[$daemon] = true;
             }
-            return array('response' => $response);
-        } else {
-            return array('response' => array());
+        }
+
+        // Stop all services that are not in the current network's services
+        foreach ($allServices as $daemon => $value) {
+            if (!in_array($daemon, $services)) {
+                $this->stopAction($daemon);
+            }
+        }
+
+        // Start the services that belong to the current network
+        foreach ($services as $daemonKey => $daemon) {
+            $this->stopAction($daemon);
+            $this->startAction($daemon);
         }
     }
 
@@ -100,118 +133,61 @@ class ServiceController extends ApiControllerBase
      */
     public function reconfigureActAction($network)
     {
-
         if ($this->request->isPost()) {
-            // close session for long running action
             $this->sessionClose();
-
-            $mdlServices = new Opncore();   // all services as nodes.(makes them easier to work /manipulate this way)
-            $backend = new Backend();
             (new GeneralController)->setNetwork($network);
-            $backend->configdRun('mongod' . ' '. 'start');
-
-            // generate template
+            $backend = new Backend();
+            $backend->configdRun('mongod start');
             $backend->configdRun('template reload OPNsense/OPNCore');
-            $services['service_lst'] = $mdlServices->getNodes();
-
-            $fourGServices =["enablehssd"=>"hssd","enablemmed"=>"mmed",
-                "enablepcrfd"=>"pcrfd","enablesgwud"=>"sgwud", "enablesgwcd"=>"sgwcd",
-                "enablesmfd"=>"smfd","enableupfd"=>"upfd"];
-
-            $fiveNSAGServices = ["enablehssd"=>"hssd","enablemmed"=>"mmed",
-                "enablepcrfd"=>"pcrfd","enablesgwud"=>"sgwud", "enablesgwcd"=>"sgwcd",
-                "enablesmfd"=>"smfd","enableupfd"=>"upfd"];
-
-            $fiveGSAServices =["enablenrfd"=>"nrfd","enablescpd"=>"scpd","enableamfd"=>"amfd","enablesmfd"=>"smfd",
-                "enableupfd"=>"upfd","enableausfd"=>"ausfd","enableudmd"=>"udmd","enableudrd"=>"udrd",
-                "enablepcfd"=>"pcfd","enablenssfd"=>"nssfd","enablebsfd"=>"bsfd"];
-
-            if ($network == "enablefour") {
-                foreach ($services['service_lst'] as $daemonKey => $value) {
-                    if (array_key_exists($daemonKey, $fourGServices)) {
-                        $daemon = str_replace("enable", "", $daemonKey);
-                        $this->stopAction($daemon);
-                        $this->startAction($daemon);
-                    } else {
-                        $daemon = str_replace("enable", "", $daemonKey);
-                        $backend->configdRun($daemon . ' '. 'stop');
-                    }
-                }
-            } elseif ($network== "enablefiveNSA") {
-                foreach ($services['service_lst'] as $daemonKey => $value) {
-                    if (array_key_exists($daemonKey, $fiveNSAGServices)) {
-                        $daemon = str_replace("enable", "", $daemonKey);
-                        $this->stopAction($daemon);
-                        $this->startAction($daemon);
-                    } else {
-                        $daemon = str_replace("enable", "", $daemonKey);
-                        $backend->configdRun($daemon . ' '. 'stop');
-                    }
-                }
-            } elseif ($network == "enablefiveSA") {
-                foreach ($services['service_lst'] as $daemonKey => $value) {
-                    if (array_key_exists($daemonKey, $fiveGSAServices)) {
-                        $daemon = str_replace("enable", "", $daemonKey);
-                        $this->stopAction($daemon);
-                        $this->startAction($daemon);
-                    } else {
-                        $daemon = str_replace("enable", "", $daemonKey);
-                        $backend->configdRun($daemon . ' '. 'stop');
-                    }
-                }
-            }
-
+            $this->manageNetworkServices($network);
         }
     }
 
-    /**
-     * @throws Exception
-     */
+    private function validateGeneral($mdlGeneral)
+    {
+        $valMsgs = $mdlGeneral->performValidation();
+        $fields = [
+            'mcc' => [3, 3, 'Should be 3 digits in the range 001-999'],
+            'mnc' => [2, 3, 'Should be either 2 or 3 digits'],
+            'tac' => [1, 2, 'Should be 1 or 2 digits']
+        ];
+
+        foreach ($fields as $field => [$min, $max, $message]) {
+            $value = $mdlGeneral->$field->__toString();
+            if (strlen($value) < $min || strlen($value) > $max) {
+                $valMsgs->appendMessage(new Message(gettext($message), $field));
+            }
+        }
+
+        return $valMsgs;
+    }
+
     public function setAction($network): array
     {
         $result = array("result" => "failed");
-        $backend = new Backend();
         if ($this->request->isPost()) {
-            // load model and update with provided data
             $mdlGeneral = new General();
-
             $mdlGeneral->setNodes($this->request->getPost("general"));
             $mdlGeneral->setNodes([$network => "1"]);
-            // perform validation
-            $valMsgs = $mdlGeneral->performValidation();
-            $mcc = $mdlGeneral->mcc->__toString();
-            $mnc = $mdlGeneral->mnc->__toString();
-            $tac = $mdlGeneral->tac->__toString();
 
+            $valMsgs = $this->validateGeneral($mdlGeneral, $network);
 
-            if (strlen($mcc) != 3) {
-                $valMsgs->appendMessage(new Message(gettext('Should be 3 digits in the range  001-999'), 'mcc'));
-            }
-            if (strlen($mnc) < 2 || strlen($mnc) > 3) {
-                $valMsgs->appendMessage(new Message(gettext('Should be either 2 or 3 digits'), 'mnc'));
-            }
-            if (strlen($tac) > 3) {
-                $valMsgs->appendMessage(new Message(gettext('Should be 2 or 1 digits'), 'tac'));
-            }
-
-            foreach ($valMsgs as $field => $msg) {
-                if (!array_key_exists("validations", $result)) {
+            foreach ($valMsgs as $msg) {
+                if (!isset($result["validations"])) {
                     $result["validations"] = array();
                 }
                 $result["validations"]["general." . $msg->getField()] = $msg->getMessage();
             }
+
             $result['general'] = $mdlGeneral->getNodes();
             $result['general']['network'] = $network;
+            $values = json_encode($result);
 
-            $values =  json_encode($result);
-
-            //serialize model to config and save
             if ($valMsgs->count() == 0) {
                 $mdlGeneral->serializeToConfig();
                 Config::getInstance()->save();
-
+                $backend = new Backend();
                 $backend->configdpRun("opncore loadConfiguration", array($values));
-
                 $result["result"] = "saved";
             }
         }

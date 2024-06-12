@@ -32,6 +32,16 @@
             <type>text</type>
         </field>
     <field>
+        <id>general.ue</id>
+        <label>ue</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>general.peer</id>
+        <label>Peer</label>
+        <type>text</type>
+    </field>
+    <field>
         <id>general.enablefour</id>
         <label>4G</label>
         <type>checkbox</type>

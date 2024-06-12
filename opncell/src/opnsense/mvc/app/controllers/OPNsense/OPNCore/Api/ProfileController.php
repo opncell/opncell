@@ -87,15 +87,15 @@ class ProfileController extends ApiMutableModelControllerBase
         $r = $this->searchBase('profiles.profile', array("apn"));
         $APNArray = explode(",", $profile);
 
+        foreach ($r['rows'] as $data) {
+            $customProfile[$data['uuid']] = array("value" => $data['apn'], "selected" => 0);
+        }
+
+// Iterate over the APNArray to set selected to 1 for matching APNs
         foreach ($APNArray as $apn) {
-            $apnFound = false;
             foreach ($r['rows'] as $data) {
                 if ($data['apn'] == $apn) {
-                    $customProfile[$data['uuid']] = array("value" => $data['apn'], "selected" => 1);
-                    $apnFound = true;
-                } elseif (!$apnFound && !isset($customProfile[$data['uuid']])) {
-                    // Only set selected to 0 if APN hasn't been found yet and it hasn't been set already
-                    $customProfile[$data['uuid']] = array("value" => $data['apn'], "selected" => 0);
+                    $customProfile[$data['uuid']]['selected'] = 1;
                 }
             }
         }
@@ -130,7 +130,7 @@ class ProfileController extends ApiMutableModelControllerBase
         $count = 0;
         foreach ($dataArray as $command_key => $command_value) {
             if ($command_value["selected"] === 1) {
-                $count+=1;
+                $count++;
                 $apn['apn'.$count] = $command_key;
             }
         }
@@ -152,30 +152,14 @@ class ProfileController extends ApiMutableModelControllerBase
         $newProfile['profileName'] = $profileName;
 
         // Filter $userProfileArray for 'profile' equal to $profileName
-
         $resultArray = array_filter($userProfileArray['rows'], function ($row) use ($profileName) {
-            $profileList = explode(",", $row['profile']);
-            foreach ($profileList as $profile) {
-                if ($profile === $profileName) {
-                    return $row['profile'] ;
-                }
-            }
+            return in_array($profileName, explode(',', $row['profile']));
         });
 
         $imsiArray = array_column($resultArray, 'imsi');
+        $newProfile['arp_capability'] = $newProfile['arp_capability'] === 'enabled' ? '1' : '2';
+        $newProfile['arp_vulnerability'] = $newProfile['arp_vulnerability'] === 'enabled' ? '1' : '2';
 
-        $cap = $newProfile['arp_capability'];
-        if ($cap == 'enabled') {
-            $newProfile["arp_capability"] = '1';
-        } else {
-            $newProfile["arp_capability"] = '2';
-        }
-        $vul = $newProfile['arp_vulnerability'];
-        if ($vul == 'enabled') {
-            $newProfile["arp_vulnerability"] = '1';
-        } else {
-            $newProfile["arp_vulnerability"] = '2';
-        }
         //cascade the changes of the profile, to the attached users.
         foreach ($imsiArray as $imsi) {
             $newProfile['imsi'] = $imsi;

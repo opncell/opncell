@@ -43,6 +43,7 @@ use OPNsense\Base\UIModelGrid;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use Phalcon\Exception;
 use Phalcon\Messages\Message;
+use ReflectionException;
 
 header("Access-Control-Allow-Origin: *");
 class GeneralController extends ApiMutableModelControllerBase
@@ -51,39 +52,25 @@ class GeneralController extends ApiMutableModelControllerBase
     protected static $internalModelName = 'opncore';
     protected static $internalModelClass = '\OPNsense\OPNCore\Opncore';
 
-    public function getModel(): General
-    {
-        return new General();
-    }
-
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function getAction(): array
     {
-        // define list of configurable settings
         $result = array();
         if ($this->request->isGet()) {
             $mdlGeneral = $this->getModel();
             $result['general'] = $mdlGeneral->getNodes();
-            $values = json_encode($result) ;
-            $g = array($values);
         }
         return $result;
     }
 
-    /**
-     * @throws \ReflectionException
-     */
     public function getUserAction(): array
     {
-        // define list of configurable settings
         $result = array();
         if ($this->request->isGet()) {
             $mdlUser = new  User();
             $result['user'] = $mdlUser->getNodes();
-            $values = json_encode($result) ;
-            $g = array($values);
         }
         return $result;
     }
@@ -118,25 +105,23 @@ class GeneralController extends ApiMutableModelControllerBase
     {
         $backend = new Backend();
         $model = new Opncore();
-
-        $response = $backend->configdRun($serviceName ." " . "status");
-        $mynode = "enable".$serviceName;
-        $node = str_replace('"', '', $mynode);
-        if (strpos($response, "not running") > 0) {
-            if ($model->$node->__toString() == 1) {
-                $status = "stopped";
-            } else {
+        try {
+            $response = $backend->configdRun($serviceName ." " . "status");
+            $mynode = "enable".$serviceName;
+            $node = str_replace('"', '', $mynode);
+            if (strpos($response, "not running") > 0) {
+                $status = ($model->$node->__toString() == 1) ? "stopped" : "disabled";
+            } elseif (strpos($response, "is running") > 0) {
+                $status = "running";
+            } elseif ($model->enablemmed->__toString() == 0) {
                 $status = "disabled";
+            } else {
+                $status = "unknown";
             }
-        } elseif (strpos($response, "is running") > 0) {
-            $status = "running";
-        } elseif ($model->enablemmed->__toString() == 0) {
-            $status = "disabled";
-        } else {
-            $status = "unknown";
+            return  $status ;
+        } catch (Exception $e) {
+            return "error: " . $e->getMessage();
         }
-
-        return  $status ;
     }
 
     public function editServerConfigAction($params)
@@ -154,144 +139,132 @@ class GeneralController extends ApiMutableModelControllerBase
         $backend->configdRun($net['server'] . ' '. 'start');
     }
 
-    public function reconfigureService()
-    {
-    }
-    public function getProcessNamesAction($network)
-    {
-        $descriptions = array(
-            'mme' => gettext('Mobility Management Entity '),
-            'hss' => gettext('Home Subscriber System '),
-            'pcrf' => gettext('Policy and Charging Rules Function'),
-            'sgwu' => gettext('Serving Gateway User Plane'),
-            'ausf' => gettext('Authentication Server Function'),
-            'amf' => gettext('Access and Mobility Function'),
-            'udm' => gettext('Unified Data Management'),
-            'smf' => gettext('Session Management Function'),
-            'pcf' => gettext('Policy and Charging Function'),
-            'nssf' => gettext('Network Slice Selection Function'),
-            'sgwc' => gettext('Serving Gateway Control Plane'),
-            'upf' => gettext('User Plane Function'),
-            'nrf' => gettext('Network Repository Function'),
-            'scp' => gettext('Service Communication Proxy'),
-            'bsf' => gettext('Binding Support Function'),
-            'mongod' => gettext('Mongo DB'),
-            'udr' => gettext('Unified Data Repository'),
-        );
-        $bindAddress = array(
-            'hssd' => gettext('127.0.0.8'),
-            'mongod' => gettext('127.0.0.1'),
-            'sgwcd' => gettext('127.0.0.3'),
-            'pcrfd' => gettext('127.0.0.9'),
-        );
+    private array $processDescriptions = [
+        'mme' => 'Mobility Management Entity ',
+        'hss' => 'Home Subscriber System ',
+        'pcrf' => 'Policy and Charging Rules Function',
+        'sgwu' => 'Serving Gateway User Plane',
+        'ausf' => 'Authentication Server Function',
+        'amf' => 'Access and Mobility Function',
+        'udm' => 'Unified Data Management',
+        'smf' => 'Session Management Function',
+        'pcf' => 'Policy and Charging Function',
+        'nssf' => 'Network Slice Selection Function',
+        'sgwc' => 'Serving Gateway Control Plane',
+        'upf' => 'User Plane Function',
+        'nrf' => 'Network Repository Function',
+        'scp' => 'Service Communication Proxy',
+        'bsf' => 'Binding Support Function',
+        'mongod' => 'Mongo DB',
+        'udr' => 'Unified Data Repository',
+    ];
 
+    private array $bindAddress = [
+        'hssd' => '127.0.0.8',
+        'mongod' => '127.0.0.1',
+        'sgwcd' => '127.0.0.3',
+        'pcrfd' => '127.0.0.9',
+    ];
+
+    public function getProcessNamesAction($network): array
+    {
         $result = array();
         $backend = new Backend();
         $net['network'] = $network;
-        $bindAddrToNotChange = ['sgwcd','mongod','pcrfd','hssd'];
-        $val = json_encode($net);
-        $response = $backend->configdpRun("opncore processNames", array($val));
-
+        $values = json_encode($net);
+        $response = $backend->configdpRun("opncore processNames", array($values));
         $data = json_decode((string)$response, true);
 
         if ($data != null) {
             foreach ($data as $index => $process) {
-                $item = array();
-                $item['uuid']=$index;
-                $serviceName =  $process['Name']."d";
-                $item['status'] = $this->statusAction($serviceName);
-                #This is what we pass to the start function, From the table UI
-                $item['serviceName'] = $serviceName;
-                $item['name'] = $descriptions[$process['Name']] . " - " . "(" .$process['Name'] .")";
-                $item['PID'] = $process['PID'];
-                if (in_array($item['serviceName'], $bindAddrToNotChange)) {
-                    $item['mme_add'] = $bindAddress[$item['serviceName']];
-                } else {
-                    //TODO Better way of doing this??
-                    foreach ($process['config'] as $configKey => $configValue) {
-                        // Check for specific substrings
-                        if (strpos($configKey, '.metrics') !== false) {
-                            $metrics = $configValue[0];
-                            $item['metrics_addr'] = $metrics['addr'];
-                            $item['metrics_port'] = $metrics['port'];
-                        } elseif (strpos($configKey, 'mongod.bind') !== false) {
-                            $mme = $configValue[0];
-                            $item['mme_add'] = $mme['address'];
-                        } elseif (strpos($configKey, 'freeDiameter') !== false) {
-                            $item['freeDiameter'] = $configValue;
-                        } elseif (strpos($configKey, 's1ap.server') !== false) {
-                            $mme = $configValue[0];
-                            $item['mme_add'] = $mme['address'];
-                        } elseif (strpos($configKey, 'sbi.server') !== false) {
-                            $mme = $configValue[0];
-                            $item['mme_add'] = $mme['address'];
-                        } elseif (strpos($configKey, 'gtpu.server') !== false) {
-                            $mme = $configValue[0];
-                            $item['mme_add'] = $mme['address'];
-                        } elseif (strpos($configKey, 'ngap.server') !== false) {
-                            $mme = $configValue[0];
-                            $item['mme_add'] = $mme['address'];
-                        } elseif (strpos($configKey, 'tai') !== false) {
-                            $tac = $configValue[0];
-                            $item['tac'] = $tac['tac'];
-                        } elseif (strpos($configKey, 'nsi') !== false) {
-                            $nsi = $configValue[0];
-                            $item['sst'] =  $nsi['s_nssai']['sst'];
-                        }
-                    }
-                }
-
-
+                $item = $this->formatProcessData($index, $process);
                 $result[] = $item;
             }
         }
+
         return $result;
     }
 
-    /**
-     * @throws \Exception
-     */
+    private function formatProcessData($index, $process): array
+    {
+        $item = [];
+        $item['uuid'] = $index;
+        $serviceName = $process['Name'] . "d";
+        $item['status'] = $this->statusAction($serviceName);
+        $item['serviceName'] = $serviceName;
+        $item['name'] = $this->processDescriptions[$process['Name']] . " - (" . $process['Name'] . ")";
+        $item['PID'] = $process['PID'];
+
+        if (isset($this->bindAddress[$serviceName])) {
+            $item['mme_add'] = $this->bindAddress[$serviceName];
+        } else {
+            foreach ($process['config'] as $configKey => $configValue) {
+                $this->extractProcessConfig($item, $configKey, $configValue);
+            }
+        }
+
+        return $item;
+    }
+    private function extractProcessConfig(&$item, $configKey, $configValue)
+    {
+        if (strpos($configKey, '.metrics') !== false) {
+            $metrics = $configValue[0];
+            $item['metrics_addr'] = $metrics['addr'];
+            $item['metrics_port'] = $metrics['port'];
+        } elseif (strpos($configKey, 's1ap.server') !== false ||
+            strpos($configKey, 'sbi.server') !== false ||
+            strpos($configKey, 'gtpu.server') !== false ||
+            strpos($configKey, 'ngap.server') !== false) {
+            $mme = $configValue[0];
+            $item['mme_add'] = $mme['address'];
+        } elseif (strpos($configKey, 'tai') !== false) {
+            $tac = $configValue[0];
+            $item['tac'] = $tac['tac'];
+        } elseif (strpos($configKey, 'nsi') !== false) {
+            $nsi = $configValue[0];
+            $item['sst'] = $nsi['s_nssai']['sst'];
+        }
+    }
+
     public function startedServicesAction($network): array
     {
         $this->sessionClose();
         $result = $this->getProcessNamesAction($network);
-        // fetch query parameters (limit results to prevent out of memory issues)
+
         $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
         $currentPage = $this->request->getPost('current', 'int', 1);
         $offset = ($currentPage - 1) * $itemsPerPage;
+        $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
 
-        $entry_keys = array_keys($result);
-        if ($this->request->hasPost('searchPhrase') && $this->request->getPost('searchPhrase') !== '') {
-            $searchPhrase = $this->request->getPost('searchPhrase');
-            $entry_keys = array_filter($entry_keys, function ($key) use ($searchPhrase, $result) {
-                foreach ($result[$key] as $itemval) {
-                    if (strpos($itemval, $searchPhrase) !== false) {
-                        return true;
-                    }
-                }
-                return false;
-            });
-        }
-        $formatted = array_map(function ($value) use (&$result) {
-            $item = ['#' => $value];
-            foreach ($result[$value] as $ekey => $evalue) {
-                $item[$ekey] = $evalue;
-            }
-            return $item;
-        }, array_slice($entry_keys, $offset, $itemsPerPage));
-
+        $filteredResult = $this->filterResults($result, $searchPhrase);
+        $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
 
         return [
-            'total' => count($entry_keys),
+            'total' => count($filteredResult),
             'rowCount' => $itemsPerPage,
             'current' => $currentPage,
-            'rows' => $formatted,
+            'rows' => $paginatedResult,
         ];
+    }
 
+    private function filterResults(array $results, string $searchPhrase): array
+    {
+        if ($searchPhrase === '') {
+            return $results;
+        }
+
+        return array_filter($results, function ($item) use ($searchPhrase) {
+            foreach ($item as $value) {
+                if (strpos($value, $searchPhrase) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function getStartedServicesAction($uuid = null): array
     {
@@ -299,7 +272,7 @@ class GeneralController extends ApiMutableModelControllerBase
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      * @throws UserException
      */
     public function setStartedServicesAction($uuid): array

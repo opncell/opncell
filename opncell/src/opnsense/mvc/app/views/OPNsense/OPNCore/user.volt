@@ -378,7 +378,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     "')}}" + "{{ lang._(' ? ')}}", "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", function (data, status) {
                         $("#deleting").attr("style", "display:block");
                         $("#deleting_progress").addClass("fa fa-spinner fa-pulse");
-                        ajaxCall(url = "/api/opncore/user/deleteSub/"  + uuid, sendData = {}, callback = function (data, status) {
+                        ajaxCall(url = "/api/opncore/user/deleteSubFromDB/"  + imsi, sendData = {}, callback = function (data, status) {
                             if (data.result === "failed"){
                                 $("#deleting").attr("style", "display:none");
                                 $("#failedDelete").attr("style", "display:block");
@@ -390,6 +390,8 @@ POSSIBILITY OF SUCH DAMAGE.
                             console.log(data.result)
                             updateServiceControlUI('opncore');
                             $("#grid-user-list").bootgrid('reload');
+                            $("#successfulDelete").attr("style", "display:none");
+                            $("#failedDelete").attr("style", "display:none");
                         });
                     }
                 )
@@ -408,8 +410,8 @@ POSSIBILITY OF SUCH DAMAGE.
                     let uuid = $(this).data("row-id");
                     let urlMap = {};
 
-                    // urlMap['frm_' + editDlg] = '/api/opncore/user/getSingleSub/' + imsi;   //pass the imsi of the row of interest
-                    urlMap['frm_' + editDlg] = gridParams['get'] + uuid;
+                    urlMap['frm_' + editDlg] = '/api/opncore/user/getSingleSub/' + imsi;   //pass the imsi of the row of interest
+                    // urlMap['frm_' + editDlg] = gridParams['get'] + uuid;
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
                         formatTokenizersUI();
@@ -424,11 +426,11 @@ POSSIBILITY OF SUCH DAMAGE.
                     $("#btn_" + editDlg + "_save").unbind('click').click(function () {
                         $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').addClass("fa fa-spinner")
                         if (gridParams['set'] !== undefined) {
-                            saveFormToEndpoint(url = "/api/opncore/user/setSub/" + uuid, formid = 'frm_' + editDlg, callback_ok = function (data) {
+                            saveFormToEndpoint(url = "/api/opncore/user/setSub/" + imsi, formid = 'frm_' + editDlg, callback_ok = function (data) {
                                 $("#" + editDlg).modal('hide');
                                 std_bootgrid_reload(gridId);
                                 console.log(data)
-
+                                $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').removeClass("fa fa-spinner")
                                 // $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
                                 ajaxCall(url = "/api/opncore/user/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
                                     updateServiceControlUI('opncore');

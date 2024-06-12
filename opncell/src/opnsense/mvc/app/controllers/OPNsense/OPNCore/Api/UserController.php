@@ -36,29 +36,31 @@ namespace OPNsense\OPNCore\Api;
 
 use Exception;
 use OPNsense\Base\ApiMutableModelControllerBase;
+use OPNsense\OPNCore\Api\FileUploadService;
 use OPNsense\Base\UserException;
+use OPNsense\OPNCore\Api\UserRepository;
 use OPNsense\Core\Config;
 use OPNsense\Core\Backend;
-use OPNsense\OPNCore\User;
 use OPNsense\Phalcon\Filter\Filter;
 use ReflectionException;
 
 header("Access-Control-Allow-Origin: *");
+
+
 class UserController extends ApiMutableModelControllerBase
 {
 
     protected static $internalModelClass = '\OPNsense\OPNCore\User';
     protected static $internalModelName = 'user';
 
+
     public function multipartValues($value, $key): array
     {
         $apn = [];
         $jsonString = json_encode($value);
         $dataArray = json_decode($jsonString, true);
-        $count = 0;
         foreach ($dataArray as $command_key => $command_value) {
             if ($command_value["selected"] === 1) {
-                $count+=1;
                 $apn[$key] = $command_key;
             }
         }
@@ -68,14 +70,10 @@ class UserController extends ApiMutableModelControllerBase
     public function multipart($value): array
     {
         $selected_apn = [];
-        $selectedString = " ";
         $jsonString = json_encode($value);
         $dataArray = json_decode($jsonString, true);
-        $count = 0;
         foreach ($dataArray as $command_key => $command_value) {
             if ($command_value["selected"] === 1) {
-//                $selectedString = $command_key;
-                $count+=1;
                 $selected_apn[] = $command_key;
             }
         }
@@ -101,56 +99,54 @@ class UserController extends ApiMutableModelControllerBase
      * @throws ReflectionException
      */
 
+    public function searchSubAction(): array
+    {
+        $backend = new Backend();
+        $userRepository = new UserRepository($backend);
+        $data = $userRepository->getUsers();
+        $details = [];
+        if ($data != null) {
+            foreach ($data as $index => $process) {
+                $item = array();
+                $item['uuid']=$index;
+                $item['imsi'] = $process['imsi'];
+                $item['profile'] = $process['apn'];
+                $details[] = $item;
+            }
+        }
 
-//    public function searchSubAction(): array
-//    {
-//        $backend = new Backend();
-//        // fetch query parameters (limit results to prevent out of memory issues)
-//        $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
-//        $currentPage = $this->request->getPost('current', 'int', 1);
-//        $offset = ($currentPage - 1) * $itemsPerPage;
-//
-//        $response = $backend->configdpRun("opncore showUsers");
-//
-//        $data = json_decode((string)$response, true);
-//        $details = [];
-//        if ($data != null) {
-//            foreach ($data as $index => $process) {
-//                $item = array();
-//                $item['uuid']=$index;
-//                $item['imsi'] = $process['imsi'];
-//                $item['profile'] = $process['apn'];
-//                $details[] = $item;
-//            }
-//        }
-//        $entry_keys = array_keys($details);
-//        if ($this->request->hasPost('searchPhrase') && $this->request->getPost('searchPhrase') !== '') {
-//            $searchPhrase = $this->request->getPost('searchPhrase');
-//            $entry_keys = array_filter($entry_keys, function ($key) use ($searchPhrase, $details) {
-//                foreach ($details[$key] as $itemval) {
-//                    if (strpos($itemval, $searchPhrase) !== false) {
-//                        return true;
-//                    }
-//                }
-//                return false;
-//            });
-//        }
-//        $formatted = array_map(function ($value) use (&$details) {
-//            $item = ['#' => $value];
-//            foreach ($details[$value] as $ekey => $evalue) {
-//                $item[$ekey] = $evalue;
-//            }
-//            return $item;
-//        }, array_slice($entry_keys, $offset, $itemsPerPage));
-//
-//
-//        return [
-//            'total' => count($entry_keys),
-//            'rowCount' => $itemsPerPage,
-//            'current' => $currentPage,
-//            'rows' => $formatted,
-//        ];
-//    }
+        // fetch query parameters (limit results to prevent out of memory issues)
+        $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
+        $currentPage = $this->request->getPost('current', 'int', 1);
+        $offset = ($currentPage - 1) * $itemsPerPage;
+        $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
+
+        $filteredResult = $this->filterResults($details, $searchPhrase);
+        $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
+
+        return [
+            'total' => count($filteredResult),
+            'rowCount' => $itemsPerPage,
+            'current' => $currentPage,
+            'rows' => $paginatedResult,
+        ];
+    }
+
+    private function filterResults(array $results, string $searchPhrase): array
+    {
+        if ($searchPhrase === '') {
+            return $results;
+        }
+
+        return array_filter($results, function ($item) use ($searchPhrase) {
+            foreach ($item as $value) {
+                if (strpos($value, $searchPhrase) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
 
 
     //Get the correlation between users and profiles.
@@ -161,12 +157,10 @@ class UserController extends ApiMutableModelControllerBase
     public function profileAndUsersListAction(): array
     {
         $result = [];
-//        $user = $this->searchBase('users.user', array("imsi", "profile")); // users' list having only imsi and profile
         $user = $this->searchSubAction();
         if (count($user) > 0) {
             $profiles = array_column($user['rows'], 'profile');
             $initialProfileCount = [];
-
             #Cater for situations where one imsi has multiple profiles attached.
             foreach ($profiles as $profile) {
                 $split_elements = explode(",", $profile);
@@ -214,42 +208,34 @@ class UserController extends ApiMutableModelControllerBase
      */
     public function deleteSubAction($uuid)
     {
-        $verdict = [];
+
         $user = $this->getBase('user', 'users.user', $uuid);
         $imsi = $user['user']['imsi'];
         $backend = new Backend();
-        $net['imsi'] = $imsi;
-        $values = json_encode($net);
-        $db_result = $backend->configdpRun("opncore deleteUser", array($values));  //remove user from db
-        $data = json_decode((string)$db_result, true);
-        if ($data == "deleted") {
+        $userRepository = new UserRepository($backend);
+         //remove user from db
+        $db_result = $userRepository->deleteUser($imsi);
+        if ($db_result == "deleted") {
             return $this->delBase('users.user', $uuid);
-        } else {
-            return array("result"=>"failed");
-
         }
     }
     public function deleteSubFromDBAction($imsi)
     {
-        $verdict = [];
         $backend = new Backend();
-        $net['imsi'] = $imsi;
-        $values = json_encode($net);
-        $db_result = $backend->configdpRun("opncore deleteUser", array($values));  //remove user from db
-        $data = json_decode((string)$db_result, true);
-        if ($data == "deleted") {
+        $userRepository = new UserRepository($backend);
+        $db_result = $userRepository->deleteUser($imsi);
+        if ($db_result == "deleted") {
             return array("result"=>"success");
         } else {
             return array("result"=>"failed");
-
         }
     }
 
-    public function searchSubAction(): array
-    {
-        $profile_array = $this->searchBase('users.user', array("imsi","profile"));
-        return $profile_array;
-    }
+//    public function searchSubAction(): array
+//    {
+//        $profile_array = $this->searchBase('users.user', array("imsi","profile"));
+//        return $profile_array;
+//    }
     /**
      * @throws ReflectionException
      * @throws UserException
@@ -257,11 +243,9 @@ class UserController extends ApiMutableModelControllerBase
     public function getSingleSubAction($imsi): array
     {
         $backend = new Backend();
-        $net['imsi'] = $imsi;
-        $values = json_encode($net);
         $profileClass = new ProfileController();
-        $response = $backend->configdpRun("opncore getUser", array($values));
-        $data =  json_decode((string)$response, true);
+        $userRepository = new UserRepository($backend);
+        $data = $userRepository->getUser($imsi);
         $item = array();
         if ($data != null) {
             foreach ($data as $process) {
@@ -277,22 +261,16 @@ class UserController extends ApiMutableModelControllerBase
 
     /**
      * @throws ReflectionException
-     * @throws UserException
      * @throws Exception
      */
-    public function setSubAction($uuid): array
+    public function setSubAction($imsi): array
     {
-        $this->setBase('user', 'users.user', $uuid);
         $backend = new Backend();
-        $result = ["result" => "failed"];
         $userDetails = [];
-        $user = $this->getSubAction($uuid);
-        $imsi = $user['user']['imsi'];
-        $imsi_string["imsi"] = $imsi;
-        $val = json_encode($imsi_string);
         $updatedUserDetails = $this->request->getPost('user');
-        $response = $backend->configdpRun("opncore getUser", array($val));
-        $data =  json_decode((string)$response, true);
+
+        $userRepository = new UserRepository($backend);
+        $data = $userRepository->getUser($imsi);
         if ($data != null) {
             foreach ($data as $process) {
                 $userDetails['imsi'] = $process['imsi'];
@@ -304,10 +282,10 @@ class UserController extends ApiMutableModelControllerBase
         $profileIDS = $updatedUserDetails['profile'];
         $userClass = new UserController();
         $profileClass = new ProfileController();
+        $userRepository = new UserRepository($backend);
         $profileList = explode(",", $profileIDS);
         $numberOfProfiles = count($profileList);
         $sub_user['count'] = $numberOfProfiles;
-        $sub_result = "";
         if ($profileIDS != "") {
             $this->deleteSubFromDBAction($imsi);
             foreach ($profileList as $profileID) {
@@ -322,82 +300,16 @@ class UserController extends ApiMutableModelControllerBase
                 $userDetails = $userClass->getUserDetails($profile['profile'], $userDetails);
                 $sub_user[$index] = $userDetails;
             }
-            $val = json_encode($sub_user);
-            $sub_result= $backend->configdpRun("opncore saveUsers", array($val));
+
+            $data = $userRepository->saveUser($sub_user);
         }
-        $data = json_decode((string)$sub_result, true);
         if ($data != "Success") {
             return array("result"=>"Failed");
         } else {
-            return $this->setBase('user', 'users.user', $uuid);
+            return array("result"=>"success");
         }
-    }
-
-    public function headersToLowerCase($headers)
-    {
-        $i=0;
-        foreach ($headers as $item) {
-            $headers[$i] = strtolower($item);
-            $i++;
-        }
-        return $headers;
-    }
-    public function processInpOutFiles($handle): array
-    {
-        $foundStart = false;
-        $headers = array();
-        $isOutFile = false;
-        $contentLines = array();
-
-        $counter = 0;
-        while (($line = fgets($handle)) !== false) {
-            if (empty(trim($line))) { // ignore empty lines
-                continue;
-            }
-            $counter +=1;
-            // Check if the line starts with "var_out:"
-            if (strpos($line, "var_out:") === 0) {
-                $foundStart = true;
-                if ($counter === 1) { // if var_out: is on the very first line it is an outfile
-                    $isOutFile = true;
-                }
-                $line = str_replace("var_out:", "", $line);
-                $headers = explode("/", trim($line));
-                $headers = $this->headersToLowerCase($headers);
-            }
-            if ($foundStart) {
-                // Split the line by tabs or multiple spaces if inp file and by comma if outfile
-                if ($isOutFile) {
-                    $record = explode(",", trim($line));
-                } else {
-                    $record = preg_split('/\t+|\s{2,}/', trim($line));
-                }
-                // Check if the number of elements in $headers matches the number of elements
-                // in $record (for empty rows)
-                if (count($headers) == count($record)) {
-                    // Map the values to keys from headers array
-                    $mappedRecord = array_combine($headers, $record);
-                    $contentLines[] = $mappedRecord;
-                }
-            }
-        }
-        return $contentLines;
-    }
-
-    public function processCSVFile($handle): array
-    {
-        $headers = fgetcsv($handle);
-        $headers = $this->headersToLowerCase($headers);
-        $data = array();
-        while (($row = fgetcsv($handle)) !== false) {
-            $row = array_combine($headers, $row);
-            $data[] = $row;
-            while (($row = fgetcsv($handle)) !== false) {
-                $row = array_combine($headers, $row);
-                $data[] = $row;
-            }
-        }
-        return $data;
+//            return $this->setBase('user', 'users.user', $uuid);
+//        }
     }
 
     # bulk insertion of users
@@ -405,26 +317,13 @@ class UserController extends ApiMutableModelControllerBase
     public function uploadAction():array
     {
         global $outputKeyValue;
+        $fileUploadService = new FileUploadService();
         $result = ["result" => "failed"];
         if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["file"])) {
             $file = $_FILES["file"];
-            $isCsvFile = $file["type"] === "text/csv";
 
             if ($file["error"] === UPLOAD_ERR_OK) {
-                $fileTmpPath = $file["tmp_name"];
-                $fileName = $file["name"];
-
-                $handle = fopen($fileTmpPath, "r");
-                if ($handle !== false) {
-                    if ($isCsvFile) {
-                         $outputKeyValue = $this->processCSVFile($handle);
-                    } else {
-                        $outputKeyValue = $this->processInpOutFiles($handle);
-                    }
-                    fclose($handle);
-                    session_start();
-                    $_SESSION['fileValues'] = $outputKeyValue;
-                }
+                $outputKeyValue = $fileUploadService->processFile($file);
             } else {
                 echo "Error: Failed to upload file.";
             }
@@ -444,7 +343,7 @@ class UserController extends ApiMutableModelControllerBase
     {
         $userDetails = array();
         $backend = new Backend();
-
+        $userRepository = new UserRepository($backend);
         $userUUID = $this->addBase('user', 'users.user');
         if ($userUUID['result'] == 'saved') {
             $uuid = $userUUID['uuid'];
@@ -477,11 +376,7 @@ class UserController extends ApiMutableModelControllerBase
                     $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
                     $sub[$index] = $userDetails;
                 }
-                $val = json_encode($sub);
-
-                $sub_result = $backend->configdpRun("opncore saveUsers", array($val));
-                $data = json_decode((string)$sub_result, true);
-
+                $data = $userRepository->saveUser($sub);
                 if ($data != "Success") {
                     $this->delBase('users.user', $uuid);
                     return array("result"=>"failed");

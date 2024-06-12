@@ -96,6 +96,8 @@ POSSIBILITY OF SUCH DAMAGE.
             $('tr[id="row_general.tac"]').addClass('hidden');
             $('tr[id="row_general.networkname"]').addClass('hidden');
             $('tr[id="row_general.sst"]').addClass('hidden');
+            $('tr[id="row_general.ue"]').addClass('hidden');
+            $('tr[id="row_general.peer"]').addClass('hidden');
             $('tr[id="row_general.dns"]').addClass('hidden');
             $('tr[id="row_general.ca"]').addClass('hidden');
             $('tr[id="row_general.enablefour"]').addClass('hidden');
@@ -111,6 +113,8 @@ POSSIBILITY OF SUCH DAMAGE.
             $('tr[id="row_general.tac"]').removeClass('hidden');
             $('tr[id="row_general.networkname"]').removeClass('hidden');
             $('tr[id="row_general.sst"]').removeClass('hidden');
+            $('tr[id="row_general.ue"]').removeClass('hidden');
+            $('tr[id="row_general.peer"]').removeClass('hidden');
             $('tr[id="row_general.dns"]').removeClass('hidden');
             $('tr[id="row_general.ca"]').removeClass('hidden');
             $("#saveAct_configs").attr("style", "display:block");
@@ -428,11 +432,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                        data-label="enablefiveNSA"/> {{
                                 lang._('5G NSA') }}
                             </label>
-                            <label id="enableupf" class="btn btn-default">
-                                <input type="radio" id="upf" name="network" value="enableupf"
-                                       data-label="enableupf"/> {{
-                                lang._('UPF') }}
-                            </label>
+
                         </div>
                     </form>
                     {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_general_settings'])}}

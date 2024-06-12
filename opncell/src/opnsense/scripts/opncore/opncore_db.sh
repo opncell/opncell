@@ -589,12 +589,17 @@ if [ "$1" = "remove" ]; then
     output=$(mongo --quiet --eval "db.subscribers.deleteOne({\"imsi\": \"$IMSI\"});" $DB_URI 2>/dev/null)
     json_output=$(echo "$output" | awk '/{/,/}/')
     deleted_count=$(echo "$json_output" | awk -F '[:,]' '{for(i=1;i<=NF;i++) if($i ~ /"deletedCount"/) print $(i+1)}')
+    #deleted_count=$(echo "$deleted_count" | tr -d '\n\r')
     deleted_count=$(echo "$deleted_count" | awk '{$1=$1};1')
     deleted_count=$(echo "$deleted_count" | cut -d' ' -f1)
    
     deleted_count=$(echo "$deleted_count" | sed 's/0}$//')
-
-    echo "$deleted_count"
+    #if [ -n "$deleted_count" ] && [ "$deleted_count" -gt 0 ]; then
+     #   echo "Document with IMSI $IMSI has been deleted."
+    #else
+     #   echo "No document with IMSI $IMSI found or deleted."
+    #fi
+    echo $deleted_count
     exit $?
 fi
 

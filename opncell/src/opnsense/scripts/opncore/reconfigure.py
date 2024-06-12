@@ -34,8 +34,15 @@ if len(sys.argv) > 1:
                 new_mnc = value
             if key == 's1ap':
                 new_addr = value
+            if key == 'ue':
+                ue = value
+            if key == 'peer':
+                peer = value
             if key == 'network':
                 network = value
+            if key == 'network_name':
+                network_name = value
+
 
 
     def running_processes():
@@ -83,17 +90,33 @@ if len(sys.argv) > 1:
             # the whole file
             if process_name == 'sgwu':
                 yaml_data['sgwu']['gtpu']['server'][0]['address'] = new_addr.strip("'")
+                yaml_data['global']['max']['ue'] = ue
+                yaml_data['global']['max']['peer'] = peer
+                yaml_data['logger']['file']['level'] = "debug"
 
-            if process_name == 'sgwc':
-                yaml_data['sgwc']['gtpc']['server'][0]['address'] = new_addr.strip("'")
+            # if process_name == 'sgwc':
+            #     yaml_data['sgwc']['gtpc']['server'][0]['address'] = new_addr.strip("'")
+
+            if process_name == 'nrf':
+                yaml_data['nrf']['serving'][0]['plmn_id']['mcc'] = new_mcc
+                yaml_data['nrf']['serving'][0]['plmn_id']['mnc'] = new_mnc
+                yaml_data['global']['max']['ue'] = ue
+                yaml_data['global']['max']['peer'] = peer
+                yaml_data['logger']['file']['level'] = "debug"
 
             if process_name == 'amf':
-                yaml_data['amf']['ngap']['server'][0]['addr'] = new_addr.strip("'")
+                yaml_data['amf']['ngap']['server'][0]['address'] = new_addr.strip("'")
                 yaml_data['amf']['guami'][0]['plmn_id']['mcc'] = new_mcc
                 yaml_data['amf']['guami'][0]['plmn_id']['mnc'] = new_mnc
                 yaml_data['amf']['tai'][0]['plmn_id']['mcc'] = new_mcc
                 yaml_data['amf']['tai'][0]['plmn_id']['mnc'] = new_mnc
+                yaml_data['amf']['plmn_support'][0]['plmn_id']['mcc'] = new_mcc
+                yaml_data['amf']['plmn_support'][0]['plmn_id']['mnc'] = new_mnc
                 yaml_data['amf']['tai'][0]['tac'] = int(new_tac)
+                yaml_data['amf']['network_name']['full'] = network_name
+                yaml_data['logger']['file']['level'] = "debug"
+                yaml_data['global']['max']['ue'] = ue
+                yaml_data['global']['max']['peer'] = peer
 
             if process_name == 'mme':
                 yaml_data['mme']['tai'][0]['tac'] = int(new_tac)
@@ -102,6 +125,10 @@ if len(sys.argv) > 1:
                 yaml_data['mme']['gummei'][0]['plmn_id']['mnc'] = new_mnc
                 yaml_data['mme']['tai'][0]['plmn_id']['mcc'] = new_mcc
                 yaml_data['mme']['tai'][0]['plmn_id']['mnc'] =  new_mnc
+                yaml_data['mme']['network_name']['full'] = network_name
+                yaml_data['logger']['file']['level'] = "debug"
+                yaml_data['global']['max']['ue'] = ue
+                yaml_data['global']['max']['peer'] = peer
 
             if pid != 0:
                 kill_command = "kill -9 " + pid
