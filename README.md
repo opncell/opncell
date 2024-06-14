@@ -1,6 +1,6 @@
 ## What is OPNcell
-  OPNCcell is an out-of-box [OPNsense](https://opnsense.org/) plugin that adds Private 5G & LTE network capability.
-  The plugin adds 5G/LTE services to OPNSense using the Open Source [Open5Gs](https://open5gs.org/open5gs/docs/) software. By
+  OPNcell is an out-of-box [OPNsense](https://opnsense.org/) plugin that adds Private 5G & LTE network capability.
+  The plugin adds 5G/LTE services to OPNsense using the Open Source [Open5Gs](https://open5gs.org/open5gs/docs/) software. By
   combining advanced packet filtering &amp; management with 4G/5G capability, OPNcell offers a low-cost complete solution for private LTE deployments.
 
 ## What is Open5Gs
