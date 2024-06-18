@@ -91,7 +91,7 @@ Add the rule under; <br>
 
 'Firewall > Rules > Floating'
 
-<img width="852" alt="loopback addresses" src="https://github.com/opncell/opncell/assets/170442159/c941bc65-91df-49f0-8e76-f73c22523605">
+<img width="1680" alt="floating_rule" src="https://github.com/opncell/opncell/assets/170442159/bebc03e3-e7c5-436d-9c23-0e8d6e571b73">
 
 ## OPNcell functionality.
 ## Register Subscriber Information.
@@ -99,7 +99,7 @@ Add the rule under; <br>
 To add subscriber information, first you need to create a profile.A profile consists of APN, QoS values as well as AMBR-speed details. <br>
 When a profile is linked to an IMSI during subscriber addition, the profile details are automatically associated with that IMSI and saved in the database.<br>
 
-<img width="852" alt="loopback addresses" src="https://github.com/opncell/opncell/assets/170442159/c941bc65-91df-49f0-8e76-f73c22523605">
+<img width="902" alt="add_profile" src="https://github.com/opncell/opncell/assets/170442159/b04f61ab-c004-4b10-943d-11ecd1442b7d">
 
 When a profile is linked to an IMSI during subscriber addition, the profile details are automatically associated with that IMSI and saved in the database. <br>
 
@@ -110,13 +110,15 @@ Therefore, to add subscriber information, you can do that in the following order
 4. Navigate to Subscriber List tab
 5. Click + Button to add a new Subscriber
 6. Fill the IMSI, security context(K, OPc), and attach a profile to that subscriber.
-7. Click SAVE Button.
+7. Click SAVE Button
+utton.
 
 ## Bulk insertion
 
 OPNcell offers the option of adding multiple user at a go through the bulk insertion functionality. Both .csv and .inc file formats are accepted. It should follow the below template.<br>
 
-<img width="852" alt="loopback addresses" src="https://github.com/opncell/opncell/assets/170442159/c941bc65-91df-49f0-8e76-f73c22523605">
+<img width="1329" alt="template" src="https://github.com/opncell/opncell/assets/170442159/2f6a1b00-db09-45c6-9bb5-3287cc3a4147">
+
 
 1. To add multiple subscribers at a go, you can do that in the following order: <br>
 2. Go to Users Menu.
