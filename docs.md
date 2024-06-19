@@ -54,7 +54,7 @@ The MME is the main **control plane** hub of the core. It primarily manages sess
 
 It links to the HSS, which generates SIM authentication vectors and holds the subscriber profile and to the SGWC and PGWC/SMF, which are the control planes of the gateway servers.
 
-All the [eNB]() in the mobile network (4G base stations) connect to the MME. The final element of the control plane is the PCRF, which sits in-between the PGWC/SMF and the HSS, and handles charging and enforces subscriber policies.
+All the eNB in the mobile network (4G base stations) connect to the MME. The final element of the control plane is the PCRF, which sits in-between the PGWC/SMF and the HSS, and handles charging and enforces subscriber policies.
 
 The **user plane** carries user data packets between the eNB/gNB (5G NSA base stations) and the external WAN. The two user plane core components are the SGWU and PGWU/UPF. Each of these connect back to their control plane counterparts. eNBs/gNBs connect to the SGWU, which connects to the PGWU/UPF, and on to the WAN. By having the control and user planes physically separated like this, it means you can deploy multiple user plane servers in the field (e.g. somewhere with a high speed Internet connection), whilst keeping control functionality centralized. This enables support of MEC use cases.
 
