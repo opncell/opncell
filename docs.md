@@ -33,7 +33,7 @@ Open5GS is a series of software components and network functions that implement 
 The main components of the 4G/5G NSA architecture are:
 
 - User Equipment (UE): The mobile device used by the end user.
-- Evolved NodeB (eNB): The base station that connects the UE to the core network
+- [Evolved NodeB (eNB)](https://teletopix.org/what-is-the-difference-between-gnb-and-enb-gnb/#:~:text=The%20terms%20%E2%80%9CgNB%E2%80%9D%20(gNodeB,Long%2DTerm%20Evolution)%20networks.): The base station that connects the UE to the core network
 - Evolved Packet Core (EPC): The core network in the 4G/5G NS architecture, which has several services like SGW, PGW, MME, etc.
 
 ## 1.1.1 4G/ 5G NSA Core
@@ -54,7 +54,7 @@ The MME is the main **control plane** hub of the core. It primarily manages sess
 
 It links to the HSS, which generates SIM authentication vectors and holds the subscriber profile and to the SGWC and PGWC/SMF, which are the control planes of the gateway servers.
 
-All the eNB in the mobile network (4G base stations) connect to the MME. The final element of the control plane is the PCRF, which sits in-between the PGWC/SMF and the HSS, and handles charging and enforces subscriber policies.
+All the [eNB]() in the mobile network (4G base stations) connect to the MME. The final element of the control plane is the PCRF, which sits in-between the PGWC/SMF and the HSS, and handles charging and enforces subscriber policies.
 
 The **user plane** carries user data packets between the eNB/gNB (5G NSA base stations) and the external WAN. The two user plane core components are the SGWU and PGWU/UPF. Each of these connect back to their control plane counterparts. eNBs/gNBs connect to the SGWU, which connects to the PGWU/UPF, and on to the WAN. By having the control and user planes physically separated like this, it means you can deploy multiple user plane servers in the field (e.g. somewhere with a high speed Internet connection), whilst keeping control functionality centralized. This enables support of MEC use cases.
 
@@ -65,7 +65,7 @@ All of these Open5GS components have configuration files. Each file contains the
 The main components of the 4G/5G NSA architecture are:
 
 - User Equipment (UE): The mobile device used by the end user, enhanced to support 5g speeds and features.
-- gNodeB (gNB): The equivalent of eNB in 5G.
+- [gNodeB (gNB)](https://teletopix.org/what-is-the-difference-between-gnb-and-enb-gnb/#:~:text=The%20terms%20%E2%80%9CgNB%E2%80%9D%20(gNodeB,Long%2DTerm%20Evolution)%20networks.): The equivalent of eNB in 5G.
 - 5G Core (5GC): The core network in the 5G SA architecture, which has several services like AMF , UDM , NRF , etc.
 
 The Open5GS 5G SA Core contains the following functions:
