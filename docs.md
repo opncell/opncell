@@ -231,6 +231,7 @@ Fill the IMSI, security context(K, OPc), and attach a profile to that subscriber
 
 Click SAVE Button.
 
+<img width="914" alt="add_sub" src="https://github.com/opncell/opncell/assets/170442159/68d29061-dac2-4490-8de4-0bab2a669d72">
 
 Figure 4 Add subscriber
 
