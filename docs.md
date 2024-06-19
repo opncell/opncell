@@ -217,12 +217,6 @@ When a profile is linked to an IMSI during subscriber addition, the profile deta
 
 Therefore, to add subscriber information, you can do that in the following order:
 
-Navigate to **Users** Menu.
-
-Navigate to **Profile List** tab
-
-Click **+** Button to add a new profile
-
 Navigate to **Subscriber List** tab
 
 Click **+** Button to add a new Subscriber
