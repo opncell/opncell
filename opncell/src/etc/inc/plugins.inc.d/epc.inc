@@ -32,19 +32,20 @@ use OPNsense\OPNCore\General;
 function fourG_enabled(): bool
 {
     $model = new General();
-    return (string)$model->enablefour == '1';
+    return $model->enablefour->__toString() == "1";
 }
 
 function fiveGSA_enabled(): bool
 {
     $model = new General();
-    return (string)$model->enablefiveSA == '1';
+    return $model->enablefiveSA->__toString() == "1";
+
 }
 
 function fiveGNSA_enabled(): bool
 {
     $model = new General();
-    return (string)$model->enablefiveNSA == '1';
+    return $model->enablefiveNSA->__toString() == "1";
 }
 
 function epc_services():array

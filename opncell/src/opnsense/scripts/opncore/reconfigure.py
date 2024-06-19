@@ -94,8 +94,11 @@ if len(sys.argv) > 1:
                 yaml_data['global']['max']['peer'] = peer
                 yaml_data['logger']['file']['level'] = "debug"
 
-            # if process_name == 'sgwc':
-            #     yaml_data['sgwc']['gtpc']['server'][0]['address'] = new_addr.strip("'")
+            if process_name == 'upf':
+                yaml_data['upf']['gtpu']['server'][0]['address'] = new_addr.strip("'")
+                yaml_data['global']['max']['ue'] = ue
+                yaml_data['global']['max']['peer'] = peer
+                yaml_data['logger']['file']['level'] = "debug"
 
             if process_name == 'nrf':
                 yaml_data['nrf']['serving'][0]['plmn_id']['mcc'] = new_mcc
@@ -146,8 +149,8 @@ if len(sys.argv) > 1:
 
     def configureProcess(process_name, pid, name):
 
-        configurableServices = ['sgwu', 'sgwc', 'amf']
-        configurableFourServices = ['mme', 'sgwu', 'sgwc']
+        configurableServices = ['nrf', 'upf', 'amf']
+        configurableFourServices = ['mme', 'sgwu']
 
         if network == 'enablefour':
             config(configurableFourServices, process_name, pid, name)
@@ -156,9 +159,9 @@ if len(sys.argv) > 1:
 
 
     def reconfigure(process_list):
-        # only edit what needs to be edited. mme + sgwu for 4g and 5g-nsa networks. amf + sgwc for 5gsa networks
+        # only edit what needs to be edited. mme + sgwu for 4g and 5g-nsa networks. amf + upf + nrf for 5gsa networks
         runningProcesses = []
-        configurableServices = ['mme', 'sgwu', 'sgwc', 'amf']
+        configurableServices = ['mme', 'sgwu', 'nrf', 'amf', 'upf']
         for process in process_list:
             name = process.get("Name", "")
             pid = process.get("PID", "")

@@ -36,7 +36,7 @@ The Open5GS 5G SA Core contains the following functions: <br>
 With the exception of the SMF and UPF, all configuration files for the 5G SA core functions only contain the function’s IP bind addresses/ local Interface names and the IP address/ DNS name of the NRF.
 > [!TIP]
 > TL;DR.
-> A more in depth run through of roles of each function within a core can be found [here](http://docs.opncell.io)
+> A more in depth run through of roles of each function within a core can be found [here](docs.md)
 
 ## What is OPNsense
 
@@ -77,7 +77,7 @@ loopback address space (127.0.0.X). This allows a user to have all services nece
 * SGWU-pfcp = 127.0.0.6 :8805 for Sxa
 * SGWU-gtpu = 127.0.0.6 :2152 for S1-U, S5u <br>
   
-Full list of all the services with their loopback addresses is [here](http://docs.opncell.io)<br>
+Full list of all the services with their loopback addresses is [here](docs.md)<br>
 
 In the GUI, set up the loop back addresses for each of the open5gs services.<br>
 Add the virtual addresses under; <br>
@@ -117,8 +117,11 @@ utton.
 
 OPNcell offers the option of adding multiple user at a go through the bulk insertion functionality. Both .csv and .inc file formats are accepted. It should follow the below template.<br>
 
-<img width="1329" alt="template" src="https://github.com/opncell/opncell/assets/170442159/2f6a1b00-db09-45c6-9bb5-3287cc3a4147">
+[//]: # (<img width="1329" alt="template" src="https://github.com/opncell/opncell/assets/170442159/2f6a1b00-db09-45c6-9bb5-3287cc3a4147">)
 
+| imsi | ki  | opc |
+| --- | --- | --- |
+| 9997080930195106 | EF84CE78D9C47D64A6765B87972119F7 | 4723E4872557013C4F39A1D8E4D59CE4 |
 
 1. To add multiple subscribers at a go, you can do that in the following order: <br>
 2. Go to Users Menu.
@@ -144,7 +147,7 @@ If you find OPNcell useful please consider supporting this Open Source project b
 
 ## Documentation
 
-A more in depth documentation is [Here.](http://docs.opncell.io)
+A more in depth documentation is [Here.](docs.md)
 
 
 
