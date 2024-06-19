@@ -85,7 +85,7 @@ class ServiceController extends ApiControllerBase
         return array('response' => array());
     }
 
-    private $serviceMapping = [
+    private array $serviceMapping = [
         'enablefour' => [
             "enablehssd" => "hssd", "enablemmed" => "mmed", "enablepcrfd" => "pcrfd",
             "enablesgwud" => "sgwud", "enablesgwcd" => "sgwcd", "enablesmfd" => "smfd",
@@ -162,6 +162,9 @@ class ServiceController extends ApiControllerBase
         return $valMsgs;
     }
 
+    /**
+     * @throws Exception
+     */
     public function setAction($network): array
     {
         $result = array("result" => "failed");

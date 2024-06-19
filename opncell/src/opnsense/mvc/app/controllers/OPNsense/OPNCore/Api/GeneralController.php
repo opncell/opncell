@@ -59,7 +59,8 @@ class GeneralController extends ApiMutableModelControllerBase
     {
         $result = array();
         if ($this->request->isGet()) {
-            $mdlGeneral = $this->getModel();
+//            $mdlGeneral = $this->getModel();
+            $mdlGeneral = new General();
             $result['general'] = $mdlGeneral->getNodes();
         }
         return $result;
