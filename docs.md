@@ -110,9 +110,10 @@ Except the SMF and UPF, all configuration files for the 5G SA core functions onl
 5. Features such as failover and load balancing ensure continuous network availability and performance.
 
 ## 1.3 OPNcell  
-OPNcell is an out-of-box OPNsense plugin that adds Private 5G & LTE network capability.  
-The package adds 5G/LTE services to OPNsense using the Open Source Open5Gs software.  
-By combining advanced packet filtering & management with 4G/5G capability, OPNcell offers a low-cost complete solution for private LTE deployments.
+
+OPNcell is an easy-to-install out-of-the-box OPNsense plugin that adds private 5G and LTE network capability. This package integrates 5G/LTE services into OPNsense using the open-source Open5GS software.
+
+Installing OPNcell behind OPNsense firewall ensures that all network components are properly set up and secure.This allows you to create a secure, cost-effective, and easy-to-manage private network solution.
 
 ## 2\. Installing OPNcell
 
@@ -126,7 +127,9 @@ Once the repo is in place, then run \`**_pkg install os-cellular-devel_**\`.
 
 ## 3\. Next Steps
 
-In the OPNsense, SCTP traffic is blocked by default, therefore add a floating rule to explicitly allow it to pass.
+After installing OPNcell, you can now begin configuring your network.
+
+In OPNsense, SCTP traffic is blocked by default, therefore add a floating rule to explicitly allow it to pass.
 
 To do this, go to opnsense GUI, under the **Firewall** sub menu > **Rules** > **Floating**
 
@@ -249,7 +252,7 @@ Click SAVE Button.
 
 ## Logging
 
-All log files in OPNcell for the different services can be found under the **Diagnostics** sub menu.
+All log files in OPNcell for the different services can be found under the **Diagnostics** sub menu. Regularly check the logs to ensure your network is running smoothly and securely.
 
 ## Uninstalling OPNcell
 
