@@ -14,20 +14,14 @@ start_cmd="${name}_start"
 command_args="-D > /dev/null 2>&1"
 
 load_rc_config ${name}
-: "${epcudmd_enable:="NO"}"
-#: "${epc_config="/usr/local/etc/epc/epc.conf"}"
-
-#required_files="${epc_config}"
 
 
 epcudmd_start(){
         echo "Starting open5gs-${service_name} daemon"
-#        chmod +x /tmp/startmmed.sh
-#        mkdir -p /var/run/epc
-        pfile="/var/run/epc/epcudmd.pid"
-        cd /tmp || exit 1
+        mkdir -p /var/run/epc
+        pidfile="/var/run/epc/epcudmd.pid"
 
-        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pfile}; then
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
                 echo "Started"
         else
                 echo "Failed to start"

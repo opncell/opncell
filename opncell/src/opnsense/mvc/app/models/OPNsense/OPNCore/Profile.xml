@@ -27,7 +27,7 @@
                 </ul>
                 <QoS type="IntegerField">
                     <Required>Y</Required>
-                    <default>15</default>
+                    <default>9</default>
                     <ValidationMessage>Should be a character</ValidationMessage>
                 </QoS>
                 <arp_priority type="IntegerField">
@@ -40,7 +40,7 @@
 
                 <arp_capability type="OptionField">
                     <Required>Y</Required>
-                    <default>disabled</default>
+                    <default>enabled</default>
                     <OptionValues>
                         <enabled>enabled</enabled>
                         <disabled>disabled</disabled>
