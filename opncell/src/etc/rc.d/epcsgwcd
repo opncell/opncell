@@ -22,12 +22,11 @@ load_rc_config ${name}
 
 epcsgwcd_start(){
         echo "Starting open5gs-${service_name} daemon"
-        #chmod +x /tmp/startmmed.sh
-        mkdir -p /var/run/epc
-        pfile="/var/run/epc/epcsgwcd.pid"
-        cd /tmp || exit 1
 
-        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pfile}; then
+        mkdir -p /var/run/epc
+        pidfile="/var/run/epc/epcsgwcd.pid"
+
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
                 echo "Started"
         else
                 echo "Failed to start"

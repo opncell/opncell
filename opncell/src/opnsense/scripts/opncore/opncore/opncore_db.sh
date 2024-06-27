@@ -919,23 +919,23 @@ if [ "$1" = "set_apn" ]; then
         ARP_VUL=${11}
 
  mongo --eval "db.subscribers.updateOne(
-             {
+             { 
                'imsi': '$IMSI',
                'slice.session.name': '$APN'
              },
-             {
-               \$set: {
+             { 
+               \$set: { 
                  'slice.$[s].session.$[se].qos.index': NumberInt($QOS),
                  'slice.$[s].session.$[se].qos.arp.priority_level': NumberInt($PRIORITY_LEVEL),
                  'slice.$[s].session.$[se].qos.arp.pre_emption_capability': NumberInt($ARP_CAPA),
                  'slice.$[s].session.$[se].qos.arp.pre_emption_vulnerability': NumberInt($ARP_VUL),
                  'slice.$[s].session.$[se].ambr.downlink.value': NumberInt($DL),
                  'slice.$[s].session.$[se].ambr.downlink.unit': NumberInt($UNIT),
-                 'slice.$[s].session.$[se].ambr.uplink.value': NumberInt($UL)
+                 'slice.$[s].session.$[se].ambr.uplink.value': NumberInt($UL),
                  'slice.$[s].session.$[se].ambr.uplink.unit': NumberInt($UNIT)
                }
              },
-             {
+             { 
                arrayFilters: [
                  { 's.session': { \$elemMatch: { 'name': '$APN' } } },
                  { 'se.name': '$APN' }

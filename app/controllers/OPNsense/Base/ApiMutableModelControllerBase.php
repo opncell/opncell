@@ -84,7 +84,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      * @param $uuid string uuid to check
      * @throws UserException containing additional information
      */
-    private function checkAndThrowSafeDelete($uuid)
+    protected function checkAndThrowSafeDelete($uuid)
     {
         if (static::$internalModelUseSafeDelete) {
             $configObj = Config::getInstance()->object();

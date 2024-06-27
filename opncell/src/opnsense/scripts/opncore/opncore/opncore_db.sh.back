@@ -135,7 +135,7 @@ if [ "$1" = "add" ]; then
             );" $DB_URI
         exit $?
     fi
-
+    
     if [ "$#" -eq 14 ]; then
         IMSI=$2
         KI=$3
@@ -225,7 +225,7 @@ if [ "$1" = "add" ]; then
 
     if [ "$#" -eq 4 ]; then
         IMSI=$2
-
+        
         KI=$3
         OPC=$4
 
@@ -588,7 +588,7 @@ if [ "$1" = "remove" ]; then
     #deleted_count=$(echo "$deleted_count" | tr -d '\n\r')
     deleted_count=$(echo "$deleted_count" | awk '{$1=$1};1')
     deleted_count=$(echo "$deleted_count" | cut -d' ' -f1)
-
+   
     deleted_count=$(echo "$deleted_count" | sed 's/0}$//')
     #if [ -n "$deleted_count" ] && [ "$deleted_count" -gt 0 ]; then
      #   echo "Document with IMSI $IMSI has been deleted."
@@ -918,100 +918,38 @@ if [ "$1" = "set_apn" ]; then
         ARP_CAPA=${10}
         ARP_VUL=${11}
 
- mongo --eval "db.subscribers.updateOne(
-             {
-               'imsi': '$IMSI',
-               'slice.session.name': '$APN'
-             },
-             {
-               \$set: {
-                 'slice.$[s].session.$[se].qos.index': NumberInt($QOS),
-                 'slice.$[s].session.$[se].qos.arp.priority_level': NumberInt($PRIORITY_LEVEL),
-                 'slice.$[s].session.$[se].qos.arp.pre_emption_capability': NumberInt($ARP_CAPA),
-                 'slice.$[s].session.$[se].qos.arp.pre_emption_vulnerability': NumberInt($ARP_VUL),
-                 'slice.$[s].session.$[se].ambr.downlink.value': NumberInt($DL),
-                 'slice.$[s].session.$[se].ambr.downlink.unit': NumberInt($UNIT),
-                 'slice.$[s].session.$[se].ambr.uplink.value': NumberInt($UL)
-                 'slice.$[s].session.$[se].ambr.uplink.unit': NumberInt($UNIT)
-               }
-             },
-             {
-               arrayFilters: [
-                 { 's.session': { \$elemMatch: { 'name': '$APN' } } },
-                 { 'se.name': '$APN' }
-               ]
-             }
-           );" $DB_URI
 
-#        mongo --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},
-#            {\$set: {
-#                \"ambr\" : {
-#                    \"downlink\" : {
-#                        \"value\" : NumberInt($DL),
-#                        \"unit\"  : NumberInt($UNIT)
-#                    },
-#                    \"uplink\" :{
-#                        \"value\": NumberInt($UL),
-#                        \"unit\" : NumberInt($UNIT)
-#                    }
-#                },
-#                { \"slice.0.sst\": $SST
-#                },
-#                { \"slice.0.session.0.name\": $APN
-#                },
-#                \"slice.0.session.0.qos\": {
-#                      \"index\": $QOS,
-#                      \"arp\" : {
-#                          \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-#                          \"pre_emption_capability\"  : NumberInt($ARP_CAPA),
-#                          \"pre_emption_vulnerability\"  : NumberInt($ARP_VUL)
-#                      }
-#                  },
-#                \"slice.0.session.0.ambr\": {
-#                    \"downlink\" : {
-#                        \"value\" : NumberInt($DL),
-#                        \"unit\"  : NumberInt($UNIT)
-#                    },
-#                    \"uplink\" :{
-#                        \"value\": NumberInt($UL),
-#                        \"unit\" : NumberInt($UNIT)
-#                    }
-#                }
-#                     }
-#            });" $DB_URI
-
-#        mongo --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
-#            {\$set: { \"slice\":
-#
-#                            {
-#                            \"sst\" : NumberInt($SST),
-#                            \"default_indicator\" : false,
-#                            \"_id\" : new ObjectId(),
-#                            \"session\" :
-#                            [{
-#                                \"name\" : \"$APN\",
-#                                \"type\" : NumberInt(3),
-#                                \"_id\" : new ObjectId(),
-#                                \"pcc_rule\" : [],
-#                                \"ambr\" :
-#                                {
-#                                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\" : NumberInt($UNIT) },
-#                                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\" : NumberInt($UNIT) },
-#                                },
-#                                \"qos\" :
-#                                {
-#                                    \"index\" : NumberInt($QOS),
-#                                    \"arp\" :
-#                                    {
-#                                        \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-#                                        \"pre_emption_capability\" : NumberInt($ARP_CAPA),
-#                                        \"pre_emption_vulnerability\" : NumberInt($ARP_VUL),
-#                                    },
-#                                },
-#                             }]
-#                            }
-#                    }
-#            });" $DB_URI
+        mongo --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
+            {\$set:{ \"slice\":
+                            [{
+                            \"sst\" : NumberInt($SST),
+                            \"default_indicator\" : false,
+                            \"_id\" : new ObjectId(),
+                            \"session\" :
+                            [{
+                                \"name\" : \"$APN\",
+                                \"type\" : NumberInt(3),
+                                \"_id\" : new ObjectId(),
+                                \"pcc_rule\" : [],
+                                \"ambr\" :
+                                {
+                                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\" : NumberInt($UNIT) },
+                                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\" : NumberInt($UNIT) },
+                                },
+                                \"qos\" :
+                                {
+                                    \"index\" : NumberInt($QOS),
+                                    \"arp\" :
+                                    {
+                                        \"priority_level\" : NumberInt($PRIORITY_LEVEL),
+                                        \"pre_emption_capability\" : NumberInt($ARP_CAPA),
+                                        \"pre_emption_vulnerability\" : NumberInt($ARP_VUL),
+                                    },
+                                },
+                             }]
+                            }]
+                    }
+            });" $DB_URI
         exit $?
     fi
 
@@ -1085,6 +1023,7 @@ if [ "$1" = "ambr_speed" ]; then
                 }
                      }
             });" $DB_URI
+
 
         exit $?
     fi

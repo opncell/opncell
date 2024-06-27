@@ -42,6 +42,7 @@ use OPNsense\OPNCore\Api\UserRepository;
 use OPNsense\Core\Config;
 use OPNsense\Core\Backend;
 use OPNsense\Phalcon\Filter\Filter;
+use phpDocumentor\Reflection\Type;
 use ReflectionException;
 
 header("Access-Control-Allow-Origin: *");
@@ -201,6 +202,30 @@ class UserController extends ApiMutableModelControllerBase
         return array_merge($user_array, $profile);
     }
 
+    public function delAction($uuid): array
+    {
+        $result = array("result" => "failed");
+        $path = 'users.user';
+
+//        if ($this->request->isPost()) {
+//            $this->checkAndThrowSafeDelete($uuid);
+            Config::getInstance()->lock();
+            $mdl = $this->getModel();
+        if ($uuid != null) {
+            $tmp = $mdl;
+            foreach (explode('.', $path) as $step) {
+                $tmp = $tmp->{$step};
+            }
+            if ($tmp->del($uuid)) {
+                $this->save();
+                $result['result'] = 'success';
+            } else {
+                $result['result'] = 'not found';
+            }
+        }
+//        }
+        return $result;
+    }
 
     /**
      * @throws ReflectionException
@@ -219,13 +244,29 @@ class UserController extends ApiMutableModelControllerBase
             return $this->delBase('users.user', $uuid);
         }
     }
+
+    /**
+     * @throws ReflectionException
+     * @throws UserException
+     */
     public function deleteSubFromDBAction($imsi)
     {
         $backend = new Backend();
+        $target_uuid = '';
         $userRepository = new UserRepository($backend);
+        $allUsers= $this->getModelNodes();
+
+        foreach ($allUsers['users']['user'] as $uuid => $user) {
+            if ($user['imsi'] === $imsi) {
+                $target_uuid = $uuid;
+                break;
+            }
+        }
         $db_result = $userRepository->deleteUser($imsi);
+
+
         if ($db_result == "deleted") {
-            return array("result"=>"success");
+            return $this->delAction($target_uuid);
         } else {
             return array("result"=>"failed");
         }
@@ -375,7 +416,6 @@ class UserController extends ApiMutableModelControllerBase
                 return ["result" => "Failed"];
             }
             return ["result" => "success"];
-
         } catch (Exception $e) {
             return ["result" => "Failed", "message" => $e->getMessage()];
         }

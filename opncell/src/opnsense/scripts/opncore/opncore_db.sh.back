@@ -136,11 +136,98 @@ if [ "$1" = "add" ]; then
         exit $?
     fi
 
-    if [ "$#" -eq 5 ]; then
+    if [ "$#" -eq 14 ]; then
         IMSI=$2
-        IP=$3
-        KI=$4
-        OPC=$5
+        KI=$3
+        OPC=$4
+        SST=$5
+        APN=$6
+        DL=$7
+        UNIT=$8
+        UL=$9
+        QOS=${10}
+        PRIORITY_LEVEL=${11}
+        ARP_CAPA=${12}
+        ARP_VUL=${13}
+        IP=${14}
+
+        mongo --eval "db.subscribers.insertOne(
+            {
+                \"_id\": new ObjectId(),
+                \"schema_version\": NumberInt(1),
+                \"imsi\": \"$IMSI\",
+                \"msisdn\": [],
+                \"imeisv\": [],
+                \"mme_host\": [],
+                \"mm_realm\": [],
+                \"purge_flag\": [],
+                \"slice\":[
+                {
+                    \"sst\": NumberInt($SST),
+                    \"default_indicator\": true,
+                    \"session\": [
+                    {
+                        \"name\" : \"$APN\",
+                        \"type\" : NumberInt(3),
+                        \"qos\" :
+                        { \"index\": NumberInt($QOS),
+                            \"arp\":
+                            {
+                                \"priority_level\" : NumberInt($PRIORITY_LEVEL),
+                                \"pre_emption_capability\": NumberInt($ARP_CAPA),
+                                \"pre_emption_vulnerability\": NumberInt($ARP_VUL)
+                            }
+                        },
+                        \"ambr\":
+                        {
+                            \"downlink\":
+                            {
+                                \"value\": NumberInt($DL),
+                                \"unit\": NumberInt($UNIT)
+                            },
+                            \"uplink\":
+                            {
+                                \"value\": NumberInt($UL),
+                                \"unit\": NumberInt($UNIT)
+                            }
+                        },
+                         \"ue\":
+                        {
+                            \"addr\": \"$IP\"
+                        },
+                        \"pcc_rule\": [],
+                        \"_id\": new ObjectId(),
+                    }],
+                    \"_id\": new ObjectId(),
+                }],
+                \"security\":
+                {
+                    \"k\" : \"$KI\",
+                    \"op\" : null,
+                    \"opc\" : \"$OPC\",
+                    \"amf\" : \"8000\",
+                },
+                \"ambr\" :
+                {
+                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\": NumberInt($UNIT)},
+                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\": NumberInt($UNIT)}
+                },
+                \"access_restriction_data\": 32,
+                \"network_access_mode\": 0,
+                \"subscriber_status\": 0,
+                \"operator_determined_barring\": 0,
+                \"subscribed_rau_tau_timer\": 12,
+                \"__v\": 0
+            }
+            );" $DB_URI
+        exit $?
+    fi
+
+    if [ "$#" -eq 4 ]; then
+        IMSI=$2
+
+        KI=$3
+        OPC=$4
 
         mongo --eval "db.subscribers.insertOne(
             {
@@ -158,7 +245,7 @@ if [ "$1" = "add" ]; then
                     \"default_indicator\": true,
                     \"session\": [
                     {
-                        \"name\" : \"internet\",
+                        \"name\" : \"teal\",
                         \"type\" : NumberInt(3),
                         \"qos\" :
                         { \"index\": NumberInt(9),
@@ -181,10 +268,6 @@ if [ "$1" = "add" ]; then
                                 \"value\": NumberInt(1000000000),
                                 \"unit\": NumberInt(0)
                             }
-                        },
-                        \"ue\":
-                        {
-                            \"addr\": \"$IP\"
                         },
                         \"pcc_rule\": [],
                         \"_id\": new ObjectId(),
@@ -499,7 +582,20 @@ if [ "$1" = "remove" ]; then
     fi
 
     IMSI=$2
-    mongo --eval "db.subscribers.deleteOne({\"imsi\": \"$IMSI\"});" $DB_URI
+    output=$(mongo --quiet --eval "db.subscribers.deleteOne({\"imsi\": \"$IMSI\"});" $DB_URI 2>/dev/null)
+    json_output=$(echo "$output" | awk '/{/,/}/')
+    deleted_count=$(echo "$json_output" | awk -F '[:,]' '{for(i=1;i<=NF;i++) if($i ~ /"deletedCount"/) print $(i+1)}')
+    #deleted_count=$(echo "$deleted_count" | tr -d '\n\r')
+    deleted_count=$(echo "$deleted_count" | awk '{$1=$1};1')
+    deleted_count=$(echo "$deleted_count" | cut -d' ' -f1)
+
+    deleted_count=$(echo "$deleted_count" | sed 's/0}$//')
+    #if [ -n "$deleted_count" ] && [ "$deleted_count" -gt 0 ]; then
+     #   echo "Document with IMSI $IMSI has been deleted."
+    #else
+     #   echo "No document with IMSI $IMSI found or deleted."
+    #fi
+    echo $deleted_count
     exit $?
 fi
 

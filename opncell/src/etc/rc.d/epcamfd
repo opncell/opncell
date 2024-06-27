@@ -16,19 +16,14 @@ command_args="-D > /dev/null 2>&1"
 
 load_rc_config ${name}
 : "${epcamfd_enable:="NO"}"
-#: "${epc_config="/usr/local/etc/epc/epc.conf"}"
-
-required_files="${epc_config}"
-
 
 epcamfd_start(){
         echo "Starting open5gs-${service_name} daemon"
         sleep 4
         mkdir -p /var/run/epc
-        pfile="/var/run/epc/epcamfd.pid"
-        cd /tmp || exit 1
+        pidfile="/var/run/epc/epcamfd.pid"
 
-        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pfile}; then
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name};then
                 echo "Started"
         else
                 echo "Failed to start"
