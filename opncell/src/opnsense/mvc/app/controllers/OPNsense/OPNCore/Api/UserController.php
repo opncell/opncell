@@ -41,7 +41,9 @@ use OPNsense\Base\UserException;
 use OPNsense\OPNCore\Api\UserRepository;
 use OPNsense\Core\Config;
 use OPNsense\Core\Backend;
+use OPNsense\OPNCore\User;
 use OPNsense\Phalcon\Filter\Filter;
+use Phalcon\Messages\Message;
 use phpDocumentor\Reflection\Type;
 use ReflectionException;
 
@@ -80,6 +82,7 @@ class UserController extends ApiMutableModelControllerBase
         }
         return $selected_apn;
     }
+
     public function multipartAPN($value): array
     {
         $apn = [];
@@ -88,7 +91,7 @@ class UserController extends ApiMutableModelControllerBase
         $count = 0;
         foreach ($dataArray as $command_key => $command_value) {
             if ($command_value["selected"] === 1) {
-                $count+=1;
+                $count += 1;
                 $apn['apn'] = $command_key;
             }
         }
@@ -109,7 +112,7 @@ class UserController extends ApiMutableModelControllerBase
         if ($data != null) {
             foreach ($data as $index => $process) {
                 $item = array();
-                $item['uuid']=$index;
+                $item['uuid'] = $index;
                 $item['imsi'] = $process['imsi'];
                 $item['profile'] = $process['apn'];
                 $details[] = $item;
@@ -125,12 +128,7 @@ class UserController extends ApiMutableModelControllerBase
         $filteredResult = $this->filterResults($details, $searchPhrase);
         $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
 
-        return [
-            'total' => count($filteredResult),
-            'rowCount' => $itemsPerPage,
-            'current' => $currentPage,
-            'rows' => $paginatedResult,
-        ];
+        return ['total' => count($filteredResult), 'rowCount' => $itemsPerPage, 'current' => $currentPage, 'rows' => $paginatedResult,];
     }
 
     private function filterResults(array $results, string $searchPhrase): array
@@ -173,8 +171,9 @@ class UserController extends ApiMutableModelControllerBase
             }
         }
 
-        return  $result;
+        return $result;
     }
+
     public function getSubAction($uuid = null): array
     {
         $this->sessionClose();
@@ -196,7 +195,7 @@ class UserController extends ApiMutableModelControllerBase
             }
         }
         $profileClass = new ProfileController();
-        $profile= $profileClass->getProfileAction($profile_uuid);
+        $profile = $profileClass->getProfileAction($profile_uuid);
 
         //return the user + the details of the serviceType/profile they are attached to
         return array_merge($user_array, $profile);
@@ -209,8 +208,8 @@ class UserController extends ApiMutableModelControllerBase
 
 //        if ($this->request->isPost()) {
 //            $this->checkAndThrowSafeDelete($uuid);
-            Config::getInstance()->lock();
-            $mdl = $this->getModel();
+        Config::getInstance()->lock();
+        $mdl = $this->getModel();
         if ($uuid != null) {
             $tmp = $mdl;
             foreach (explode('.', $path) as $step) {
@@ -238,7 +237,7 @@ class UserController extends ApiMutableModelControllerBase
         $imsi = $user['user']['imsi'];
         $backend = new Backend();
         $userRepository = new UserRepository($backend);
-         //remove user from db
+        //remove user from db
         $db_result = $userRepository->deleteUser($imsi);
         if ($db_result == "deleted") {
             return $this->delBase('users.user', $uuid);
@@ -254,7 +253,7 @@ class UserController extends ApiMutableModelControllerBase
         $backend = new Backend();
         $target_uuid = '';
         $userRepository = new UserRepository($backend);
-        $allUsers= $this->getModelNodes();
+        $allUsers = $this->getModelNodes();
 
         foreach ($allUsers['users']['user'] as $uuid => $user) {
             if ($user['imsi'] === $imsi) {
@@ -268,7 +267,7 @@ class UserController extends ApiMutableModelControllerBase
         if ($db_result == "deleted") {
             return $this->delAction($target_uuid);
         } else {
-            return array("result"=>"failed");
+            return array("result" => "failed");
         }
     }
 
@@ -308,7 +307,7 @@ class UserController extends ApiMutableModelControllerBase
 
     # bulk insertion of users
 
-    public function uploadAction():array
+    public function uploadAction(): array
     {
         global $outputKeyValue;
         $fileUploadService = new FileUploadService();
@@ -335,53 +334,46 @@ class UserController extends ApiMutableModelControllerBase
      */
     public function addSubAction(): array
     {
-        $userDetails = array();
         $backend = new Backend();
+        $mdlUser = new User();
+        $result = array();
         $userRepository = new UserRepository($backend);
-        $userUUID = $this->addBase('user', 'users.user');
-        if ($userUUID['result'] == 'saved') {
-            $uuid = $userUUID['uuid'];
-            $selected_profile_uuid = [];
-            $sub = [];
-            if ($uuid) {
-                $record = $this->getSubAction($uuid);
-                foreach ($record as $user_record) {
-                    $userDetails["imsi"] = $user_record['imsi'];
-                    $userDetails["ki"] = $user_record['ki'];
-                    $userDetails["opc"] = $user_record['opc'];
-                    $userDetails["ip"] = $user_record['ip'];
-                    if ($user_record['profile']) {
-                        $selected_profile_uuid = $this->multipart($user_record['profile']);
-                    }
+        $userDetails = $this->request->getPost("user");
+        $selected_profile_uuid = explode(",", $userDetails['profile']);
+        $numberOfProfiles = count($selected_profile_uuid);
+        $profileClass = new ProfileController();
+        $index = 0;
+        $sub['count'] = $numberOfProfiles;
+        foreach ($selected_profile_uuid as $p_uuid) {
+            $profile = $profileClass->getProfileAction($p_uuid);
+            $index += 1;
+            $userDetails['sst'] = $profile['profile']['sst'];
+            $userDetails["dl"] = $profile['profile']['dl'];
+            $userDetails["ul"] = $profile['profile']['ul'];
+            $userDetails["QoS"] = $profile['profile']['QoS'];
+            $userDetails["arp_priority"] = $profile['profile']['arp_priority'];
+            $userDetails["apn"] = $profile['profile']['apn'];
+            $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
+            $sub[$index] = $userDetails;
+        }
+
+        $data = $userRepository->saveUser($sub);
+        if ($data == "Duplicate") {
+            $valMsgs = $mdlUser->performValidation();
+            $valMsgs->appendMessage(new Message(gettext(" A User with this imsi already exists."), 'imsi'));
+            foreach ($valMsgs as $msg) {
+                if (!isset($result["validations"])) {
+                    $result["validations"] = array();
                 }
-                $numberOfProfiles = count($selected_profile_uuid);
-                $profileClass = new ProfileController();
-                $index = 0;
-                $sub['count'] = $numberOfProfiles;
-                foreach ($selected_profile_uuid as $p_uuid) {
-                    $profile = $profileClass->getProfileAction($p_uuid);
-                    $index+=1;
-                    $userDetails['sst'] = $profile['profile']['sst'];
-                    $userDetails["dl"] = $profile['profile']['dl'];
-                    $userDetails["ul"] = $profile['profile']['ul'];
-                    $userDetails["QoS"] = $profile['profile']['QoS'];
-                    $userDetails["arp_priority"] = $profile['profile']['arp_priority'];
-                    $userDetails["apn"] = $profile['profile']['apn'];
-                    $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
-                    $sub[$index] = $userDetails;
-                }
-                $data = $userRepository->saveUser($sub);
-                if ($data != "Success") {
-                    $this->delBase('users.user', $uuid);
-                    return array("result"=>"failed");
-                } else {
-                    return array("result"=>"success");
-                }
-            } else {
-                return array("result"=>"failed");
+                $result["validations"]["user." . $msg->getField()] = $msg->getMessage();
             }
+            return $result;
+
+        }
+        if ($data == "Success") {
+            return array("result" => $data);
         } else {
-            return $userUUID;
+            return array("result" => $sub);
         }
     }
 
@@ -420,6 +412,7 @@ class UserController extends ApiMutableModelControllerBase
             return ["result" => "Failed", "message" => $e->getMessage()];
         }
     }
+
     private function fetchUserDetails($userRepository, $imsi): ?array
     {
         $data = $userRepository->getUser($imsi);
@@ -444,14 +437,7 @@ class UserController extends ApiMutableModelControllerBase
 
         foreach ($profileList as $index => $profileID) {
             $profile = $profileClass->getProfileAction($profileID);
-            $userDetails = array_merge($userDetails, [
-                'sst' => $profile['profile']['sst'],
-                'dl' => $profile['profile']['dl'],
-                'ul' => $profile['profile']['ul'],
-                'QoS' => $profile['profile']['QoS'],
-                'arp_priority' => $profile['profile']['arp_priority'],
-                'apn' => $profile['profile']['apn']
-            ]);
+            $userDetails = array_merge($userDetails, ['sst' => $profile['profile']['sst'], 'dl' => $profile['profile']['dl'], 'ul' => $profile['profile']['ul'], 'QoS' => $profile['profile']['QoS'], 'arp_priority' => $profile['profile']['arp_priority'], 'apn' => $profile['profile']['apn']]);
             $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
             $subUser[$index + 1] = $userDetails;
         }
@@ -468,7 +454,7 @@ class UserController extends ApiMutableModelControllerBase
     {
 
         $userDetails['arp_capability'] = ($this->multipart($profile1['arp_capability']) == 'enabled') ? '1' : '2';
-        $userDetails['arp_vulnerability'] =($this->multipart($profile1 ['arp_vulnerability']) == 'enabled') ? '1' : '2';
+        $userDetails['arp_vulnerability'] = ($this->multipart($profile1 ['arp_vulnerability']) == 'enabled') ? '1' : '2';
         return $userDetails;
     }
 }

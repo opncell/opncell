@@ -152,7 +152,7 @@ if len(sys.argv) > 1:
         configurableServices = ['nrf', 'upf', 'amf']
         configurableFourServices = ['mme', 'sgwu']
 
-        if network == 'enablefour':
+        if network == 'enablefour' or network == 'enableFiveNSA':
             config(configurableFourServices, process_name, pid, name)
         else:
             config(configurableServices, process_name, pid, name)

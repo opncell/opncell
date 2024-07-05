@@ -21,7 +21,7 @@ if len(sys.argv) > 0:
 
     json_data = json.loads(t)
     #json_data = json.loads(json_data2)
-    #print(type(json_data))
+    # print(type(json_data))
     imsi = []
     num_profiles = 0
     ki = []
@@ -40,6 +40,8 @@ if len(sys.argv) > 0:
     my_list = []
     new_slice = False
     result = "Failed"
+
+
     def append_index(append_key, var_value, var_index):
         result = append_key + var_index
 
@@ -69,7 +71,7 @@ if len(sys.argv) > 0:
                 append_index(var_key, var_value, var_index)
             if var_key == "arp_vulnerability":
                 append_index(var_key, var_value, var_index)
-        print (new_slice)
+
         if new_slice:
             # Add slice to existing UE
             subprocess.check_output(
@@ -80,7 +82,6 @@ if len(sys.argv) > 0:
                 text=True, stderr=subprocess.STDOUT)
         else:
             # add an apn to already existent UE
-            # print(apn_dict['apn' + var_index])
             subprocess.check_output(
                 [script_path] + ['update_apn'] + imsi + apn_dict['apn' + var_index] + apn_dict['sst' + var_index] +
                 apn_dict['dl' + var_index] + unit + apn_dict['ul' + var_index]
@@ -93,7 +94,6 @@ if len(sys.argv) > 0:
         try:
             num_profiles = json_data['count']
             firstAPN = json_data['1']
-           # print(firstAPN)
             for key, value in firstAPN.items():
                 if key == "imsi":
                     imsi.append(str(value))
@@ -131,46 +131,31 @@ if len(sys.argv) > 0:
                     if value != "":
                         arp_vulnerability.append(str(value))
 
-           # print(imsi, ki, opc, sst, apn, dl, unit, ul, qos, arp_priority, arp_capability, arp_vulnerability)
-
             if len(ip) > 0:
 
                 output = subprocess.check_output([script_path] + ['add'] + imsi + ki + opc + sst + apn + dl + unit + ul
                                                  + qos + arp_priority + arp_capability + arp_vulnerability + ip,
                                                  text=True, stderr=subprocess.STDOUT)
             else:
+
                 output = subprocess.check_output([script_path] + ['add'] + imsi + ki + opc + sst + apn + dl + unit + ul
                                                  + qos + arp_priority + arp_capability + arp_vulnerability,
                                                  text=True, stderr=subprocess.STDOUT)
-            # print(ujson.dumps(output))
+
             # After creating the UE, then add the other apns, (if they exist)
             for i in range(2, num_profiles + 1):
                 for key, value in json_data.items():
                     if key == str(i):
                         otherAPNS(value, str(i))
 
-            output_user = subprocess.check_output([script_path] + ['showone'] + imsi, text=True,
-                                                  stderr=subprocess.STDOUT)
-            output_list = output_user.strip().split('\n')
-            # print(output_list)
-            result = "Failed"
-            imsi_r = ""
-            for json_str in output_list:
-                try:
-                    data = json.loads(json_str)
-                    # print(data)
-
-                    imsi_r = data.get("imsi")
-                    # k = data.get("security", {}).get("k")
-                    # opc = data.get("security", {}).get("opc")
-                    # dets = {"imsi": imsi, "ki": k, "opc": opc}
-                    # user_details.append(dets)
-
-                except json.JSONDecodeError as e:
-                    pass
-            if imsi_r != "":
-                result = "Success"
+            output_list = output.strip().split('\n')
+            # print(output_list[0])
+            if len(output_list) > 1:
+                if output_list[-2] == "Success":
+                    result = "Success"
+            else:
+                if output_list[0] == "Duplicate":
+                    result = "Duplicate"
         except:
             pass
-        print(ujson.dumps(result))
-
+    print(ujson.dumps(result))

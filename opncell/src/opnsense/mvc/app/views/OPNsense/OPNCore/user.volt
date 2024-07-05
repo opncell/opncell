@@ -171,6 +171,7 @@ POSSIBILITY OF SUCH DAMAGE.
         $("#saveAct_users_progress").addClass("fa fa-spinner fa-pulse");
         saveFormToEndpoint(url = "/api/opncore/user/addSub", formid = 'frm_user_settings', callback_ok = function (data, status) {
             $("#saveAct_users_progress").removeClass("fa fa-spinner fa-pulse");
+            console.log(data.result)
 
         }, true);
 

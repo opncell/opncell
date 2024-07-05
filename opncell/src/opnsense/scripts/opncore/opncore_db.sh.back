@@ -43,6 +43,8 @@ done
 
 DB_URI="${DB_URI:-mongodb://localhost/open5gs}"
 
+mongo --quiet --eval 'db.subscribers.createIndex({"imsi": 1}, {unique: true})' $DB_URI > /dev/null 2>&1
+
 if [ "$#" -lt 1 ]; then
     display_help
     exit 1
@@ -52,6 +54,8 @@ if [ "$1" = "help" ]; then
     display_help
     exit 1
 fi
+
+
 
 if [ "$1" = "add" ]; then
     if [ "$#" -eq 13 ]; then
@@ -68,7 +72,11 @@ if [ "$1" = "add" ]; then
         ARP_CAPA=${12}
         ARP_VUL=${13}
 
-        mongo --eval "db.subscribers.insertOne(
+       output=$(mongo --quiet --eval "
+       var result;
+
+        try {
+           db.subscribers.insertOne(
             {
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
@@ -132,7 +140,20 @@ if [ "$1" = "add" ]; then
                 \"subscribed_rau_tau_timer\": 12,
                 \"__v\": 0
             }
-            );" $DB_URI
+            );
+
+                print('Success');
+                        } catch (e) {
+                            if (e.code === 11000) {
+                                print('Duplicate');
+                            } else {
+                                print('Error: ' + e);
+                            }
+                            quit(1);
+                        }
+            " $DB_URI 2>&1)
+
+            echo "$output"
         exit $?
     fi
 
@@ -585,16 +606,10 @@ if [ "$1" = "remove" ]; then
     output=$(mongo --quiet --eval "db.subscribers.deleteOne({\"imsi\": \"$IMSI\"});" $DB_URI 2>/dev/null)
     json_output=$(echo "$output" | awk '/{/,/}/')
     deleted_count=$(echo "$json_output" | awk -F '[:,]' '{for(i=1;i<=NF;i++) if($i ~ /"deletedCount"/) print $(i+1)}')
-    #deleted_count=$(echo "$deleted_count" | tr -d '\n\r')
     deleted_count=$(echo "$deleted_count" | awk '{$1=$1};1')
     deleted_count=$(echo "$deleted_count" | cut -d' ' -f1)
 
     deleted_count=$(echo "$deleted_count" | sed 's/0}$//')
-    #if [ -n "$deleted_count" ] && [ "$deleted_count" -gt 0 ]; then
-     #   echo "Document with IMSI $IMSI has been deleted."
-    #else
-     #   echo "No document with IMSI $IMSI found or deleted."
-    #fi
     echo $deleted_count
     exit $?
 fi
@@ -918,39 +933,31 @@ if [ "$1" = "set_apn" ]; then
         ARP_CAPA=${10}
         ARP_VUL=${11}
 
+ mongo --eval "db.subscribers.updateOne(
+             {
+               'imsi': '$IMSI',
+               'slice.session.name': '$APN'
+             },
+             {
+               \$set: {
+                 'slice.$[s].session.$[se].qos.index': NumberInt($QOS),
+                 'slice.$[s].session.$[se].qos.arp.priority_level': NumberInt($PRIORITY_LEVEL),
+                 'slice.$[s].session.$[se].qos.arp.pre_emption_capability': NumberInt($ARP_CAPA),
+                 'slice.$[s].session.$[se].qos.arp.pre_emption_vulnerability': NumberInt($ARP_VUL),
+                 'slice.$[s].session.$[se].ambr.downlink.value': NumberInt($DL),
+                 'slice.$[s].session.$[se].ambr.downlink.unit': NumberInt($UNIT),
+                 'slice.$[s].session.$[se].ambr.uplink.value': NumberInt($UL)
+                 'slice.$[s].session.$[se].ambr.uplink.unit': NumberInt($UNIT)
+               }
+             },
+             {
+               arrayFilters: [
+                 { 's.session': { \$elemMatch: { 'name': '$APN' } } },
+                 { 'se.name': '$APN' }
+               ]
+             }
+           );" $DB_URI
 
-        mongo --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
-            {\$set: { \"slice\":
-
-                            {
-                            \"sst\" : NumberInt($SST),
-                            \"default_indicator\" : false,
-                            \"_id\" : new ObjectId(),
-                            \"session\" :
-                            [{
-                                \"name\" : \"$APN\",
-                                \"type\" : NumberInt(3),
-                                \"_id\" : new ObjectId(),
-                                \"pcc_rule\" : [],
-                                \"ambr\" :
-                                {
-                                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\" : NumberInt($UNIT) },
-                                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\" : NumberInt($UNIT) },
-                                },
-                                \"qos\" :
-                                {
-                                    \"index\" : NumberInt($QOS),
-                                    \"arp\" :
-                                    {
-                                        \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-                                        \"pre_emption_capability\" : NumberInt($ARP_CAPA),
-                                        \"pre_emption_vulnerability\" : NumberInt($ARP_VUL),
-                                    },
-                                },
-                             }]
-                            }
-                    }
-            });" $DB_URI
         exit $?
     fi
 
@@ -989,7 +996,7 @@ if [ "$1" = "showpretty" ]; then
         exit $?
 fi
 if [ "$1" = "showfiltered" ]; then
-   mongo --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1})" $DB_URI
+   mongo --quiet --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1})" $DB_URI
         exit $?
 fi
 
@@ -1024,7 +1031,6 @@ if [ "$1" = "ambr_speed" ]; then
                 }
                      }
             });" $DB_URI
-
 
         exit $?
     fi
