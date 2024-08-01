@@ -51,7 +51,7 @@ OPNsense offers a variety of pros which compelled the decision to build OPNcell 
 ## Installing OPNcell
 
 Run the below command in the console of the machine running the OPNsense firewall.<br><br>
-`fetch -o /usr/local/etc/pkg/repos/opncell.conf http://repo.opncell.io/cellular.conf && pkg update` <br><br>
+`fetch -o /usr/local/etc/pkg/repos/OPNcell.conf http://repo.opncell.io/cellular.conf && pkg update` <br><br>
 This establishes the repository holding the cellular package installer, including other necessary pieces of the service.
 
 ## Getting into it
