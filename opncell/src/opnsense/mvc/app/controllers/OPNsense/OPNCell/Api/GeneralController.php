@@ -36,7 +36,7 @@ use OPNsense\Core\Backend;
 use OPNsense\Core\Config;
 
 
-//use OPNsense\Mvc\Request;
+use OPNsense\Mvc\Request;
 use OPNsense\OPNCell\Opncore;
 use OPNsense\OPNCell\User;
 use OPNsense\OPNCell\General;
@@ -52,7 +52,7 @@ class GeneralController extends ApiMutableModelControllerBase
 
     protected static $internalModelName = 'opncore';
     protected static $internalModelClass = '\OPNsense\OPNCell\Opncore';
-//    public Request $request;
+    public Request $request;
 
     /**
      * @throws ReflectionException
@@ -71,7 +71,7 @@ class GeneralController extends ApiMutableModelControllerBase
     public function getUserAction(): array
     {
         $result = array();
-//        $this->request = new Request();
+        $this->request = new Request();
         if ($this->request->isGet()) {
             $mdlUser = new  User();
             $result['user'] = $mdlUser->getNodes();
@@ -85,7 +85,7 @@ class GeneralController extends ApiMutableModelControllerBase
     {
         $result = array("result" => "failed");
         $mdlGeneral = new General();
-//        $this->request = new Request();
+        $this->request = new Request();
         $mdlGeneral->setNodes($this->request->getPost("general"));
         $mdlGeneral->setNodes(["enablefour" => "0"]);
         $mdlGeneral->setNodes(["enablefiveSA" => "0"]);
@@ -236,7 +236,7 @@ class GeneralController extends ApiMutableModelControllerBase
     {
         $this->sessionClose();
         $result = $this->getProcessNamesAction($network);
-//        $this->request = new Request();
+        $this->request = new Request();
         $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
         $currentPage = $this->request->getPost('current', 'int', 1);
         $offset = ($currentPage - 1) * $itemsPerPage;

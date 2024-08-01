@@ -65,7 +65,7 @@ class ServiceController extends ApiControllerBase
 
     public function startAction($process): array
     {
-//        $this->request = new Request();
+        $this->request = new Request();
         if ($this->request->isPost()) {
             return $this->manageService($process, 'start');
         }
@@ -73,7 +73,7 @@ class ServiceController extends ApiControllerBase
     }
     public function restartAction($process): array
     {
-//        $this->request = new Request();
+        $this->request = new Request();
         if ($this->request->isPost()) {
             $this->manageService($process, 'stop');
             return $this->manageService($process, 'start');
@@ -82,7 +82,7 @@ class ServiceController extends ApiControllerBase
     }
     public function stopAction($process): array
     {
-//        $this->request = new Request();
+        $this->request = new Request();
         if ($this->request->isPost()) {
             return $this->manageService($process, 'stop');
         }
