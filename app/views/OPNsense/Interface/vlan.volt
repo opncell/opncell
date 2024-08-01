@@ -36,7 +36,6 @@
           </tr>
       </tfoot>
   </table>
-
   <div class="col-md-12">
       <div id="VlanChangeMessage" class="alert alert-info" style="display: none" role="alert">
           {{ lang._('After changing settings, please remember to apply them with the button below') }}

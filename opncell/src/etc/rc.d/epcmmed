@@ -10,11 +10,11 @@ name=epcmmed
 service_name=mmed
 desc="Mobility Management Entity Daemon"
 rcvar=${name}_enable
-command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
+config_file="/usr/local/etc/open5gs/mme.yaml"
+log_file="/var/log/opncell/mme.log"
+command="/usr/local/bin/open5gs/open5gs-${service_name}"
 start_cmd="${name}_start"
 command_args="-D > /dev/null 2>&1"
-#mkdir -p /var/run/epc
-#pidfile="/var/run/epc/${name}.pid"
 
 load_rc_config ${name}
 : "${epcmmed_enable:="NO"}"
@@ -25,7 +25,7 @@ epcmmed_start(){
 mkdir -p /var/run/epc
 pidfile="/var/run/epc/epcmmed.pid"
 
-if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
+if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name} ${config_file} ${log_file}; then
  echo "Started"
 else
     echo "Failed to start"

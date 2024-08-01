@@ -28,7 +28,7 @@
 
 namespace OPNsense\Interfaces;
 
-use Phalcon\Messages\Message;
+use OPNsense\Base\Messages\Message;
 use OPNsense\Base\BaseModel;
 use OPNsense\Core\Config;
 use OPNsense\Firewall\Util;
@@ -41,21 +41,33 @@ class Vip extends BaseModel
     public function performValidation($validateFullModel = false)
     {
         $messages = parent::performValidation($validateFullModel);
-        $vips = [];
-        $carp_vhids = [];
 
-        // collect chaned VIP entries
-        $vip_fields = ['mode', 'subnet', 'subnet_bits', 'password', 'vhid', 'interface'];
+        $unique_addrs = [];
+        $carp_vhids = [];
+        $vips = [];
+
+        // collect changed VIP entries
+        $vip_fields = ['mode', 'subnet', 'subnet_bits', 'password', 'vhid', 'interface', 'peer', 'peer6'];
         foreach ($this->getFlatNodes() as $key => $node) {
             $tagName = $node->getInternalXMLTagName();
             $parentNode = $node->getParentNode();
+
             if ($validateFullModel || $node->isFieldChanged()) {
                 if ($parentNode->getInternalXMLTagName() === 'vip' && in_array($tagName, $vip_fields)) {
-                    $parentKey = $parentNode->__reference;
-                    $vips[$parentKey] = $parentNode;
+                    $vips[$parentNode->__reference] = $parentNode;
                 }
             }
+
+            if ($parentNode->getInternalXMLTagName() === 'vip' && $tagName == 'subnet') {
+                $addr = (string)$parentNode->subnet;
+                if (Util::isLinkLocal($addr)) {
+                    $addr .= '@' . (string)$parentNode->interface;
+                }
+                $unique_addrs[$parentNode->__reference] = $addr;
+            }
+
             $vhid_key = sprintf("%s_%s", $parentNode->interface, $parentNode->vhid);
+
             if ((string)$parentNode->mode == 'carp' && !isset($carp_vhids[$vhid_key])) {
                 $carp_vhids[$vhid_key] = $parentNode;
             }
@@ -66,30 +78,31 @@ class Vip extends BaseModel
             $subnet_bits = (string)$node->subnet_bits;
             $subnet = (string)$node->subnet;
             if (in_array((string)$node->mode, ['carp', 'ipalias'])) {
-                if (Util::isSubnet($subnet . "/" . $subnet_bits) && strpos($subnet, ':') === false) {
+                if (Util::isSubnet($subnet . "/" . $subnet_bits) && strpos($subnet, ':') === false && $subnet_bits <= 30) {
                     $sm = 0;
                     for ($i = 0; $i < $subnet_bits; $i++) {
                         $sm >>= 1;
                         $sm |= 0x80000000;
                     }
                     $network_addr = long2ip(ip2long($subnet) & $sm);
-                    $broadcast_addr = long2ip((ip2long($subnet) & 0xFFFFFFFF) | $sm);
-                    if ($subnet == $network_addr && $subnet_bits != '32') {
+                    $broadcast_addr = long2ip((ip2long($subnet) & $sm) | (0xFFFFFFFF ^ $sm));
+                    if ($subnet == $network_addr) {
                         $messages->appendMessage(
                             new Message(
-                                gettext("You cannot use the network address for this VIP"),
+                                gettext('You cannot use the network address.'),
                                 $key . ".subnet"
                             )
                         );
-                    } elseif ($subnet == $broadcast_addr && $subnet_bits != '32') {
+                    } elseif ($subnet == $broadcast_addr) {
                         $messages->appendMessage(
                             new Message(
-                                gettext("You cannot use the broadcast address for this VIP"),
+                                gettext('You cannot use the broadcast address.'),
                                 $key . ".subnet"
                             )
                         );
                     }
                 }
+
                 $configHandle = Config::getInstance()->object();
                 if (!empty($configHandle->interfaces) && !empty((string)$node->vhid)) {
                     foreach ($configHandle->interfaces->children() as $ifname => $ifnode) {
@@ -103,6 +116,17 @@ class Vip extends BaseModel
                             break;
                         }
                     }
+                }
+            } elseif ((string)$node->mode == 'proxyarp') {
+                $net = $subnet . "/" . $subnet_bits;
+                if (Util::isSubnet($net) && !Util::isSubnetStrict($net)) {
+                    $messages->appendMessage(
+                        new Message(
+                            gettext("Only strict subnets are allowed for Proxy ARP types" .
+                                " (e.g. 192.168.0.0/24, 192.168.1.1/32)."),
+                            $key . ".subnet"
+                        )
+                    );
                 }
             }
             $vhid_key = sprintf("%s_%s", $node->interface, $node->vhid);
@@ -136,6 +160,23 @@ class Vip extends BaseModel
                         )
                     );
                 }
+                /* XXX: ideally we shouldn't need the validations below, but when using the same vhid for
+                 *      ipv4 and ipv6 one will always flip back to multicast */
+                if (strpos($subnet, ':') === false && !empty((string)$node->peer6)) {
+                    $messages->appendMessage(
+                        new Message(
+                            gettext('An (unicast) address can only be configured for the same protocol family.'),
+                            $key . ".peer6"
+                        )
+                    );
+                } elseif (strpos($subnet, ':') !== false && !empty((string)$node->peer)) {
+                    $messages->appendMessage(
+                        new Message(
+                            gettext('An (unicast) address can only be configured for the same protocol family.'),
+                            $key . ".peer"
+                        )
+                    );
+                }
             } elseif (
                 (string)$node->mode == 'ipalias' &&
                 !empty((string)$node->vhid) && (
@@ -151,6 +192,17 @@ class Vip extends BaseModel
                     )
                 );
             }
+
+            /* ensure address is unique; for link-local we test with scope attached */
+            $addr = (string)$node->subnet;
+            if (Util::isLinkLocal($addr)) {
+                $addr .= '@' . (string)$node->interface;
+            }
+            foreach ($unique_addrs as $refKey => $refAddr) {
+                if ($refKey != $key && $refAddr === $addr) {
+                    $messages->appendMessage(new Message(gettext('Address already assigned.'), $key . '.subnet'));
+                }
+            }
         }
 
         return $messages;
@@ -162,7 +214,7 @@ class Vip extends BaseModel
     public function whereUsed($address)
     {
         $relevant_paths = [
-          'nat.outbound.rule.' => gettext('Address %s referenced by outboud nat rule "%s"'),
+          'nat.outbound.rule.' => gettext('Address %s referenced by outbound nat rule "%s"'),
           'nat.rule.' => gettext('Address %s referenced by port forward "%s"'),
         ];
         $usages = [];

@@ -121,7 +121,7 @@
                                   )
                                 ).append(
                                    $("<td>").append(
-                                     $("<span style='width:100%'/>").html($("<code/>").html(line.raw))
+                                     $("<span style='width:100%; word-break: break-word;'/>").html($("<code/>").html(line.raw))
                                    )
                                 )
                               );
@@ -189,7 +189,7 @@
                         });
                     }
                 }
-                saveFormToEndpoint("/api/diagnostics/packet_capture/set", 'frm_CaptureSettings', callb, false, callb);
+                saveFormToEndpoint("/api/diagnostics/packet_capture/set", 'frm_CaptureSettings', callb, true, callb);
             }
         });
 
@@ -200,7 +200,7 @@
         // (de)select all interfaces
         $(".interface_select").closest("td").find('a').remove();
         $(".interface_select").closest("td").find('br').remove();
-        let btn_toggle_all = $('<button id="select_all" class="btn btn-default">');
+        let btn_toggle_all = $('<button id="select_all" type="button" class="btn btn-default">');
         btn_toggle_all.append($('<i class="fa fa-check-square-o fa-fw" aria-hidden="true"></i>'));
         btn_toggle_all.tooltip({"title": "{{ lang._('(de)select all') }}"});
         btn_toggle_all.click(function(e){

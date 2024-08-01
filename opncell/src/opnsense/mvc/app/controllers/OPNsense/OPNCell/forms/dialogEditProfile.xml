@@ -1,0 +1,66 @@
+<form>
+    <field>
+        <label>Profile Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>profile.apn</id>
+        <label>APN</label>
+        <type>text</type>
+        <help>Set name of the apn</help>
+    </field>
+    <field>
+        <id>profile.sst</id>
+        <label>Slice/Service Type</label>
+        <type>text</type>
+    </field>
+    <field>
+        <label>AMBR-Speed Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>profile.dl</id>
+        <label>Downlink value</label>
+        <type>text</type>
+        <hint>In megabytes</hint>
+    </field>
+    <field>
+        <id>profile.ul</id>
+        <label>Uplink speed value</label>
+        <type>text</type>
+        <hint>In megabytes</hint>
+    </field>
+
+    <field>
+        <label>Quality Of Service Details</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>profile.QoS</id>
+        <label>QoS Index</label>
+        <type>text</type>
+    </field>
+
+    <field>
+        <id>profile.arp_priority</id>
+        <label>ARP priority level</label>
+        <type>text</type>
+        <help>This defines the relative importance of a resource request to allow in deciding whether
+            a new QoS Flow may be accepted or needs to be rejected in the case of resource limitations</help>
+    </field>
+    <field>
+        <id>profile.arp_capability</id>
+        <label>Pre-emption Capability</label>
+        <type>dropdown</type>
+        <help>This defines whether a service data flow may get resources that were already assigned
+            to another service data flow with a lower ARP priority leve</help>
+    </field>
+    <field>
+        <id>profile.arp_vulnerability</id>
+        <label>Pre-emption Vulnerability </label>
+        <type>dropdown</type>
+        <help>defines whether a service data flow may lose the resources assigned to it in order to admit
+            a service data flow with higher ARP priority level</help>
+    </field>
+
+</form>

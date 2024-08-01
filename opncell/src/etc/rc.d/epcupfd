@@ -10,6 +10,8 @@ name=epcupfd
 service_name=upfd
 desc="upf daemon"
 rcvar=${name}_enable
+config_file="/usr/local/etc/open5gs/upf.yaml"
+log_file="/var/log/opncell/upf.log"
 command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
 start_cmd="${name}_start"
 stop_cmd="${name}_stop"
@@ -27,7 +29,7 @@ epcupfd_start(){
            ifconfig epc0 name tun0 > /dev/null 2>&1
         fi
         
-        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name} ${config_file} ${log_file}; then
                 echo "Started"
                 sleep 10   #Wait for daemon to initialize before renaming tun0 
         else

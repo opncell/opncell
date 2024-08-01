@@ -149,15 +149,17 @@
 
       function switch_mode(value) {
           let select = $("#severity_filter");
-
-          // switch select mode and destroy selectpicker
-          select.prop("multiple", filter_exact);
-          select.selectpicker('destroy');
-
-          // remove title option. bug in bs-select. fixed in v1.13.18 https://github.com/snapappointments/bootstrap-select/issues/2491
-          select.find('option.bs-title-option').remove();
-
           let header_val = filter_exact ? m_header : s_header;
+
+          // switch select mode and reinit selectpicker
+          select.prop("multiple", filter_exact);
+
+          // destroy, reinit & reopen select after load if called from mode switch
+          if (event && (event.currentTarget.id == 'exact_severity')) {
+              select.selectpicker('destroy').on('loaded.bs.select', function () {
+                  select.selectpicker('toggle');
+              });
+          }
           select.selectpicker({ header: header_val });
 
           // attach event handler each time header created
@@ -179,8 +181,6 @@
                   localStorage.setItem('log_severity_{{module}}_{{scope}}', new_val);
               }
               switch_mode(new_val);
-              // keep it open
-              select.selectpicker('toggle');
           });
 
           select.val(value);
@@ -199,7 +199,7 @@
                 <div class="hidden">
                     <!-- filter per type container -->
                     <div id="severity_filter_container" class="btn-group">
-                        <select id="severity_filter" data-title="{{ lang._('Severity') }}" class="selectpicker" data-width="200px">
+                        <select id="severity_filter" data-title="{{ lang._('Severity') }}" data-width="200px">
                             <option value="Emergency">{{ lang._('Emergency') }}</option>
                             <option value="Alert">{{ lang._('Alert') }}</option>
                             <option value="Critical">{{ lang._('Critical') }}</option>

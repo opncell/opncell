@@ -1,0 +1,38 @@
+<form>
+<field>
+    <label>User Details</label>
+    <type>header</type>
+</field>
+<field>
+    <id>user.imsi</id>
+    <label>IMSI</label>
+    <type>text</type>
+    <allownew>true</allownew>
+</field>
+
+<field>
+    <id>user.ki</id>
+    <label>Subscriber Key</label>
+    <type>text</type>
+    <help>Subscriber Key for how the UE connects to a network.</help>
+</field>
+<field>
+    <id>user.opc</id>
+    <label>OPc</label>
+    <type>text</type>
+</field>
+    <field>
+        <id>user.ip</id>
+        <label>IP</label>
+        <type>text</type>
+    </field>
+<field>
+    <id>user.profile</id>
+    <label>Profile</label>
+    <style>tokenize</style>
+    <type>select_multiple</type>
+    <help>Define the profile to be associated with the user.</help>
+</field>
+
+</form>
+

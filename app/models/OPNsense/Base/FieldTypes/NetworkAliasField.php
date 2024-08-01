@@ -54,18 +54,11 @@ class NetworkAliasField extends BaseListField
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
-    protected function getValidationMessage()
+    protected function defaultValidationMessage()
     {
-        if ($this->internalValidationMessage == null) {
-            return sprintf(
-                gettext("%s is not a valid source IP address or alias."),
-                (string)$this
-            );
-        } else {
-            return $this->internalValidationMessage;
-        }
+        return sprintf(gettext("%s is not a valid source IP address or alias."), (string)$this);
     }
 
     /**
@@ -102,12 +95,23 @@ class NetworkAliasField extends BaseListField
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function setMultiple($value)
     {
         // XXX: only single items are supported
         throw new \Exception("Unsupported feature setMultiple()");
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getDescription()
+    {
+        if (isset($this->internalOptionList[(string)$this])) {
+            return $this->internalOptionList[(string)$this];
+        }
+        return (string)$this;
     }
 
     /**

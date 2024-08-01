@@ -1,6 +1,6 @@
 <menu>
     <Lobby order="10" cssClass="fa fa-laptop">
-        <Dashboard order="0" url="/index.php" cssClass="fa fa-dashboard fa-fw">
+        <Dashboard order="0" url="/ui/core/dashboard" cssClass="fa fa-dashboard fa-fw">
             <Args url="/index.php*" visibility="hidden"/>
             <Root url="/" visibility="hidden"/>
             <RootArgs url="/?*" visibility="hidden"/>
@@ -34,9 +34,7 @@
         <Configuration cssClass="fa fa-history fa-fw">
             <Backups url="/diag_backup.php"/>
             <Defaults url="/diag_defaults.php"/>
-            <History url="/diag_confbak.php">
-                <none url="/diag_confbak.php*" visibility="hidden"/>
-            </History>
+            <History url="/ui/core/backup/history/this"/>
         </Configuration>
         <Firmware cssClass="fa fa-building-o fa-fw">
             <Status order="10" url="/ui/core/firmware#status"/>
@@ -49,10 +47,7 @@
             <LogFile order="80" VisibleName="Log File" url="/ui/diagnostics/log/core/pkg"/>
         </Firmware>
         <Gateways cssClass="fa fa-location-arrow fa-fw">
-            <Single order="10" url="/system_gateways.php">
-                <List url="/system_gateways.php*" visibility="hidden"/>
-                <Edit url="/system_gateways_edit.php*" visibility="hidden"/>
-            </Single>
+            <Configuration order="10" url="/ui/routing/configuration"/>
             <Group order="20" url="/system_gateway_groups.php">
                 <List url="/system_gateway_groups.php*" visibility="hidden"/>
                 <Edit url="/system_gateway_groups_edit.php*" visibility="hidden"/>
@@ -60,7 +55,7 @@
             <LogFile VisibleName="Log File" order="30" url="/ui/diagnostics/log/core/gateways"/>
         </Gateways>
         <HighAvailability VisibleName="High Availability" cssClass="fa fa-refresh fa-fw">
-            <Settings order="100" url="/system_hasync.php"/>
+            <Settings order="100" url="/ui/core/hasync"/>
             <Status order="200" url="/status_habackup.php"/>
         </HighAvailability>
         <Routes cssClass="fa fa-map-signs fa-fw">
@@ -72,22 +67,15 @@
             <General url="/system_general.php">
                 <Edit url="/system_general.php*" visibility="hidden"/>
             </General>
-            <Logging url="/diag_logs_settings.php"/>
             <Miscellaneous url="/system_advanced_misc.php"/>
             <Tunables url="/system_advanced_sysctl.php">
                 <Edit url="/system_advanced_sysctl.php*" visibility="hidden"/>
             </Tunables>
         </Settings>
         <Trust cssClass="fa fa-certificate fa-fw">
-            <Authorities url="/system_camanager.php">
-                <Edit url="/system_camanager.php*" visibility="hidden"/>
-            </Authorities>
-            <Certificates url="/system_certmanager.php">
-                <Edit url="/system_certmanager.php*" visibility="hidden"/>
-            </Certificates>
-            <Revocation url="/system_crlmanager.php">
-                <Edit url="/system_crlmanager.php*" visibility="hidden"/>
-            </Revocation>
+            <Authorities url="/ui/trust/ca"/>
+            <Certificates url="/ui/trust/cert"/>
+            <Revocation url="/ui/trust/crl"/>
         </Trust>
         <Wizard url="/wizard.php?xml=system" cssClass="fa fa-magic fa-fw"/>
         <LogFiles order="150" VisibleName="Log Files" cssClass="fa fa-eye fa-fw">
@@ -103,8 +91,9 @@
     </System>
     <Interfaces order="30" cssClass="fa fa-sitemap">
         <Assignments order="900" url="/interfaces_assign.php" cssClass="fa fa-pencil fa-fw"/>
-        <Overview order="910" url="/status_interfaces.php" cssClass="fa fa-tasks fa-fw"/>
+        <Overview VisibleName="Overview" order="910" url="/ui/interfaces/overview" cssClass="fa fa-tasks fa-fw"/>
         <Settings order="920" url="/system_advanced_network.php" cssClass="fa fa-cogs fa-fw"/>
+        <Neighbors order="930" url="/ui/interfaces/neighbor" cssClass="fa fa-users fa-fw"/>
         <Wireless order="940" cssClass="fa fa-wifi fa-fw">
             <Devices url="/interfaces_wireless.php">
                 <Edit url="/interfaces_wireless_edit.php*" visibility="hidden"/>
@@ -121,12 +110,8 @@
             <Bridge url="/interfaces_bridge.php">
                 <Edit url="/interfaces_bridge_edit.php*" visibility="hidden"/>
             </Bridge>
-            <GIF url="/interfaces_gif.php">
-                <Edit url="/interfaces_gif_edit.php*" visibility="hidden"/>
-            </GIF>
-            <GRE url="/interfaces_gre.php">
-                <Edit url="/interfaces_gre_edit.php*" visibility="hidden"/>
-            </GRE>
+            <GIF url="/ui/interfaces/gif"/>
+            <GRE url="/ui/interfaces/gre"/>
         </Types>
         <Diagnostics order="970" cssClass="fa fa-medkit fa-fw">
             <DNSLookup VisibleName="DNS Lookup" url="/ui/diagnostics/dns_diagnostics"/>
@@ -146,15 +131,9 @@
             <PortForward order="100" VisibleName="Port Forward" url="/firewall_nat.php">
                 <Edit url="/firewall_nat_edit.php*" visibility="hidden"/>
             </PortForward>
-            <OneToOne order="200" VisibleName="One-to-One" url="/firewall_nat_1to1.php">
-                <Edit url="/firewall_nat_1to1_edit.php*" visibility="hidden"/>
-            </OneToOne>
             <Outbound order="300" VisibleName="Outbound" url="/firewall_nat_out.php">
                 <Edit url="/firewall_nat_out_edit.php*" visibility="hidden"/>
             </Outbound>
-            <NPTv6 order="400" url="/firewall_nat_npt.php">
-                <Edit url="/firewall_nat_npt_edit.php*" visibility="hidden"/>
-            </NPTv6>
         </NAT>
         <Rules cssClass="fa fa-check fa-fw" />
         <Settings order="200" cssClass="fa fa-cogs fa-fw">
@@ -181,26 +160,24 @@
         </LogFiles>
     </Firewall>
     <Services order="60" cssClass="fa fa-cog">
-        <DHCPv4 cssClass="fa fa-bullseye fa-fw">
-            <Relay order="200" url="/services_dhcp_relay.php"/>
+        <ISC_DHCPv4 VisibleName="ISC DHCPv4" cssClass="fa fa-bullseye fa-fw">
             <Leases order="300" url="/ui/dhcpv4/leases"/>
             <LogFile VisibleName="Log File" order="400" url="/ui/diagnostics/log/core/dhcpd"/>
-        </DHCPv4>
-        <DHCPv6 cssClass="fa fa-bullseye fa-fw">
-            <Relay order="300" url="/services_dhcpv6_relay.php"/>
+        </ISC_DHCPv4>
+        <ISC_DHCPv6 VisibleName="ISC DHCPv6" cssClass="fa fa-bullseye fa-fw">
             <Leases order="400" url="/ui/dhcpv6/leases"/>
-        </DHCPv6>
+        </ISC_DHCPv6>
         <OpenDNS VisibleName="OpenDNS" url="/services_opendns.php" cssClass="fa fa-tags fa-fw"/>
         <RouterAdv VisibleName="Router Advertisements" cssClass="fa fa-bullseye fa-fw" />
     </Services>
     <VPN order="50" cssClass="fa fa-globe">
-        <OpenVPN cssClass="fa fa-lock fa-fw" order="20">
-            <Instances VisibleName="Instances [new]" order="5" url="/ui/openvpn/instances"/>
-            <Servers order="10" url="/vpn_openvpn_server.php">
+        <OpenVPN cssClass="fa fa-lock fa-fw">
+            <Instances url="/ui/openvpn/instances"/>
+            <Servers VisibleName="Servers [legacy]" order="10" url="/vpn_openvpn_server.php">
                 <Edit url="/vpn_openvpn_server.php?*" visibility="hidden"/>
                 <Step url="/wizard.php?xml=openvpn*" visibility="hidden"/>
             </Servers>
-            <Clients order="20" url="/vpn_openvpn_client.php">
+            <Clients VisibleName="Clients [legacy]" order="20" url="/vpn_openvpn_client.php">
                 <Edit url="/vpn_openvpn_client.php?*" visibility="hidden"/>
             </Clients>
             <CSC order="30" VisibleName="Client Specific Overrides" url="/ui/openvpn/client_overwrites"/>

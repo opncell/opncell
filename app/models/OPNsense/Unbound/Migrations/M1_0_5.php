@@ -46,13 +46,17 @@ class M1_0_5 extends BaseModelMigration
                     $new[$key] = empty($config->unbound->$key) ? 0 : 1;
                     continue;
                 }
-                $new[$key] = $config->unbound->$key;
+                $new[$key] = (string)$config->unbound->$key;
             }
         }
 
         $new['enabled'] = isset($config->unbound->enable) ? '1' : '0';
 
         $model->general->setNodes($new);
+
+        /* discard missing interfaces to pass validation */
+        $model->general->active_interface->normalizeValue();
+        $model->general->outgoing_interface->normalizeValue();
     }
 
     public function post($model)

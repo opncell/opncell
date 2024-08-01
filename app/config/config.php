@@ -1,30 +1,47 @@
 <?php
 
 /*
- * Modified: prepend directory path of current file, because of this file own different ENV under between Apache and command line.
- * NOTE: please remove this comment.
+ * Copyright (C) 2014-2024 Deciso B.V.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+ * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
-defined('BASE_PATH') || define('BASE_PATH', getenv('BASE_PATH') ?: realpath(dirname(__FILE__) . '/../..'));
-defined('APP_PATH') || define('APP_PATH', BASE_PATH . '/app');
 
-return new \Phalcon\Config([
-    'database' => [
-        'adapter'     => 'Mysql',
-        'host'        => 'localhost',
-        'username'    => 'root',
-        'password'    => '',
-        'dbname'      => 'test',
-        'charset'     => 'utf8',
-    ],
+require_once 'AppConfig.php';
+
+return new OPNsense\Core\AppConfig([
     'application' => [
-        'appDir'         => APP_PATH . '/',
-        'controllersDir' => APP_PATH . '/controllers/',
-        'modelsDir'      => APP_PATH . '/models/',
-        'migrationsDir'  => APP_PATH . '/migrations/',
-        'viewsDir'       => APP_PATH . '/views/',
-        'pluginsDir'     => APP_PATH . '/plugins/',
-        'libraryDir'     => APP_PATH . '/library/',
-        'cacheDir'       => BASE_PATH . '/cache/',
-        'baseUri'        => '/',
-    ]
+        'controllersDir' => __DIR__ . '/../../app/controllers/',
+        'modelsDir'      => __DIR__ . '/../../app/models/',
+        'viewsDir'       => __DIR__ . '/../../app/views/',
+        'pluginsDir'     => __DIR__ . '/../../app/plugins/',
+        'libraryDir'     => __DIR__ . '/../../app/library/',
+        'cacheDir'       => __DIR__ . '/../../app/cache/',
+        'baseUri'        => '/opnsense_gui/',
+    ],
+    'globals' => [
+        'config_path'    => '/conf/',
+        'temp_path'      => '/tmp/',
+        'debug'          => false,
+        'simulate_mode'  => false,
+    ],
 ]);

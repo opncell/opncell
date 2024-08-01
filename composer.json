@@ -31,7 +31,9 @@
         "vlucas/phpdotenv": "^3.6|^4.0|^5.0",
         "symfony/yaml": "^5.3",
       "ext-json": "*",
-      "ext-gettext": "*"
+      "ext-gettext": "*",
+        "ext-simplexml": "*",
+        "ext-zip": "*"
     },
     "require-dev": {
         "humbug/box": "^3.13",

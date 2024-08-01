@@ -28,8 +28,11 @@
 
 namespace OPNsense\Base;
 
-use OPNsense\Core\ACL;
 use OPNsense\Auth\AuthenticationFactory;
+use OPNsense\Core\ACL;
+use OPNsense\Core\Backend;
+use OPNsense\Core\Config;
+use OPNsense\Mvc\Security;
 
 /**
  * Class ApiControllerBase, inherit this class to implement API calls
@@ -44,6 +47,7 @@ class ApiControllerBase extends ControllerRoot
      * @param string|null $defaultSort default sort field name
      * @param null|function $filter_funct additional filter callable
      * @param int $sort_flags sorting behavior
+     * @param array|null $search_clauses optional overwrite to pass clauses to search instead of using searchPhrase
      * @return array
      */
     protected function searchRecordsetBase(
@@ -51,7 +55,8 @@ class ApiControllerBase extends ControllerRoot
         $fields = null,
         $defaultSort = null,
         $filter_funct = null,
-        $sort_flags = SORT_NATURAL | SORT_FLAG_CASE
+        $sort_flags = SORT_NATURAL | SORT_FLAG_CASE,
+        $search_clauses = null
     ) {
         $records = is_array($records) ? $records : []; // safeguard input, we are only able to search arrays.
         $itemsPerPage = intval($this->request->getPost('rowCount', 'int', 9999));
@@ -59,7 +64,11 @@ class ApiControllerBase extends ControllerRoot
         $currentPage = intval($this->request->getPost('current', 'int', 1));
         $offset = ($currentPage - 1) * $itemsPerPage;
         $entry_keys = array_keys($records);
-        $searchPhrase = (string)$this->request->getPost('searchPhrase', null, '');
+        if (!is_array($search_clauses)) {
+            /* default behavior, extract clauses to search from post */
+            $searchPhrase = (string)$this->request->getPost('searchPhrase', null, '');
+            $search_clauses = preg_split('/\s+/', $searchPhrase);
+        }
 
         $sortOrder = SORT_ASC;
         $sortKey = $defaultSort;
@@ -83,8 +92,8 @@ class ApiControllerBase extends ControllerRoot
             array_multisort($keys, $sortOrder, $sort_flags, $records);
         }
 
-        $search_clauses = preg_split('/\s+/', $searchPhrase);
-        $entry_keys = array_filter($entry_keys, function ($key) use ($search_clauses, $filter_funct, $fields, $records) {
+
+        $entry_keys = array_filter($entry_keys, function ($key) use ($search_clauses, $filter_funct, $fields, &$records) {
             if (is_callable($filter_funct) && !$filter_funct($records[$key])) {
                 // not applicable according to $filter_funct()
                 return false;
@@ -94,7 +103,17 @@ class ApiControllerBase extends ControllerRoot
                     foreach ($records[$key] as $itemkey => $itemval) {
                         if (!empty($fields) && !in_array($itemkey, $fields)) {
                             continue;
-                        } if (!is_array($itemval) && stripos((string)$itemval, $clause) !== false) {
+                        }
+
+                        if (is_array($itemval)) {
+                            $tmp = [];
+                            array_walk_recursive($itemval, function ($a) use (&$tmp) {
+                                $tmp[] = $a;
+                            });
+                            $itemval = implode(' ', $tmp);
+                        }
+
+                        if (stripos((string)$itemval, $clause) !== false) {
                             $matches = true;
                         }
                     }
@@ -124,6 +143,56 @@ class ApiControllerBase extends ControllerRoot
     }
 
     /**
+     * passtru recordset (key value store) as csv output
+     * @param array $records dataset to export (e.g. [['field' => 'value'], ['field' => 'value']])
+     */
+    protected function exportCsv(
+        $records,
+        $headers = [
+            'Content-Type: text/csv', 'Content-Transfer-Encoding: binary', 'Pragma: no-cache', 'Expires: 0'
+        ]
+    ) {
+        $records = is_array($records) ? $records : [];
+        $stream = fopen('php://temp', 'rw+');
+        if (isset($records[0])) {
+            fputcsv($stream, array_keys($records[0]));
+        }
+        foreach ($records as $record) {
+            fputcsv($stream, $record);
+        }
+        foreach ($headers as $header) {
+            $parts = explode(':', $header, 2);
+            $this->response->setHeader($parts[0], ltrim($parts[1]));
+        }
+        rewind($stream);
+        $this->response->setContent($stream);
+    }
+
+    /**
+     * passtru configd stream
+     * @param string $action configd action to perform
+     * @param array $params list of parameters
+     * @param array $headers http headers to send before pushing data
+     * @param int $poll_timeout poll timeout after connect
+     */
+    protected function configdStream(
+        $action,
+        $params = [],
+        $headers = [
+            'Content-Type: application/json', 'Content-Transfer-Encoding: binary', 'Pragma: no-cache', 'Expires: 0'
+        ],
+        $poll_timeout = 2
+    ) {
+        $response = (new Backend())->configdpStream($action, $params, $poll_timeout);
+
+        foreach ($headers as $header) {
+            $parts = explode(':', $header, 2);
+            $this->response->setHeader($parts[0], ltrim($parts[1]));
+        }
+        $this->response->setContent($response);
+    }
+
+    /**
      * parse raw json type content to POST data depending on content type
      * (only for api calls)
      * @return string
@@ -133,7 +202,7 @@ class ApiControllerBase extends ControllerRoot
         switch (strtolower(str_replace(' ', '', $this->request->getHeader('CONTENT_TYPE')))) {
             case 'application/json':
             case 'application/json;charset=utf-8':
-                $jsonRawBody = $this->request->getJsonRawBody(true);
+                $jsonRawBody = $this->request->getJsonRawBody();
                 if (empty($this->request->getRawBody()) && empty($jsonRawBody)) {
                     return "Invalid JSON syntax";
                 }
@@ -153,37 +222,6 @@ class ApiControllerBase extends ControllerRoot
                 break;
         }
         return null;
-    }
-
-    /**
-     * Raise errors, warnings, notices, etc.
-     * @param $errno The first parameter, errno, contains the level of the
-     *               error raised, as an integer.
-     * @param $errstr The second parameter, errstr, contains the error
-     *                message, as a string.
-     * @param $errfile The third parameter is optional, errfile, which
-     *                 contains the filename that the error was raised in, as
-     *                 a string.
-     * @param $errline The fourth parameter is optional, errline, which
-     *                 contains the line number the error was raised at, as an
-     *                 integer.
-     * @throws \Exception
-     */
-    public function APIErrorHandler($errno, $errstr, $errfile, $errline)
-    {
-        if ($errno & error_reporting()) {
-            $msg = "Error at $errfile:$errline - $errstr (errno=$errno)";
-            throw new \Exception($msg);
-        }
-    }
-
-    /**
-     * Initialize API controller
-     */
-    public function initialize()
-    {
-        // disable view processing
-        set_error_handler(array($this, 'APIErrorHandler'));
     }
 
     /**
@@ -234,38 +272,23 @@ class ApiControllerBase extends ControllerRoot
                                 $this->response->send();
                                 return false;
                             } else {
-                                // authentication + authorization successful.
-                                // pre validate request and communicate back to the user on errors
-                                $callMethodName = $dispatcher->getActionName() . 'Action';
-                                $dispatchError = null;
-                                // check number of parameters using reflection
-                                $object_info = new \ReflectionObject($this);
-                                if ($object_info->hasMethod($callMethodName)) {
-                                    // only inspect parameters if object exists
-                                    $req_c = $object_info->getMethod($callMethodName)->getNumberOfRequiredParameters();
-                                    if ($req_c > count($dispatcher->getParams())) {
-                                        $dispatchError = 'action ' . $dispatcher->getActionName() .
-                                            ' expects at least ' . $req_c . ' parameter(s)';
-                                    }
-                                }
+                                // link username on successful login
+                                $this->logged_in_user = $authResult['username'];
                                 // if body is send as json data, parse to $_POST first
-                                $dispatchError = empty($dispatchError) ? $this->parseJsonBodyData() : $dispatchError;
-
+                                $dispatchError = $this->parseJsonBodyData();
                                 if ($dispatchError != null) {
-                                    // send error to client
                                     $this->response->setStatusCode(400, "Bad Request");
                                     $this->response->setContentType('application/json', 'UTF-8');
-                                    $this->response->setJsonContent(
-                                        array('message' => $dispatchError,
-                                            'status'  => 400)
-                                    );
+                                    $this->response->setJsonContent(['status'  => 400, 'message' => $dispatchError]);
                                     $this->response->send();
                                     return false;
                                 }
 
-                                // link username on successful login
-                                $this->logged_in_user = $authResult['username'];
-
+                                // pass revision context to config object
+                                Config::getInstance()->setRevisionContext([
+                                    'username' => $authResult['username'],
+                                    'user_apitoken' => $apiKey
+                                ]);
                                 return true;
                             }
                         }
@@ -294,8 +317,10 @@ class ApiControllerBase extends ControllerRoot
             }
 
             // check for valid csrf on post requests
-            $csrf_token = $this->request->getHeader('X_CSRFTOKEN');
-            $csrf_valid = $this->security->checkToken(null, $csrf_token, false);
+            $csrf_valid = (new Security($this->session, $this->request))->checkToken(
+                null,
+                $this->request->getHeader('X_CSRFTOKEN')
+            );
 
             if (
                 ($this->request->isPost() ||
@@ -323,20 +348,18 @@ class ApiControllerBase extends ControllerRoot
      */
     public function afterExecuteRoute($dispatcher)
     {
-        // exit when reponse headers are already set
-        if ($this->response->getHeaders()->get("Status") != null) {
-            return false;
-        } else {
-            // process response, serialize to json object
-            $data = $dispatcher->getReturnedValue();
-            if (is_array($data)) {
-                $this->response->setContentType('application/json', 'UTF-8');
-                if ($this->isExternalClient()) {
-                    $this->response->setContent(json_encode($data));
-                } else {
-                    $this->response->setContent(htmlspecialchars(json_encode($data), ENT_NOQUOTES));
-                }
+        // process response, serialize to json object
+        $data = $dispatcher->getReturnedValue();
+        if (is_array($data)) {
+            $this->response->setContentType('application/json', 'UTF-8');
+            if ($this->isExternalClient()) {
+                $this->response->setContent(json_encode($data));
+            } else {
+                $this->response->setContent(htmlspecialchars(json_encode($data), ENT_NOQUOTES));
             }
+        } elseif (is_string($data)) {
+            // XXX: fallback, controller returned data as string. a deprecation message might be an option here.
+            $this->response->setContent($data);
         }
 
         return $this->response->send();

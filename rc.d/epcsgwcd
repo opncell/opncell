@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# PROVIDE: epcsgwcd
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=epcsgwcd
+service_name=sgwcd
+desc="SGWC daemon"
+rcvar=${name}_enable
+command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
+start_cmd="${name}_start"
+command_args="-D > /dev/null 2>&1"
+
+load_rc_config ${name}
+: "${epcsgwcd_enable:="NO"}"
+#: "${epc_config="/usr/local/etc/epc/epc.conf"}"
+
+#required_files="${epc_config}"
+
+
+epcsgwcd_start(){
+        echo "Starting open5gs-${service_name} daemon"
+
+        mkdir -p /var/run/epc
+        pidfile="/var/run/epc/epcsgwcd.pid"
+
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
+                echo "Started"
+        else
+                echo "Failed to start"
+        fi
+}
+
+run_rc_command "$1"

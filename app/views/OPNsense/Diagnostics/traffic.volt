@@ -159,7 +159,7 @@ POSSIBILITY OF SUCH DAMAGE.
                             frameRate: 30
                           },
                           colorschemes: {
-                            scheme: 'brewer.Paired12'
+                            scheme: 'tableau.Classic10'
                           }
                       }
                   }
@@ -257,7 +257,7 @@ POSSIBILITY OF SUCH DAMAGE.
                               frameRate: 30
                           },
                           colorschemes: {
-                              scheme: 'brewer.Paired12'
+                              scheme: 'tableau.Classic10'
                           }
                       }
                   }
@@ -382,18 +382,18 @@ POSSIBILITY OF SUCH DAMAGE.
             if (tmp !== null) {
                 selected_interfaces = tmp.split(',');
             }
-            let i = 1;
+            let i = 0;
             Object.keys(data.interfaces).forEach(function(intf) {
-                let colors = Chart.colorschemes.tableau.Tableau20.length;
-                let colorIdx = i - parseInt(i / colors) * colors;
-                data.interfaces[intf].color = Chart.colorschemes.tableau.Tableau20[colorIdx];
+                let colors = Chart.colorschemes.tableau.Classic10;
+                let colorIdx = i % colors.length;
+                data.interfaces[intf].color = colors[colorIdx];
 
                 let option = $("<option/>").attr("value", intf);
                 if (selected_interfaces.includes(intf)) {
                     option.prop("selected", true);
                 }
-                option.data(
-                    'content',
+                option.attr(
+                    'data-content',
                     $("<span class='badge' style='background:"+data.interfaces[intf].color+"'/>").text(data.interfaces[intf].name).prop('outerHTML')
                 );
                 i++;

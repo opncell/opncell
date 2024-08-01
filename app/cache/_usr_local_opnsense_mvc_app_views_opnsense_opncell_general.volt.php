@@ -1,0 +1,503 @@
+
+
+<script>
+    var network = " ";
+    function getVar() {
+        return localStorage.getItem('networkName');
+    }
+    // const storedValue = localStorage.getItem("networkName");
+
+    function UpdateOptions() {
+        network = $('input:radio[name=network]:checked').val();
+        localStorage.setItem("networkName", network);
+        startServices(network);
+        // ShowHideConfigFields();
+    }
+
+    function startServices(net) {
+        // $("#saveAct_networks").attr("style", "display:block");
+        // $("#saveAct_networks_progress").addClass("fa fa-spinner fa-pulse");
+        BootstrapDialog.show({
+            type:BootstrapDialog.TYPE_INFO,
+            title: "<?= $lang->_('Activating Network') ?>",
+            closable: true,
+            onshow: function(dialogRef){
+                dialogRef.getModalBody().html(
+                    "<?= $lang->_(' Network set-up in progress, please wait...') ?>" +
+                    ' <i class="fa fa-cog fa-spin"></i>'
+                );
+                ajaxCall(url = "/api/opncell/service/reconfigureAct/" + net, sendData = {}, callback = function (data, status) {
+                    updateServiceControlUI('opncore');
+                    // $("#saveAct_networks_progress").removeClass("fa fa-spinner fa-pulse");
+                    // $("#saveAct_networks").attr("style", "display:none");
+                    // ShowHideConfigFields();
+                    $("#saveAct_configs").attr("style", "display:block");
+                    dialogRef.close()
+                });
+
+
+                // ajaxCall(url = '/api/opncore/service/start/' + serviceName, sendData = {}, callback = function (data, status) {
+                //     updateServiceControlUI('opncore');
+                //     // $("#grid-other-configs").bootgrid('reload');
+                // });
+            },
+        });
+
+
+
+    }
+
+    function saveConfigurations() {
+        var storedValue =  getVar()
+        saveFormToEndpoint(url="/api/opncell/service/set/" + storedValue, formid='frm_general_settings', callback_ok = function () {
+            $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
+
+            ajaxCall(url = "/api/opncell/service/reconfigureAct/" + storedValue, sendData = {}, callback = function (data, status) {
+                updateServiceControlUI('opncell');
+
+                $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
+
+            });
+        }, true);
+    }
+
+    function ShowHideConfigFields() {
+        if (network === "") {
+            $('tr[id="row_general.configs"]').addClass('hidden');
+            $('tr[id="row_general.plmnid_mcc"]').addClass('hidden');
+            $('tr[id="row_general.plmnid_mnc"]').addClass('hidden');
+            $('tr[id="row_general.tac"]').addClass('hidden');
+            $('tr[id="row_general.networkname"]').addClass('hidden');
+            $('tr[id="row_general.sst"]').addClass('hidden');
+            $('tr[id="row_general.ue"]').addClass('hidden');
+            $('tr[id="row_general.peer"]').addClass('hidden');
+            $('tr[id="row_general.dns"]').addClass('hidden');
+            $('tr[id="row_general.ca"]').addClass('hidden');
+            $('tr[id="row_general.enablefour"]').addClass('hidden');
+            $('tr[id="row_general.enableupf"]').addClass('hidden');
+            $('tr[id="row_general.enablefiveSA"]').addClass('hidden');
+            $('tr[id="row_general.enablefiveNSA"]').addClass('hidden');
+            $('tr[id="row_general.enablemetrics"]').addClass('hidden');
+            $('tr[id="row_general.metricsaddress"]').addClass('hidden');
+            $('tr[id="row_general.metricsport"]').addClass('hidden');
+        } else {
+            $('tr[id="row_general.configs"]').removeClass('hidden');
+            $('tr[id="row_general.plmnid_mcc"]').removeClass('hidden');
+            $('tr[id="row_general.plmnid_mnc"]').removeClass('hidden');
+            $('tr[id="row_general.tac"]').removeClass('hidden');
+            $('tr[id="row_general.networkname"]').removeClass('hidden');
+            $('tr[id="row_general.sst"]').removeClass('hidden');
+            $('tr[id="row_general.ue"]').removeClass('hidden');
+            $('tr[id="row_general.peer"]').removeClass('hidden');
+            $('tr[id="row_general.dns"]').removeClass('hidden');
+            $('tr[id="row_general.ca"]').removeClass('hidden');
+            $("#saveAct_configs").attr("style", "display:block");
+            $('tr[id="row_general.enablefour"]').addClass('hidden');
+            $('tr[id="row_general.enableupf"]').addClass('hidden');
+            $('tr[id="row_general.enablefiveSA"]').addClass('hidden');
+            $('tr[id="row_general.enablefiveNSA"]').addClass('hidden');
+            $('tr[id="row_general.enablemetrics"]').addClass('hidden');
+            $('tr[id="row_general.metricsaddress"]').addClass('hidden');
+            $('tr[id="row_general.metricsport"]').addClass('hidden');
+        }
+
+        if (network ==='enableupf'){
+            $('tr[id="row_general.configs"]').addClass('hidden');
+            $('tr[id="row_general.plmnid_mcc"]').addClass('hidden');
+            $('tr[id="row_general.plmnid_mnc"]').addClass('hidden');
+            $('tr[id="row_general.tac"]').addClass('hidden');
+            $('tr[id="row_general.networkname"]').addClass('hidden');
+            $('tr[id="row_general.sst"]').addClass('hidden');
+            $('tr[id="row_general.dns"]').addClass('hidden');
+            $('tr[id="row_general.ca"]').addClass('hidden');
+            $('tr[id="row_general.enablefour"]').addClass('hidden');
+            $('tr[id="row_general.enablefiveSA"]').addClass('hidden');
+            $('tr[id="row_general.enablefiveNSA"]').addClass('hidden');
+            $('tr[id="row_general.enablemetrics"]').addClass('hidden');
+            $('tr[id="row_general.metricsaddress"]').addClass('hidden');
+            $('tr[id="row_general.metricsport"]').addClass('hidden');
+        }
+    }
+    function stdDialogConfirmWithInput(message, defaultValue, callback) {
+        var userInput = prompt(message, defaultValue);
+        if (userInput !== null) {
+            callback(userInput);
+        }
+    }
+    $(document).ready(function () {
+        let data_get_map = {'frm_general_settings': "/api/opncell/general/get"};
+        // let data_get_map2 = {'frm_tuneables_settings': "/api/opncore/tuneables/get"};
+
+        mapDataToFormUI(data_get_map).done(function (data) {
+            formatTokenizersUI();
+            $('.selectpicker').selectpicker('refresh');
+            ShowHideConfigFields();
+            updateUI();
+            updateServiceControlUI('opncell');
+        });
+
+        function updateUI() {
+
+            if (network !== "") {
+                const networks = $('input:radio[name=network]')
+                var storedValue = getVar()
+                for (const networkVal of networks) {
+                    if (storedValue === networkVal.value) {
+                        console.log(storedValue)
+                        ShowHideConfigFields()
+                        var labelId = networkVal.getAttribute("data-label");
+                        var label = document.getElementById(labelId);
+                        label.classList.add("active");
+                        break; // No need to continue checking once we've found the match
+                    }
+                }
+            }
+        }
+        let noEdit = ['sgwcd','pcrfd','mongod','hssd'];
+
+        let gridOtherConfigs = {
+            ajax: true,
+            selection: true,
+            multiSelect: true,
+            rowCount: [10, 25, 50, 100, 500, 1000],
+            url: '/api/opncell/general/startedServices/' + getVar(),
+            formatters: {
+                "commands": function (column, row) {
+                    if(row.status === "running"){
+                        if(!(noEdit.includes(row.serviceName))){
+                            return "<button type=\"button\" title=\"<?= $lang->_('start service') ?>\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                "<button type=\"button\" title=\"<?= $lang->_('Restart service') ?>\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
+                                "<button type=\"button\" title=\"<?= $lang->_('Stop service') ?>\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"<?= $lang->_('Log file') ?>\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"<?= $lang->_('Edit Config') ?>\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
+                        } else {
+                            return "<button type=\"button\" title=\"<?= $lang->_('start service') ?>\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                "<button type=\"button\" title=\"<?= $lang->_('Restart service') ?>\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
+                                "<button type=\"button\" title=\"<?= $lang->_('Stop service') ?>\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"<?= $lang->_('Log file') ?>\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" ;
+                        }
+
+                    }else if(row.status === "stopped" || row.status === "disabled" || row.PID === "Stopped" ){
+                        if(!(noEdit.includes(row.serviceName))){
+                            return "<button type=\"button\" title=\"<?= $lang->_('Running') ?>\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                "<button type=\"button\" title=\"<?= $lang->_('Stop') ?>\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"<?= $lang->_('Log file') ?>\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"<?= $lang->_('Edit Config') ?>\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
+
+                        } else {
+                            return "<button type=\"button\" title=\"<?= $lang->_('Running') ?>\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                "<button type=\"button\" title=\"<?= $lang->_('Stop') ?>\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"<?= $lang->_('Log file') ?>\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>";
+                        }
+
+                    }else if(row.status === "unknown" ){
+                        return "<button type=\"button\" title=\"<?= $lang->_('start service') ?>\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                            "<button type=\"button\" title=\"<?= $lang->_('Restart service') ?>\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
+                            "<button type=\"button\" title=\"<?= $lang->_('Stop service') ?>\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" ;
+                            // "<button type=\"button\" title=\"<?= $lang->_('Edit Config') ?>\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
+
+                    }
+                },
+
+            },
+        };
+        function serviceWait() {
+            $.ajax({
+                url: '/ui/opncell/general#other-configs',
+                timeout: 2500
+            }).fail(function () {
+                setTimeout(serviceWait, 2500);
+            }).done(function () {
+                $(location).attr('href', '/ui/opncell/general#other-configs');
+            });
+        }
+
+
+
+
+        var tbl =  $("#grid-other-configs");
+        tbl.bootgrid(gridOtherConfigs).on("loaded.rs.jquery.bootgrid", function (e) {
+            //start service
+            $(this).find(".command-start").on("click", function (e) {
+                var serviceName = $(this).data("row-service");
+                console.log(serviceName)
+                BootstrapDialog.show({
+                    type:BootstrapDialog.TYPE_INFO,
+                    title: "<?= $lang->_('Starting Service') ?>",
+                    closable: true,
+                    onshow: function(dialogRef){
+                        dialogRef.getModalBody().html(
+                            "<?= $lang->_(' The service is starting, please wait...') ?>" +
+                        ' <i class="fa fa-cog fa-spin"></i>'
+                    );
+
+                        ajaxCall(url = '/api/opncell/service/start/' + serviceName, sendData = {}, callback = function (data, status) {
+                            console.log(status)
+                            console.log(data)
+
+                            dialogRef.close()
+
+                        });
+                        $("#grid-other-configs").bootgrid('reload');
+                        updateServiceControlUI('opncell');
+                        setTimeout(serviceWait, 45000);
+                    },
+                });
+
+            });
+
+            // restart service
+            $(this).find(".command-restart").on("click", function (e) {
+
+                var serviceName = $(this).data("row-service");
+                console.log(serviceName)
+
+              BootstrapDialog.show({
+                    type:BootstrapDialog.TYPE_INFO,
+                    title: "<?= $lang->_('Restarting Service') ?>",
+                    closable: true,
+                    onshow: function(dialogRef){
+                        dialogRef.getModalBody().html(
+                            "<?= $lang->_('The service is restarting , please wait...') ?>" +
+                            ' <i class="fa fa-cog fa-spin"></i>'
+                        );
+                        ajaxCall(url = '/api/opncell/service/restart/' + serviceName, sendData = {}, callback = function (data, status) {
+                            console.log(status)
+                            console.log(data)
+
+                            dialogRef.close()
+
+                        });
+                        $("#grid-other-configs").bootgrid('reload');
+                        updateServiceControlUI('opncell');
+                        setTimeout(serviceWait, 45000);
+                    },
+                });
+            });
+
+            //  stop service
+            $(this).find(".command-stop").on("click", function (e) {
+                var serviceName = $(this).data("row-service");
+                console.log(serviceName)
+                BootstrapDialog.show({
+                    type:BootstrapDialog.TYPE_INFO,
+                    title: "<?= $lang->_('Stopping Service') ?>",
+                    closable: true,
+                    onshow: function(dialogRef){
+                        dialogRef.getModalBody().html(
+                            "<?= $lang->_('The service is stopping , please wait...') ?>" +
+                        ' <i class="fa fa-cog fa-spin"></i>'
+                    );
+                        ajaxCall(url = '/api/opncell/service/stop/' + serviceName, sendData = {}, callback = function (data, status) {
+                            console.log(status)
+                            console.log(data)
+
+                            dialogRef.close()
+
+                        });
+                        $("#grid-other-configs").bootgrid('reload');
+                        updateServiceControlUI('opncell');
+                    },
+                });
+
+            });
+
+            //  fetch log file
+            $(this).find(".command-logfile").on("click", function (e) {
+                var serviceName = $(this).data("row-service");
+                console.log(serviceName)
+                let strippedServiceName = serviceName.slice(0,-1)    //remove the trailing 'd' mmed -> mme
+               console.log(strippedServiceName)
+                window.location.href="/ui/diagnostics/log/opncell/"+strippedServiceName
+            });
+
+
+            // edit service config
+            const editDlg = $(this).attr('data-editDialog');
+            //
+            // $(this).find(".command-editConfig").click(function() {
+            //     stdDialogConfirmWithInput('Enter your name:', '', function(input) {
+            //         alert('Hello, ' + input + '!');
+            //     });
+            // });
+            $(this).find(".command-editConfig").on("click", function (e) {
+                // edit dialog id to use
+                console.log(editDlg)
+                const gridId = $(this).attr('id');
+
+                if (editDlg !== undefined ) {
+                    let pid = $(this).data("row-pid");
+                    let server = $(this).data("row-service");
+                    console.log(server,pid)
+                    let y = [server]
+                    y.push(pid)
+
+                    $('#' + editDlg).modal({backdrop: 'static', keyboard: false});
+                      let inputElement = document.getElementById("addr")
+                    // define save action
+                    $("#btn_" + editDlg + "_save").unbind('click').click(function () {
+                        console.log("clicked")
+                        let v = inputElement.value
+                        y.push(v)
+                        ajaxCall(url = "/api/opncell/general/editServerConfig/" + y , sendData = {}, callback = function (data, status) {
+                            $("#" + editDlg).modal('hide');
+                            std_bootgrid_reload(gridId);
+                            $('#grid-other-configs').bootgrid('reload')
+                        });
+
+                    });
+                } else {
+                    console.log("[grid] action get or data-editDialog missing")
+                }
+            });
+
+        });
+
+        // Automatically load the started services in the grid
+        $('#configTab').on('click', function () {
+            var storedValue =  getVar()
+            ajaxCall(url = "/api/opncell/general/startedServices/" + storedValue, sendData = {}, callback = function (data, status) {
+                $('#grid-other-configs').bootgrid('reload')
+
+            });
+
+            updateServiceControlUI('opncell');
+        });
+
+        // update history on tab state and implement navigation
+        if (window.location.hash !== "") {
+            $('a[href="' + window.location.hash + '"]').click()
+        }
+        $('.nav-tabs a').on('shown.bs.tab', function (e) {
+            history.pushState(null, null, e.target.hash);
+        });
+
+    });
+
+
+</script>
+
+<!-- Navigation bar -->
+<ul class="nav nav-tabs" data-tabs="tabs" id="maintabs">
+    <li class="active"><a data-toggle="tab" href="#networks"><?= $lang->_('Network') ?></a></li>
+    <li id="configTab"><a data-toggle="tab" href="#other-configs"><?= $lang->_('Configurations') ?></a></li>
+    <li id="licenseTab"><a data-toggle="tab" href="#license"><?= $lang->_('License') ?></a></li>
+</ul>
+
+<div class="tab-content content-box tab-content">
+    <div id="networks" class="tab-pane fade in active">
+        <div class="content-box" style="padding-bottom: 1.7em;">
+            <div class="row __mt">
+                <div class="col-md-12 __ml ">
+                    <b class="__mb"><?= $lang->_('Select a Network') ?>:</b>
+                    <form onChange="UpdateOptions()">
+                        <div class="btn-group btn-group-s __mb" data-toggle="buttons">
+                            <label id="enablefour" class="btn btn-default">
+                                <input type="radio" id="fourg" name="network" value="enablefour"
+                                       data-label="enablefour"/>
+                                <?= $lang->_('4G') ?>
+                            </label>&nbsp;&nbsp;
+
+                            <label id="enablefiveSA" class="btn btn-default">
+                                <input type="radio" id="fivegsa" name="network" value="enablefiveSA"
+                                       data-label="enablefiveSA"/> <?= $lang->_('5G') ?>
+                            </label>
+                            <label id="enablefiveNSA" class="btn btn-default">
+                                <input type="radio" id="fivegnsa" name="network" value="enablefiveNSA"
+                                       data-label="enablefiveNSA"/> <?= $lang->_('5G NSA') ?>
+                            </label>
+                            <label id="enableupf" class="btn btn-default">
+                                <input type="radio" id="upf" name="network" value="enableupf"
+                                       data-label="enableupf"/>
+                                <?= $lang->_('UPF') ?>
+                            </label>&nbsp;
+
+                        </div>
+                    </form>
+                    <?= $this->partial('layout_partials/base_form', ['fields' => $generalForm, 'id' => 'frm_general_settings']) ?>
+                </div>
+            </div>
+
+            <div class="col-md-12 __mt">
+                <button class="btn btn-primary" style="display: none" id="saveAct_networks" type="button"><b><?= $lang->_('Services') ?></b> <i id="saveAct_networks_progress"></i></button>
+            </div>
+            <div class="col-md-12 __mt">
+                <button class="btn btn-primary" style="display: none" id="saveAct_configs" type="button"
+                        onClick="saveConfigurations()"><b><?= $lang->_('Save') ?></b> <i id="saveAct_configs_progress"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+<!--    <div id="tuneables" class="tab-pane fade in">-->
+<!--        <div class="content-box" style="padding-bottom: 1.7em;">-->
+<!--        <div class="row __mt">-->
+<!--            <div class="col-md-12 ">-->
+<!--                    <?= $this->partial('layout_partials/base_form', ['fields' => $tuneablesForm, 'id' => 'frm_tuneables_settings']) ?>-->
+<!--            </div>-->
+<!--        <div class="col-md-12 __mt __ml">-->
+<!--            <button class="btn btn-primary" style="display: block" id="saveAct_tuneables" type="button"-->
+<!--                    onClick="saveTuneablesConfigurations()"><b><?= $lang->_('Save') ?></b> <i id="saveAct_tuneables_progress"></i>-->
+<!--            </button>-->
+<!--        </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--    </div>-->
+    <div id="other-configs" class="tab-pane fade in">
+        <?= $this->partial('layout_partials/base_dialog', ['fields' => $formDialogConfigs, 'id' => 'DialogOtherconfigs', 'label' => $lang->_('Configurations:'), 'hasSaveBtn' => 'true']) ?>
+        <table id="grid-other-configs" class="table table-condensed table-hover table-striped table-responsive"
+               data-editDialog="DialogServiceConfig">
+            <thead>
+            <tr>
+<!--                <button class="act_info btn btn-xs fa fa-info-circle" aria-hidden="true"></button>-->
+<!--                <th data-column-id="info" data-type="string" data-width="20em" data-sortable="false" data-visible="true"><?= $lang->_('Info') ?></th>-->
+                <th data-column-id="name" data-type="string" data-width="20em" data-sortable="false" data-visible="true"><?= $lang->_('Service') ?></th>
+                <th data-column-id="PID" data-type="string" data-sortable="false" data-visible="true"><?= $lang->_('PID') ?></th>
+                <th data-column-id="uuid" data-type="string" data-identifier="true" data-visible="false"><?= $lang->_('uuid') ?></th>
+                <th data-column-id="tac" data-type="string" data-sortable="false" data-visible="false"><?= $lang->_('TAC') ?></th>
+                <th data-column-id="mnc" data-type="string" data-sortable="false" data-visible="false"><?= $lang->_('mnc') ?></th>
+                <th data-column-id="mcc" data-type="string" data-sortable="false" data-visible="false"><?= $lang->_('mcc') ?></th>
+                <th data-column-id="mme_add" data-type="string" data-sortable="false" data-visible="true"><?= $lang->_('bind') ?></th>
+<!--                <th data-column-id="amf_add" data-type="string" data-sortable="false" data-visible="true"><?= $lang->_('AMF:ngap') ?></th>-->
+                <th data-column-id="dns" data-type="string" data-sortable="false" data-visible="false"><?= $lang->_('DNS') ?></th>
+                <th data-column-id="status"  data-type="string" data-sortable="false" data-visible="false"><?= $lang->_('Status') ?></th>
+                <th data-column-id="commands" data-formatter="commands" data-sortable="false"><?= $lang->_('Status') ?> </th>
+                <th data-column-id="serviceName" data-type="string" data-sortable="false" data-visible="false"><?= $lang->_('serviceName') ?></th>
+
+            </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+    <div id="license" class="tab-pane fade in">
+        <section class="col-xs-11 __mt">
+            <p>OPNcell is Copyright &copy; 2023-2024<br>All rights reserved.</p>
+            <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
+            <ol><li>Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</li>
+                <li>Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</li></ol>
+            <p>THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+                INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+                AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+                THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+                EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+                PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+                OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+                WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+                OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+                ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+
+            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2023 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
+            <p>OPNcell includes various freely available software packages and ports.
+                The incorporated third party tools are listed <a href="/ui/core/firmware#packages">here</a>.</p>
+            <p>The authors of OPNcell would like to thank all contributors for their efforts.</p>
+        </section>
+        <br/>
+    </div>
+
+</div>
+<hr>
+<?= $this->partial('layout_partials/base_dialog', ['fields' => $formDialogEditServiceConfig, 'id' => 'DialogServiceConfig', 'label' => $lang->_('Change Server Config:'), 'hasSaveBtn' => 'true']) ?>
+
+
+

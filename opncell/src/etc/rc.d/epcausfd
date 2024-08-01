@@ -8,8 +8,10 @@
 
 name=epcausfd
 service_name=ausfd
-desc="AUS daemon"
+desc="AUSF daemon"
 rcvar=${name}_enable
+config_file="/usr/local/etc/open5gs/ausf.yaml"
+log_file="/var/log/opncell/ausf.log"
 command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
 start_cmd="${name}_start"
 command_args="-D > /dev/null 2>&1"
@@ -23,7 +25,7 @@ epcausfd_start(){
         mkdir -p /var/run/epc
         pidfile="/var/run/epc/epcausfd.pid"
 
-        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name} ${config_file} ${log_file}; then
                 echo "Started"
         else
                 echo "Failed to start"

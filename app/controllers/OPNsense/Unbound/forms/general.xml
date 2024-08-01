@@ -37,7 +37,6 @@
         <label>DNS64 Prefix</label>
         <type>text</type>
         <hint>64:ff9b::/96</hint>
-        <help>If no DNS64 prefix is specified, the default prefix 64:ff9b::/96 (RFC 6052) will be used.</help>
     </field>
     <field>
         <id>unbound.general.noarecords</id>
@@ -47,7 +46,7 @@
     </field>
     <field>
         <id>unbound.general.regdhcp</id>
-        <label>Register DHCP Leases</label>
+        <label>Register ISC DHCP4 Leases</label>
         <type>checkbox</type>
         <help>If this option is set, then machines that specify their hostname when requesting a DHCP lease will be registered in Unbound, so that their name can be resolved.</help>
     </field>

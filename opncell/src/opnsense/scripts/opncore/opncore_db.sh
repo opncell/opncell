@@ -68,13 +68,13 @@ create_apn_sessions() {
         arp_priority=$6
         arp_capability=$7
         arp_vulnerability=$8
-        unit=$9
+        
 
         if [ "$first" -eq 0 ]; then
             echo ","
         fi
 
-        echo "{\"name\": \"$apn_name\", \"type\": NumberInt(3), \"qos\": { \"index\": NumberInt($qos_index), \"arp\": { \"priority_level\": NumberInt($arp_priority), \"pre_emption_capability\": NumberInt($arp_capability), \"pre_emption_vulnerability\": NumberInt($arp_vulnerability) } }, \"ambr\": { \"downlink\": { \"value\": NumberInt($dl_value), \"unit\": NumberInt($unit) }, \"uplink\": { \"value\": NumberInt($ul_value), \"unit\": NumberInt($unit) } }, \"pcc_rule\": [], \"_id\": new ObjectId() }"
+        echo "{\"name\": \"$apn_name\", \"type\": NumberInt(3), \"qos\": { \"index\": NumberInt($qos_index), \"arp\": { \"priority_level\": NumberInt($arp_priority), \"pre_emption_capability\": NumberInt($arp_capability), \"pre_emption_vulnerability\": NumberInt($arp_vulnerability) } }, \"ambr\": { \"downlink\": { \"value\": NumberInt($dl_value), \"unit\": NumberInt(2) }, \"uplink\": { \"value\": NumberInt($ul_value), \"unit\": NumberInt(2) } }, \"pcc_rule\": [], \"_id\": new ObjectId() }"
 
         first=0
         shift 8
@@ -93,28 +93,26 @@ create_apn_sessions_with_ip() {
         arp_priority=$6
         arp_capability=$7
         arp_vulnerability=$8
-        unit=$9
-        ip=${10}
+        ip=$9       
 
         if [ "$first" -eq 0 ]; then
             echo ","
         fi
 
-        echo "{\"name\": \"$apn_name\", \"type\": NumberInt(3), \"qos\": { \"index\": NumberInt($qos_index), \"arp\": { \"priority_level\": NumberInt($arp_priority), \"pre_emption_capability\": NumberInt($arp_capability), \"pre_emption_vulnerability\": NumberInt($arp_vulnerability) } }, \"ambr\": { \"downlink\": { \"value\": NumberInt($dl_value), \"unit\": NumberInt($unit) }, \"uplink\": { \"value\": NumberInt($ul_value), \"unit\": NumberInt($unit) } },\"ue\":{\"addr\": \"$ip\"}, \"pcc_rule\": [], \"_id\": new ObjectId() }"
+        echo "{\"name\": \"$apn_name\", \"type\": NumberInt(3), \"qos\": { \"index\": NumberInt($qos_index), \"arp\": { \"priority_level\": NumberInt($arp_priority), \"pre_emption_capability\": NumberInt($arp_capability), \"pre_emption_vulnerability\": NumberInt($arp_vulnerability) } }, \"ambr\": { \"downlink\": { \"value\": NumberInt($dl_value), \"unit\": NumberInt(2) }, \"uplink\": { \"value\": NumberInt($ul_value), \"unit\": NumberInt(2) } },\"ue\":{\"addr\": \"$ip\"}, \"pcc_rule\": [], \"_id\": new ObjectId() }"
 
         first=0
-        shift 8
+        shift 9
     done
 }
 
 if [ "$1" = "add" ]; then
-    if [ "$#" -ge 5 ]; then
+    if [ "$#" -ge 4 ]; then
         IMSI=$2
         KI=$3
         OPC=$4
-        unit=$5
 
-        shift 5
+        shift 4
 
         # Create a temporary file to hold the sessions array
         temp_file=$(mktemp)
@@ -162,7 +160,7 @@ if [ "$1" = "add" ]; then
             print('Success');
         } catch (e) {
             if (e.code === 11000) {
-                print('Error: Duplicate IMSI');
+                print('Duplicate');
             } else {
                 print('Error: ' + e);
             }
@@ -175,14 +173,12 @@ if [ "$1" = "add" ]; then
     fi
 fi
 if [ "$1" = "add_with_ip" ]; then
-    if [ "$#" -ge 6 ]; then
+    if [ "$#" -ge 4 ]; then
         IMSI=$2
         KI=$3
         OPC=$4
-        unit=$5
-        ip=$6
 
-        shift 6
+        shift 4
 
         # Create a temporary file to hold the sessions array
         temp_file=$(mktemp)
@@ -230,7 +226,7 @@ if [ "$1" = "add_with_ip" ]; then
             print('Success');
         } catch (e) {
             if (e.code === 11000) {
-                print('Error: Duplicate IMSI');
+                print('Duplicate');
             } else {
                 print('Error: ' + e);
             }
@@ -241,6 +237,8 @@ if [ "$1" = "add_with_ip" ]; then
 
         exit $?
     fi
+
+
     if [ "$#" -eq 4 ]; then
         IMSI=$2
 

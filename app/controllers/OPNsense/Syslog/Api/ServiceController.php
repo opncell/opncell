@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2019 Deciso B.V.
+ * Copyright (c) 2019-2024 Deciso B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,24 @@ class ServiceController extends ApiMutableServiceControllerBase
     protected function reconfigureForceRestart()
     {
         return 0;
+    }
+
+    /**
+     * reset local logging
+     * @return status array
+     */
+    public function resetAction()
+    {
+        if ($this->request->isPost()) {
+            $this->sessionClose();
+
+            $backend = new Backend();
+            if ('OK' == trim($backend->configdRun('syslog reset'))) {
+                return ['status' => 'ok'];
+            }
+        }
+
+        return ['status' => 'failed'];
     }
 
     /**
@@ -109,7 +127,8 @@ class ServiceController extends ApiMutableServiceControllerBase
             return $item;
         }, array_slice($entry_keys, $offset, $itemsPerPage));
 
-        if ($this->request->hasPost('sort') &&
+        if (
+            $this->request->hasPost('sort') &&
             is_array($this->request->getPost('sort')) &&
             !empty($this->request->getPost('sort'))
         ) {

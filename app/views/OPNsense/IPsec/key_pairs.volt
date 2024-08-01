@@ -27,11 +27,11 @@
 <script>
   $( document ).ready(function() {
     $('#grid-key-pairs').UIBootgrid({
-      search: '/api/ipsec/key-pairs/searchItem',
-      get: '/api/ipsec/key-pairs/getItem/',
-      set: '/api/ipsec/key-pairs/setItem/',
-      add: '/api/ipsec/key-pairs/addItem/',
-      del: '/api/ipsec/key-pairs/delItem/',
+      search: '/api/ipsec/key_pairs/searchItem',
+      get: '/api/ipsec/key_pairs/getItem/',
+      set: '/api/ipsec/key_pairs/setItem/',
+      add: '/api/ipsec/key_pairs/addItem/',
+      del: '/api/ipsec/key_pairs/delItem/',
     });
 
     // move "generate key" inside form dialog
@@ -51,7 +51,7 @@
     $("#keygen").click(function(){
         let ktype = $("#keyPair\\.keyType").val();
         let ksize = $("#keysize").val();
-        ajaxGet("/api/ipsec/key-pairs/gen_key_pair/" + ktype + "/" + ksize, {}, function(data, status){
+        ajaxGet("/api/ipsec/key_pairs/gen_key_pair/" + ktype + "/" + ksize, {}, function(data, status){
             if (data.status && data.status === 'ok') {
                 $("#keyPair\\.publicKey").val(data.pubkey);
                 $("#keyPair\\.privateKey").val(data.privkey);
@@ -72,9 +72,9 @@
               <option data-type='rsa' value="3072">3072</option>
               <option data-type='rsa' value="4096">4096</option>
               <option data-type='rsa' value="8192">8192</option>
-              <option data-type='ecdsa' value="256">256</option>
-              <option data-type='ecdsa' value="384">384</option>
-              <option data-type='ecdsa' value="521">521</option>
+              <option data-type='ecdsa' value="256">NIST P-256</option>
+              <option data-type='ecdsa' value="384">NIST P-384</option>
+              <option data-type='ecdsa' value="521">NIST P-521</option>
           </select>
           <button id="keygen" type="button" class="btn btn-secondary" title="{{ lang._('Generate new.') }}" data-toggle="tooltip">
             <i class="fa fa-fw fa-gear"></i>

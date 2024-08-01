@@ -1,4 +1,4 @@
-{% if helpers.exists('OPNsense.opncore.general.enablefiveSA') and OPNsense.opncore.general.enablefiveSA == '1' %}
+{% if OPNsense.opncell.general.enablefiveSA == '1' or OPNsense.opncell.general.enableupf == '1' %}
 epcnssfd_enable="YES"
 epcnssfd_setup="/usr/local/opnsense/scripts/opncore/epcnssfd_setup.sh"
 {% else %}

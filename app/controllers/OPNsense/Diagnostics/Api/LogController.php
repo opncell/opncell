@@ -30,7 +30,7 @@ namespace OPNsense\Diagnostics\Api;
 
 use OPNsense\Base\ApiControllerBase;
 use OPNsense\Core\Backend;
-use OPNsense\Phalcon\Filter\Filter;
+use OPNsense\Core\SanitizeFilter;
 
 /**
  * @inherit
@@ -45,15 +45,11 @@ class LogController extends ApiControllerBase
         $searchPhrase = '';
         $severities = '';
         // create filter to sanitize input data
-        $filter = new Filter([
-            'query' => function ($value) {
-                return preg_replace("/[^0-9,a-z,A-Z, ,*,\-,_,.,\#]/", "", $value);
-            }
-        ]);
+        $filter = new SanitizeFilter();
 
         $backend = new Backend();
+        $this->sessionClose();
         if ($this->request->isPost() && substr($name, -6) == 'Action') {
-            $this->sessionClose();
             if ($action == "clear") {
                 $backend->configdpRun("system clear log", array($module, $scope));
                 return ["status" => "ok"];
@@ -98,17 +94,40 @@ class LogController extends ApiControllerBase
                     $severities = is_array($severities) ? implode(",", $severities) : $severities;
                     $severities = $filter->sanitize($severities, "query");
                 }
-                $response = $backend->configdpRun("system diag log", [
-                    0, 0, $searchPhrase, $module, $scope, $severities
-                ]);
-                $this->response->setRawHeader("Content-Type: text/csv");
-                $this->response->setRawHeader("Content-Disposition: attachment; filename=" . $scope . ".log");
-                foreach (json_decode($response, true)['rows'] as $row) {
-                    printf("%s\t%s\t%s\t%s\n", $row['timestamp'], $row['severity'], $row['process_name'], $row['line']);
+                return $this->configdStream(
+                    'system diag log_stream',
+                    [0, 0, $searchPhrase, $module, $scope, $severities],
+                    [
+                        'Content-Type: text/csv',
+                        'Content-Disposition: attachment; filename=' . $scope . '.log',
+                        'Content-Transfer-Encoding: binary',
+                        'Pragma: no-cache',
+                        'Expires: 0'
+                    ]
+                );
+            } elseif ($action == "live") {
+                $offset = $this->request->get('offset', 'int', 0);
+
+                if ($this->request->get('searchPhrase', 'string', '') != "") {
+                    $searchPhrase = $filter->sanitize($this->request->get('searchPhrase'), "query");
                 }
-                return;
+                if ($this->request->get('severity', 'string', '') != "") {
+                    $severities = $this->request->get('severity');
+                    $severities = is_array($severities) ? implode(",", $severities) : $severities;
+                    $severities = $filter->sanitize($severities, "query");
+                }
+
+                return $this->configdStream(
+                    'system diag log_live',
+                    [$offset, $searchPhrase, $module, $scope, $severities],
+                    [
+                        'Content-Type: text/event-stream',
+                        'Cache-Control: no-cache'
+                    ],
+                    60 /* XXX */
+                );
             }
         }
-        return array();
+        return [];
     }
 }

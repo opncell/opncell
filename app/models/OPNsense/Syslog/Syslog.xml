@@ -1,22 +1,31 @@
 <model>
     <mount>//OPNsense/Syslog</mount>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <items>
         <general>
             <enabled type="BooleanField">
-              <default>1</default>
-              <Required>Y</Required>
+                <Default>1</Default>
+                <Required>Y</Required>
             </enabled>
+            <loglocal type="BooleanField">
+                <Default>1</Default>
+                <Required>Y</Required>
+            </loglocal>
+            <maxpreserve type="IntegerField">
+                <Default>31</Default>
+                <Required>Y</Required>
+            </maxpreserve>
+            <maxfilesize type="IntegerField"/>
         </general>
         <destinations>
             <destination type="ArrayField">
                 <enabled type="BooleanField">
-                  <default>1</default>
+                  <Default>1</Default>
                   <Required>Y</Required>
                 </enabled>
                 <transport type="OptionField">
                   <Required>Y</Required>
-                  <default>udp</default>
+                  <Default>udp</Default>
                   <OptionValues>
                       <udp4>UDP(4)</udp4>
                       <tcp4>TCP(4)</tcp4>
@@ -27,16 +36,12 @@
                   </OptionValues>
                 </transport>
                 <program type="JsonKeyValueStoreField">
-                  <Required>N</Required>
                   <Multiple>Y</Multiple>
                   <ConfigdPopulateAct>syslog list applications</ConfigdPopulateAct>
-                  <SourceFile>/tmp/syslog_applications.json</SourceFile>
-                  <ConfigdPopulateTTL>20</ConfigdPopulateTTL>
                   <SortByValue>Y</SortByValue>
                   <ValidationMessage>Specify valid source applications.</ValidationMessage>
                 </program>
                 <level type="OptionField">
-                  <Required>N</Required>
                   <Multiple>Y</Multiple>
                   <OptionValues>
                       <debug>debug</debug>
@@ -48,10 +53,8 @@
                       <alert>alert</alert>
                       <emerg>emergency</emerg>
                   </OptionValues>
-                  <default>info,notice,warn,err,crit,alert,emerg</default>
                 </level>
                 <facility type="OptionField">
-                  <Required>N</Required>
                   <Multiple>Y</Multiple>
                   <OptionValues>
                       <kern>kernel messages</kern>
@@ -83,20 +86,17 @@
                     <Required>Y</Required>
                 </hostname>
                 <certificate type="CertificateField">
-                    <Required>N</Required>
                     <ValidationMessage>Please select a valid certificate from the list</ValidationMessage>
                 </certificate>
                 <port type="PortField">
                     <Required>Y</Required>
-                    <default>514</default>
+                    <Default>514</Default>
                 </port>
                 <rfc5424 type="BooleanField">
-                  <default>0</default>
+                  <Default>0</Default>
                   <Required>Y</Required>
                 </rfc5424>
-                <description type="TextField">
-                  <Required>N</Required>
-                </description>
+                <description type="DescriptionField"/>
             </destination>
         </destinations>
     </items>

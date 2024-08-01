@@ -30,7 +30,8 @@ if len(sys.argv) > 1:
     target_keys = ['metrics','dns','tai','network_name','nsi','s1ap','ngap']
     
     fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf"]
-    fiveNSAGServices = ["hss", "mme","pcrf",  "sgwu",  "sgwc","smf",  "upf"]
+    upfServices = ["amf", "udm", "nssf",  "smf", "udr","pcf", "upf","ausf"]
+    # fiveNSAGServices = ["hss", "mme","pcrf", "sgwu", "sgwc","smf", "upf"]
     fiveGSAServices = ["nrf", "scp", "amf", "smf", "upf", "ausf", "udm", "udr","pcf", "nssf","bsf"]
     
     
@@ -92,8 +93,11 @@ if len(sys.argv) > 1:
             elif network == 'enablefiveSA':
                 difference_set = set(fiveGSAServices) - set(running_processes_names)
                 not_running_processes = list(difference_set)
+            elif network == 'enableupf':
+                difference_set = set(upfServices) - set(running_processes_names)
+                not_running_processes = list(difference_set)
             elif network == 'enablefiveNSA':
-                difference_set = set(fiveNSAGServices) - set(running_processes_names)
+                difference_set = set(fourGServices) - set(running_processes_names)
                 not_running_processes = list(difference_set)
     
             for process in not_running_processes:

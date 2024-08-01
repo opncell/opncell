@@ -149,31 +149,34 @@ if len(sys.argv) > 1:
 
     def configureProcess(process_name, pid, name):
 
-        configurableServices = ['nrf', 'upf', 'amf']
-        configurableFourServices = ['mme', 'sgwu']
+        configurable_services = ['nrf', 'upf', 'amf']
+        configurable_four_services = ['mme', 'sgwu']
+        configurable_upf_services = ['upf', 'amf']
 
         if network == 'enablefour' or network == 'enableFiveNSA':
-            config(configurableFourServices, process_name, pid, name)
+            config(configurable_four_services, process_name, pid, name)
+        elif network == 'enableupf':
+            config(configurable_upf_services, process_name, pid, name)
         else:
-            config(configurableServices, process_name, pid, name)
+            config(configurable_services, process_name, pid, name)
 
 
     def reconfigure(process_list):
         # only edit what needs to be edited. mme + sgwu for 4g and 5g-nsa networks. amf + upf + nrf for 5gsa networks
-        runningProcesses = []
-        configurableServices = ['mme', 'sgwu', 'nrf', 'amf', 'upf']
+        currently_running_processes = []
+        all_configurable_services = ['mme', 'sgwu', 'nrf', 'amf', 'upf']
         for process in process_list:
             name = process.get("Name", "")
             pid = process.get("PID", "")
             process_name = name.replace("open5gs-", "").rstrip("d")
-            runningProcesses.append(process_name)
+            currently_running_processes.append(process_name)
             configureProcess(process_name, pid, name)
 
         # get the processes that should be reconfigured, but they weren't running initially.
 
-        difference_set = set(configurableServices) - set(runningProcesses)
+        difference_set = set(all_configurable_services) - set(currently_running_processes)
         not_running_processes = list(difference_set)
-        d = set(runningProcesses) - set(configurableServices)
+        d = set(currently_running_processes) - set(all_configurable_services)
         n_r = list(d)
         final_list = n_r + not_running_processes
         for process in final_list:

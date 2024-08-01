@@ -1,3 +1,29 @@
+{#
+ # Copyright (c) 2018-2023 Deciso B.V.
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without modification,
+ # are permitted provided that the following conditions are met:
+ #
+ # 1. Redistributions of source code must retain the above copyright notice,
+ #    this list of conditions and the following disclaimer.
+ #
+ # 2. Redistributions in binary form must reproduce the above copyright notice,
+ #    this list of conditions and the following disclaimer in the documentation
+ #    and/or other materials provided with the distribution.
+ #
+ # THIS SOFTWARE IS PROVIDED “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ # AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ # AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+ # OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ # SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ # INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ # POSSIBILITY OF SUCH DAMAGE.
+ #}
+
 <link href="{{ cache_safe('/ui/css/flags/flag-icon.css') }}" rel="stylesheet">
 <style>
     @media (min-width: 768px) {
@@ -5,6 +31,10 @@
             width: 90%;
             max-width:1200px;
         }
+    }
+
+    .dropdown-fixup {
+        overflow-x: hidden !important;
     }
 
     .alias_table {
@@ -202,7 +232,7 @@
                 var $tr = $("<tr/>");
                 $tr.append($("<td/>").text(item));
                 var geo_select = $("<td/>");
-                geo_select.append($("<select class='selectpicker geoip_select' multiple='multiple' data-id='"+'geoip_region_'+item+"'/>"));
+                geo_select.append($("<select class='selectpicker geoip_select' multiple='multiple' data-size='10' data-live-search='true' data-container='body' data-id='"+'geoip_region_'+item+"'/>"));
                 geo_select.append($("<i class=\"fa fa-fw geo_area_check fa-check-square-o\" aria-hidden=\"true\" data-id='"+'geoip_region_'+item+"'></i>"));
                 geo_select.append($("<i class=\"fa fa-fw geo_area_uncheck fa-square-o\" aria-hidden=\"true\" data-id='"+'geoip_region_'+item+"'></i>"));
                 geo_select.append($("<label class='geo_label' data-id='geoip_region_"+item+"_label'/>"));
@@ -222,12 +252,12 @@
             });
 
             $(".geoip_select").selectpicker();
-            $(".geoip_select").change(function(){
+            $("select.geoip_select").change(function(){
                 // unlink on change event
                 $("#alias\\.content").unbind('tokenize:tokens:change');
                 // copy items from geoip fields to content field
                 $("#alias\\.content").tokenize2().trigger('tokenize:clear');
-                $(".geoip_select").each(function () {
+                $("select.geoip_select").each(function () {
                     $.each($(this).val(), function(key, item){
                         $("#alias\\.content").tokenize2().trigger('tokenize:tokens:add', item);
                     });
@@ -307,6 +337,8 @@
                 case 'geoip':
                     $("#alias_type_geoip").show();
                     $("#alias\\.proto").selectpicker('show');
+                    /* work around JS injection of nasty overflow scroll bar being injected */
+                    $("#row_alias\\.type > td > .dropdown:last > .dropdown-menu > .inner").addClass('dropdown-fixup');
                     break;
                 case 'asn':
                     $("#alias_type_default").show();
@@ -359,7 +391,7 @@
         });
 
         /**
-         * update expiration (updatefreq is splitted into days and hours on the form)
+         * update expiration (updatefreq is split into days and hours on the form)
          */
         $("#alias\\.updatefreq").change(function(){
             if ($(this).val() !== "") {
@@ -536,9 +568,7 @@
         $("#reconfigureAct").SimpleActionButton({
             onPreAction: function() {
                 const dfObj = new $.Deferred();
-                saveFormToEndpoint("/api/firewall/alias/set", 'frm_GeopIPSettings', function(){
-                    dfObj.resolve();
-                });
+                saveFormToEndpoint("/api/firewall/alias/set", 'frm_GeopIPSettings', function () { dfObj.resolve(); }, true, function () { dfObj.reject(); });
                 return dfObj;
             },
             onAction: function(data, status){
@@ -591,7 +621,7 @@
                     <div class="hidden">
                         <!-- filter per type container -->
                         <div id="type_filter_container" class="btn-group">
-                            <select id="type_filter"  data-title="{{ lang._('Filter type') }}" class="selectpicker"  data-live-search="true" multiple="multiple" data-width="200px">
+                            <select id="type_filter"  data-title="{{ lang._('Filter type') }}" class="selectpicker" data-size="10" data-live-search="true" multiple="multiple" data-width="200px">
                                 <option value="host">{{ lang._('Host(s)') }}</option>
                                 <option value="network">{{ lang._('Network(s)') }}</option>
                                 <option value="port">{{ lang._('Port(s)') }}</option>
@@ -606,7 +636,7 @@
                                 <option value="internal">{{ lang._('Internal (automatic)') }}</option>
                                 <option value="external">{{ lang._('External (advanced)') }}</option>
                             </select>
-                            <select id="category_filter"  data-title="{{ lang._('Categories') }}" class="selectpicker" data-live-search="true" data-size="5"  multiple data-width="200px">
+                            <select id="category_filter"  data-title="{{ lang._('Categories') }}" class="selectpicker" data-size="10" data-live-search="true" data-size="5"  multiple data-width="200px">
                             </select>
                         </div>
                     </div>
@@ -670,7 +700,7 @@
 </section>
 
 {# Edit dialog #}
-<div class="modal fade" id="DialogAlias" tabindex="-1" role="dialog" aria-labelledby="DialogAliasLabel" aria-hidden="true">
+<div class="modal fade" id="DialogAlias" tabindex="-1" role="dialog" aria-labelledby="DialogAliasLabel">
     <div class="modal-backdrop fade in"></div>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -742,8 +772,8 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <select id="alias.type" class="selectpicker" data-width="200px"></select>
-                                        <select id="alias.proto" multiple="multiple" title="" class="selectpicker" data-width="110px"></select>
+                                        <select id="alias.type" class="selectpicker" data-container="body" data-width="245px"></select>
+                                        <select id="alias.proto" multiple="multiple" title="IPv4, IPv6" class="selectpicker" data-container="body" data-width="100px"></select>
                                     </td>
                                     <td>
                                         <span class="help-block" id="help_block_alias.type"></span>
@@ -757,12 +787,13 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <select id="alias.categories"  multiple="multiple" class="tokenize"></select>
-                                    </td>
-                                    <td>
-                                        <span class="help-block" id="help_block_alias.categories">
+                                        <select id="alias.categories" multiple="multiple" class="tokenize" data-container="body" data-width="348px"></select>
+                                        <span class="hidden" data-for="help_for_alias.categories">
                                             {{lang._('For grouping purposes you may select multiple groups here to organize items.')}}
                                         </span>
+                                    </td>
+                                    <td>
+                                        <span class="help-block" id="help_block_alias.categories"></span>
                                     </td>
                                 </tr>
                                 <tr id="row_alias.updatefreq">
@@ -810,15 +841,16 @@
                                             <select multiple="multiple"
                                                     id="alias.content"
                                                     class="tokenize"
-                                                    data-width="334px"
+                                                    data-width="348px"
                                                     data-allownew="true"
                                                     data-nbdropdownelements="10"
                                                     data-live-search="true"
+                                                    data-container="body"
                                                     data-separator="#10">
                                             </select>
                                         </div>
                                         <div class="alias_type" id="alias_type_networkgroup">
-                                            <select multiple="multiple" class="selectpicker" id="network_content" data-live-search="true">
+                                            <select multiple="multiple" class="selectpicker" id="network_content" data-container="body" data-size="10" data-live-search="true">
                                             </select>
                                         </div>
                                         <table class="table table-condensed alias_table alias_type" id="alias_type_geoip" style="display: none;">
@@ -832,7 +864,7 @@
                                             </tbody>
                                         </table>
                                         <div class="alias_type" id="alias_type_authgroup" style="display: none;">
-                                            <select multiple="multiple" class="selectpicker" id="authgroup_content" data-live-search="true">
+                                            <select multiple="multiple" class="selectpicker" id="authgroup_content" data-container="body" data-size="10" data-live-search="true">
                                             </select>
                                         </div>
 
@@ -855,7 +887,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <select  class="selectpicker" id="alias.interface" data-width="200px"></select>
+                                        <select  class="selectpicker" id="alias.interface" data-container="body" data-width="200px"></select>
                                         <div class="hidden" data-for="help_for_alias.interface">
                                             <small>{{lang._('Select the interface for the V6 dynamic IP')}}</small>
                                         </div>

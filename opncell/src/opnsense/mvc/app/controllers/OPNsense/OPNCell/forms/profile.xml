@@ -1,0 +1,118 @@
+<form>
+    <field>
+        <label>NOTE:</label>
+        <type>header</type>
+    </field>
+    <field>
+        <label>If multiple apns are defined, then define multiple Ambr-speed details, QOS details and arp details.</label>
+    </field>
+    <field>
+        <label>If multiple values for the respective apns are not defined, then the same value will be defined for all apns stated.</label>
+    </field>
+    <field>
+        <label>Profile Specifications</label>
+        <type>header</type>
+    </field>
+
+    <field>
+        <id>profile.sst</id>
+        <label>Slice/Service Type</label>
+        <type>text</type>
+    </field>
+    <field>
+        <id>profile.apn</id>
+        <label>APN</label>
+        <type>text</type>
+        <allownew>true</allownew>
+        <help>Set the name of the apn associated with the UE</help>
+        <hint>The default value is internet.</hint>
+    </field>
+    <field>
+        <label>AMBR-Speed Specifications</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>profile.dl</id>
+        <label>Downlink value</label>
+        <type>text</type>
+        <allownew>true</allownew>
+        <hint>In megabytes.</hint>
+        <help>Download speed.</help>
+    </field>
+    <field>
+        <id>profile.ul</id>
+        <label>Uplink value</label>
+        <type>text</type>
+        <allownew>true</allownew>
+        <hint>In megabytes</hint>
+        <help>Upload speed.</help>
+    </field>
+<!--    <field>-->
+<!--        <id>profile.dl</id>-->
+<!--        <label>Downlink value</label>-->
+<!--        <type>text</type>-->
+<!--        <hint>In megabytes.</hint>-->
+<!--        <help>Download speed.</help>-->
+<!--    </field>-->
+<!--    <field>-->
+<!--        <id>profile.ul</id>-->
+<!--        <label>Uplink value</label>-->
+<!--        <type>text</type>-->
+<!--        <hint>In megabytes</hint>-->
+<!--        <help>Upload speed.</help>-->
+<!--    </field>-->
+    <field>
+        <id>profile.unit</id>
+        <label>Speed Units</label>
+        <type>dropdown</type>
+        <help>Choose units for data transmission.</help>
+    </field>
+
+    <field>
+        <label>Quality Of Service Specifications</label>
+        <type>header</type>
+    </field>
+    <field>
+        <id>profile.QoS</id>
+        <label>QoS Index</label>
+        <type>text</type>
+        <allownew>true</allownew>
+    </field>
+
+    <field>
+        <id>profile.arp_priority</id>
+        <label>ARP priority level</label>
+        <type>text</type>
+        <allownew>true</allownew>
+        <help>This defines the relative importance of a resource request to allow in deciding whether
+            a new QoS Flow may be accepted or needs to be rejected in the case of resource limitations</help>
+    </field>
+<!--    <field>-->
+<!--        <id>profile.QoS</id>-->
+<!--        <label>QoS Index</label>-->
+<!--        <type>text</type>-->
+<!--    </field>-->
+
+<!--    <field>-->
+<!--        <id>profile.arp_priority</id>-->
+<!--        <label>ARP priority level</label>-->
+<!--        <type>text</type>-->
+<!--        <help>This defines the relative importance of a resource request to allow in deciding whether-->
+<!--            a new QoS Flow may be accepted or needs to be rejected in the case of resource limitations</help>-->
+<!--    </field>-->
+    <field>
+        <id>profile.arp_capability</id>
+        <label>ARP Pre-emption Capability</label>
+        <type>dropdown</type>
+        <help>This defines whether a service data flow may get resources that were already assigned
+            to another service data flow with a lower ARP priority leve</help>
+    </field>
+    <field>
+        <id>profile.arp_vulnerability</id>
+        <label>ARP Pre-emption Vulnerability </label>
+        <type>dropdown</type>
+        <help>defines whether a service data flow may lose the resources assigned to it in order to admit
+            a service data flow with higher ARP priority level</help>
+    </field>
+
+</form>

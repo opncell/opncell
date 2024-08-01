@@ -78,63 +78,105 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
         }
     }
 
+    public function isValidUUID($uuid)
+    {
+        if (
+            !is_string($uuid) ||
+            preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uuid) !== 1
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * check if a specific token is in use, either in a list of options (xxx,yyy) or as exact match
+     * @param string $token token to search recursive
+     * @param bool $contains exact match or in list
+     * @param bool $only_mvc only report (versioned) models
+     * @param array $exclude_refs exclude topics (for example the tokens original location)
+     * @throws UserException containing additional information
+     */
+    protected function checkAndThrowValueInUse($token, $contains = true, $only_mvc = true, $exclude_refs = [])
+    {
+        if ($contains) {
+            $xpath = "//text()[contains(.,'{$token}')]";
+        } else {
+            $xpath = "//*[text() = '{$token}']";
+        }
+        $usages = [];
+        // find uuid's in our config.xml
+        foreach (Config::getInstance()->object()->xpath($xpath) as $node) {
+            $referring_node = $node->xpath("..")[0];
+            $item_path = [$referring_node->getName()];
+            // collect path, when it's a model stop at model root
+            $parent_node = $referring_node;
+            do {
+                $parent_node = $parent_node->xpath("..");
+                $parent_node = $parent_node != null ? $parent_node[0] : null;
+                if ($parent_node != null) {
+                    $item_path[] = $parent_node->getName();
+                }
+            } while ($parent_node != null && !isset($parent_node->attributes()['version']));
+            $item_description = "";
+            foreach (["description", "descr", "name"] as $key) {
+                if (!empty($referring_node->$key)) {
+                    $item_description = (string)$referring_node->$key;
+                    break;
+                }
+            }
+            $item_path = array_reverse($item_path);
+            if ($parent_node == null) {
+                /* chop root node when a legacy path */
+                unset($item_path[0]);
+            }
+            $backref = implode(".", $item_path);
+            if (
+                $parent_node != null &&
+                !empty($referring_node->attributes()['uuid']) &&
+                !in_array($backref, $exclude_refs)
+            ) {
+                if ($parent_node != null) {
+                    $usages[] = [
+                        "reference" =>  $backref . "." .  $referring_node->attributes()['uuid'],
+                        "module" => $item_path[0],
+                        "description" => $item_description
+                    ];
+                }
+            } elseif (!$only_mvc && !in_array($backref, $exclude_refs)) {
+                $usages[] = [
+                    "reference" => $backref,
+                    "module" => $referring_node->getName(),
+                    "description" => $item_description
+                ];
+            }
+        }
+        if (!empty($usages)) {
+            // render exception message
+            $message = "";
+            foreach ($usages as $usage) {
+                $message .= sprintf(
+                    gettext("%s - %s {%s}"),
+                    $usage['module'],
+                    $usage['description'],
+                    $usage['reference']
+                ) . "\n";
+            }
+            throw new UserException($message, gettext("Item in use by"));
+        }
+    }
+
     /**
      * Check if item can be safely deleted if $internalModelUseSafeDelete is enabled.
      * Throws a user exception when the $uuid seems to be used in some other config section.
      * @param $uuid string uuid to check
      * @throws UserException containing additional information
      */
-    protected function checkAndThrowSafeDelete($uuid)
+    private function checkAndThrowSafeDelete($uuid)
     {
         if (static::$internalModelUseSafeDelete) {
-            $configObj = Config::getInstance()->object();
-            $usages = array();
-            // find uuid's in our config.xml
-            foreach ($configObj->xpath("//text()[contains(.,'{$uuid}')]") as $node) {
-                $referring_node = $node->xpath("..")[0];
-                if (!empty($referring_node->attributes()['uuid'])) {
-                    // this looks like a model node, try to find module name (first tag with version attribute)
-                    $item_path = array($referring_node->getName());
-                    $item_uuid = $referring_node->attributes()['uuid'];
-                    $parent_node = $referring_node;
-                    do {
-                        $parent_node = $parent_node->xpath("..");
-                        $parent_node = $parent_node != null ? $parent_node[0] : null;
-                        if ($parent_node != null) {
-                            $item_path[] = $parent_node->getName();
-                        }
-                    } while ($parent_node != null && !isset($parent_node->attributes()['version']));
-                    if ($parent_node != null) {
-                        // construct usage info and add to usages if this looks like a model
-                        $item_path = array_reverse($item_path);
-                        $item_description = "";
-                        foreach (["description", "descr", "name"] as $key) {
-                            if (!empty($referring_node->$key)) {
-                                $item_description = (string)$referring_node->$key;
-                                break;
-                            }
-                        }
-                        $usages[] = array(
-                            "reference" =>  implode(".", $item_path) . "." . $item_uuid,
-                            "module" => $item_path[0],
-                            "description" => $item_description
-                        );
-                    }
-                }
-            }
-            if (!empty($usages)) {
-                // render exception message
-                $message = "";
-                foreach ($usages as $usage) {
-                    $message .= sprintf(
-                        gettext("%s - %s {%s}"),
-                        $usage['module'],
-                        $usage['description'],
-                        $usage['reference']
-                    ) . "\n";
-                }
-                throw new UserException($message, gettext("Item in use by"));
-            }
+            $this->checkAndThrowValueInUse($uuid);
         }
     }
 
@@ -146,7 +188,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
     public function getAction()
     {
         // define list of configurable settings
-        $result = array();
+        $result = [];
         if ($this->request->isGet()) {
             $result[static::$internalModelName] = $this->getModelNodes();
         }
@@ -184,7 +226,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      * @param string $node reference node, to use as relative offset
      * @param string $prefix prefix to use when $node is provided (defaults to static::$internalModelName)
      * @return array result / validation output
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws UserException when denied write access
      */
@@ -205,27 +247,33 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
 
     /**
      * Validate this model
-     * @param $node reference node, to use as relative offset
+     * @param $node reference node, to use as relative offset, ignore validation issues outside this scope
      * @param $prefix prefix to use when $node is provided (defaults to static::$internalModelName)
+     * @param bool $validateFullModel by default we only validate the fields we have changed
      * @return array result / validation output
      * @throws \ReflectionException when binding to the model class fails
      */
-    protected function validate($node = null, $prefix = null)
+    protected function validate($node = null, $prefix = null, $validateFullModel = false)
     {
-        $result = array("result" => "");
+        $result = ["result" => ""];
         $resultPrefix = empty($prefix) ? static::$internalModelName : $prefix;
-        // perform validation
-        $valMsgs = $this->getModel()->performValidation();
+        $valMsgs = $this->getModel()->performValidation($validateFullModel);
         foreach ($valMsgs as $field => $msg) {
-            if (!array_key_exists("validations", $result)) {
-                $result["validations"] = array();
-                $result["result"] = "failed";
-            }
-            // replace absolute path to attribute for relative one at uuid.
             if ($node != null) {
+                /*
+                 * Replace absolute path with attribute for relative one at 'uuid',
+                 * ignore validation issues when triggered outside the node scope.
+                 */
+                if (strpos($msg->getField(), $node->__reference) === false) {
+                    continue;
+                }
                 $fieldnm = str_replace($node->__reference, $resultPrefix, $msg->getField());
             } else {
                 $fieldnm = $resultPrefix . "." . $msg->getField();
+            }
+            if (!array_key_exists("validations", $result)) {
+                $result["validations"] = [];
+                $result["result"] = "failed";
             }
             $msgText = $msg->getMessage();
             if (empty($result["validations"][$fieldnm])) {
@@ -245,15 +293,17 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
 
     /**
      * Save model after update or insertion, validate() first to avoid raising exceptions
+     * @param bool $validateFullModel by default we only validate the fields we have changed
+     * @param bool $disable_validation skip validation, be careful to use this!
      * @return array result / validation output
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws \OPNsense\Base\UserException when denied write access
      */
-    protected function save()
+    protected function save($validateFullModel = false, $disable_validation = false)
     {
         if (!(new ACL())->hasPrivilege($this->getUserName(), 'user-config-readonly')) {
-            if ($this->getModel()->serializeToConfig()) {
+            if ($this->getModel()->serializeToConfig($validateFullModel, $disable_validation)) {
                 Config::getInstance()->save();
             }
             return array("result" => "saved");
@@ -277,9 +327,20 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
     }
 
     /**
+     * Hook to be overridden if the controller is to take an action when
+     * setBase/addBase is called. This hook is called after a model has been
+     * constructed and validated but before it serialized to the configuration
+     * and written to disk
+     * @throws UserException when action is not possible (and save should be aborted)
+     */
+    protected function setBaseHook($node)
+    {
+    }
+
+    /**
      * Update model settings
      * @return array status / validation errors
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws UserException when denied write access
      */
@@ -296,7 +357,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
                 if (!empty($hookErrorMessage)) {
                     $result['error'] = $hookErrorMessage;
                 } else {
-                    return $this->save();
+                    return $this->save(false, true);
                 }
             }
         }
@@ -306,7 +367,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
     /**
      * Model search wrapper
      * @param string $path path to search, relative to this model
-     * @param array $fields fieldnames to fetch in result
+     * @param array|null $fields fieldnames to fetch in result, defaults to all fields
      * @param string|null $defaultSort default sort field name
      * @param null|function $filter_funct additional filter callable
      * @param int $sort_flags sorting behavior
@@ -315,7 +376,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      */
     public function searchBase(
         $path,
-        $fields,
+        $fields = null,
         $defaultSort = null,
         $filter_funct = null,
         $sort_flags = SORT_NATURAL | SORT_FLAG_CASE
@@ -325,6 +386,22 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
         foreach (explode('.', $path) as $step) {
             $element = $element->{$step};
         }
+
+        if (
+            empty($fields) && (
+            is_a($element, "OPNsense\\Base\\FieldTypes\\ArrayField") ||
+            is_subclass_of($element, "OPNsense\\Base\\FieldTypes\\ArrayField")
+            )
+        ) {
+            $fields = [];
+            foreach ($element->iterateItems() as $node) {
+                foreach ($node->iterateItems() as $key => $value) {
+                    $fields[] = $key;
+                }
+                break;
+            }
+        }
+
         $grid = new UIModelGrid($element);
         return $grid->fetchBindRequest(
             $this->request,
@@ -359,7 +436,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
             $node = $mdl->Add();
             return array($key_name => $node->getNodes());
         }
-        return array();
+        return [];
     }
 
     /**
@@ -368,7 +445,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      * @param string $path relative model path
      * @param array|null $overlay properties to overlay when available (call setNodes)
      * @return array
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws UserException when denied write access
      */
@@ -389,8 +466,9 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
             $result = $this->validate($node, $post_field);
 
             if (empty($result['validations'])) {
+                $this->setBaseHook($node);
                 // save config if validated correctly
-                $this->save();
+                $this->save(false, true);
                 $result = array(
                     "result" => "saved",
                     "uuid" => $node->getAttribute('uuid')
@@ -407,7 +485,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      * @param string $path relative model path
      * @param null|string $uuid node key
      * @return array
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws UserException when denied write access
      */
@@ -416,8 +494,8 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
         $result = array("result" => "failed");
 
         if ($this->request->isPost()) {
-            $this->checkAndThrowSafeDelete($uuid);
             Config::getInstance()->lock();
+            $this->checkAndThrowSafeDelete($uuid);
             $mdl = $this->getModel();
             if ($uuid != null) {
                 $tmp = $mdl;
@@ -425,7 +503,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
                     $tmp = $tmp->{$step};
                 }
                 if ($tmp->del($uuid)) {
-                    $this->save();
+                    $this->save(false, true);
                     $result['result'] = 'deleted';
                 } else {
                     $result['result'] = 'not found';
@@ -442,7 +520,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      * @param string $uuid node key
      * @param array|null $overlay properties to overlay when available (call setNodes)
      * @return array
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws UserException when denied write access
      */
@@ -452,9 +530,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
             $mdl = $this->getModel();
             $node = $mdl->getNodeByReference($path . '.' . $uuid);
             if ($node == null) {
-                if (!is_string($uuid) ||
-                    preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uuid) !== 1
-                ) {
+                if (!$this->isValidUUID($uuid)) {
                     // invalid uuid, upsert not allowed
                     return ["result" => "failed"];
                 }
@@ -472,10 +548,11 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
                 if (is_array($overlay)) {
                     $node->setNodes($overlay);
                 }
-                $result = $this->validate($node, $post_field);
+                $result = $this->validate($node, $post_field, true);
                 if (empty($result['validations'])) {
+                    $this->setBaseHook($node);
                     // save config if validated correctly
-                    $this->save();
+                    $this->save(false, true);
                     $result = ["result" => "saved"];
                 } else {
                     $result["result"] = "failed";
@@ -492,7 +569,7 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
      * @param string $uuid node key
      * @param string $enabled desired state enabled(1)/disabled(0), leave empty for toggle
      * @return array
-     * @throws \Phalcon\Filter\Validation\Exception on validation issues
+     * @throws \OPNsense\Base\ValidationException on validation issues
      * @throws \ReflectionException when binding to the model class fails
      * @throws UserException when denied write access
      */
@@ -521,11 +598,95 @@ abstract class ApiMutableModelControllerBase extends ApiControllerBase
                     }
                     // if item has toggled, serialize to config and save
                     if ($result['changed']) {
-                        $this->save();
+                        $this->save(false, true);
                     }
                 }
             }
         }
         return $result;
+    }
+
+    /**
+     * Import csv data into ArrayField type
+     * @param string $path model path, should point to an ArrayField type
+     * @param string $payload csv data to import
+     * @param array $keyfields fieldnames to use as key
+     * @param function $data_callback inline data modification, used to match parsed csv data
+     * @return array exceptions
+     */
+    protected function importCsv($path, $payload, $keyfields = [], $data_callback = null)
+    {
+        /* parse csv data to array structure */
+        $data = [];
+        $stream = fopen('php://temp', 'rw+');
+        fwrite($stream, $payload);
+        fseek($stream, 0);
+        $heading = [];
+        while (($line = fgetcsv($stream)) !== false) {
+            if (empty($heading)) {
+                $heading = $line;
+            } else {
+                $record = [];
+                foreach ($line as $idx => $content) {
+                    if (isset($heading[$idx])) {
+                        $record[$heading[$idx]] = $content;
+                    }
+                }
+                $data[] = $record;
+            }
+        }
+        fclose($stream);
+
+        /*
+         * Try to import the offered data, when errors occur remove records and try again.
+         * Always return validation items collected in the first run.
+         **/
+        $response = [];
+        for ($i = 0; $i < 2; $i++) {
+            $mdl = $this->getModel();
+            $node = $mdl->getNodeByReference($path);
+            if (
+                is_a($node, "OPNsense\\Base\\FieldTypes\\ArrayField") ||
+                is_subclass_of($node, "OPNsense\\Base\\FieldTypes\\ArrayField")
+            ) {
+                $result = $node->importRecordSet($data, $keyfields, $data_callback);
+                $valmsgfields = [];
+                foreach ($this->getModel()->performValidation() as $msg) {
+                    if (str_starts_with($msg->getField(), $path) && !in_array($msg->getField(), $valmsgfields)) {
+                        $tmp = explode('.', substr($msg->getField(), strlen($path) + 1));
+                        $uuid = $tmp[0];
+                        $fieldname = end($tmp);
+                        $result['validations'][] = [
+                            'sequence' => $result['uuids'][$uuid] ?? null,
+                            'message' =>  $msg->getMessage(),
+                            'field' => $fieldname
+                        ];
+                        $valmsgfields[] = $msg->getField();
+                    }
+                }
+                // save first validation result
+                $response = empty($response) ? $result : $response;
+                // remove invalid records and reinitialize model (so next pass can update)
+                if (!empty($result['validations'])) {
+                    $this->modelHandle = null;
+                    $error_keys = [];
+                    foreach ($result['validations'] as $val) {
+                        if ($val['sequence'] !== null) {
+                            $error_keys[] = $val['sequence'];
+                        }
+                    }
+                    foreach (array_reverse(array_unique($error_keys, SORT_NUMERIC)) as $err_key) {
+                        unset($data[$err_key]);
+                    }
+                } else {
+                    // save to config when there's anything left
+                    if ($result['inserted'] > 0 || $result['updated'] > 0) {
+                        $this->save(false, true);
+                    }
+                    break;
+                }
+            }
+        }
+        return $response + ['fieldnames' => $heading];
     }
 }

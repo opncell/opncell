@@ -8,7 +8,7 @@ chown -R $user:$group /var/run/epc
 chmod 777 /var/run/epc
 
 # logfile
-mkdir -p /var/log/opncore
-ln -s /usr/ports/open5gs/install/var/log/open5gs/smf.log  /var/log/opncore/smf.log
-chown -R $user:$group /var/log/opncore/smf.log
-chmod +r /var/log/opncore/smf.log
+mkdir -p /var/log/opncell
+#ln -s /usr/ports/open5gs/install/var/log/open5gs/smf.log  /var/log/opncore/smf.log
+chown -R $user:$group /var/log/opncell/smf.log
+chmod +r /var/log/opncell/smf.log

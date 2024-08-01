@@ -38,7 +38,7 @@ use OPNsense\Core\Backend;
  */
 class ServiceController extends ApiMutableServiceControllerBase
 {
-    protected static $internalServiceClass = '\OPNsense\Monit\Opncore';
+    protected static $internalServiceClass = '\OPNsense\Monit\Monit';
     protected static $internalServiceEnabled = 'general.enabled';
     protected static $internalServiceTemplate = 'OPNsense/Monit';
     protected static $internalServiceName = 'monit';

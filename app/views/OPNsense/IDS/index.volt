@@ -72,9 +72,9 @@ POSSIBILITY OF SUCH DAMAGE.
                         for (let i=0; i < values.length ; ++i) {
                             $optgroup.append(
                               $("<option>").val(values[i]).text(values[i].substr(0, 50))
-                                .data('property', key)
-                                .data('value', values[i])
-                                .data('content', "<span class='badge'>"+key+"\\"+values[i].substr(0, 50)+"</span>")
+                                .attr('data-property', key)
+                                .attr('data-value', values[i])
+                                .attr('data-content', "<span class='badge'>"+key+"\\"+values[i].substr(0, 50)+"</span>")
                             );
                         }
                         $('#rulemetadata').append($optgroup);
@@ -397,8 +397,7 @@ POSSIBILITY OF SUCH DAMAGE.
                         $("#dropSelectedRules > span").removeClass("fa-spinner fa-pulse");
                     });
                 });
-            }
-            else if (e.target.id == 'alert_tab') {
+            } else if (e.target.id == 'alert_tab') {
                 updateAlertLogs();
                 /**
                  * grid query alerts
@@ -425,10 +424,10 @@ POSSIBILITY OF SUCH DAMAGE.
                                 interface: {
                                     from: function (value) { return value; },
                                     to: function (value) {
-                                      if (value == null || value == undefined) {
+                                      if (value == null || typeof value !== 'string') {
                                           return "";
                                       }
-                                      return interface_descriptions[value.replace(/\+$/, '')];
+                                      return interface_descriptions[value.trim().replace('^' ,'')];
                                     }
                                 }
                             }
@@ -492,9 +491,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
                                                 if (data_ptr != undefined) {
                                                     var row = $("<tr/>");
+                                                    var intf = fieldname == 'in_iface' && typeof data_ptr === 'string' ? data_ptr.trim().replace('^' ,'') : '';
                                                     row.append($("<td/>").text(fielddesc));
-                                                    if (fieldname == 'in_iface' && interface_descriptions[data_ptr.replace(/\+$/, '')] != undefined) {
-                                                        row.append($("<td/>").text(interface_descriptions[data_ptr.replace(/\+$/, '')]));
+                                                    if (fieldname == 'in_iface' && interface_descriptions[intf] != undefined) {
+                                                        row.append($("<td/>").text(interface_descriptions[intf]));
                                                     } else {
                                                         row.append($("<td/>").text(data_ptr));
                                                     }
@@ -588,9 +588,7 @@ POSSIBILITY OF SUCH DAMAGE.
         $("#reconfigureAct").SimpleActionButton({
             onPreAction: function() {
                 const dfObj = new $.Deferred();
-                saveFormToEndpoint("/api/ids/settings/set", 'frm_GeneralSettings', function(){
-                    dfObj.resolve();
-                });
+                saveFormToEndpoint("/api/ids/settings/set", 'frm_GeneralSettings', function () { dfObj.resolve(); }, true, function () { dfObj.reject(); });
                 return dfObj;
             }
         });
@@ -721,8 +719,7 @@ POSSIBILITY OF SUCH DAMAGE.
 <div class="tab-content content-box">
     <div id="settings" class="tab-pane fade in">
         {{ partial("layout_partials/base_form",['fields':formGeneralSettings,'id':'frm_GeneralSettings'])}}
-        <div class="col-md-12">
-            <hr/>
+        <div class="col-md-12 __mt">
             <button class="btn btn-primary" id="reconfigureAct"
                     data-endpoint='/api/ids/service/reconfigure'
                     data-label="{{ lang._('Apply') }}"
