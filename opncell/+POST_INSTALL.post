@@ -1,6 +1,7 @@
 #!/bin/sh
 
-echo "=====> Enabling SCTP support ..."
+echo "=====> "
+echo "Enabling SCTP support ..."
 
 touch /boot/loader.conf.local
 # shellcheck disable=SC2129
@@ -26,7 +27,8 @@ fi
 export LIBRARY_PATH=/usr/local/lib
 export C_INCLUDE_PATH=/usr/local/include
 
-echo "=====> Disabling the packet filter ..."
+echo "=====> "
+echo "Disabling the packet filter ..."
 pfctl -d
 
 cd /usr/local/opnsense/mvc/app/tmp || exit 1
