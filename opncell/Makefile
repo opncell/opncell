@@ -1,6 +1,6 @@
 PLUGIN_NAME=		cellular
 PLUGIN_VERSION=		24.5.1_2
-PLUGIN_COMMENT=		Off the self way of deploying private networks application
+PLUGIN_COMMENT=		Off-the-shelf way of deploying a secure cellular core network
 PLUGIN_DEPENDS=	        libmicrohttpd \
                         cmake \
                         ninja \
