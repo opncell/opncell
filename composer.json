@@ -22,7 +22,7 @@
         "forum": "https://forum.phalcon.io"
     },
     "require": {
-        "php": ">=7.3",
+        "php": ">=7.4",
         "ext-pdo": "*",
         "ext-phalcon": ">4.0",
         "psy/psysh": "~0.9",

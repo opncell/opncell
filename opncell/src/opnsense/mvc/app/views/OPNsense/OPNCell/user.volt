@@ -103,7 +103,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 {{ lang._('An Error occurred. Check if the db is up and running, then try again.') }}<br>
             </div>
             <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
-                {{ lang._('Subscriber added. Kindly try again.') }}<br>
+                {{ lang._('Subscriber added.') }}<br>
             </div>
         </div>
         <div class="col-md-12 __mt">
@@ -389,7 +389,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 $("#" + gridUserId).bootgrid("reload");
                                 if (data.result === "failed") {
                                     $("#failedSave").attr("style", "display:block");
-                                } else if(data.result === "saved"){
+                                } else if(data.result === "saved"  || data.result === "Success" ) {
                                     $("#successfulSave").attr("style", "display:block");
                                 } else {
                                     $("#Error").attr("style", "display:block");
