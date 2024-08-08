@@ -33,9 +33,11 @@ namespace OPNsense\Base;
 namespace OPNsense\OPNCell\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
+use OPNsense\Base\UIModelGrid;
 use OPNsense\Base\UserException;
 use OPNsense\Core\Config;
 use OPNsense\Core\Backend;
+use OPNsense\Mvc\Request;
 use ReflectionException;
 
 class ProfileController extends ApiMutableModelControllerBase
@@ -81,10 +83,12 @@ class ProfileController extends ApiMutableModelControllerBase
     /**
      * @throws ReflectionException
      */
-    public function singleSearchAction($profile)
+    public function singleSearchAction($profile): array
     {
         $customProfile = [];
-        $r = $this->searchBase('profiles.profile', array("apn"));
+        $rp ='{"rows":[{"uuid":"ed619531-e8ca-46bd-8e6f-202500bee16e","apn":"Airtel"},{"uuid":"e9d5d255-116e-43a3-9858-01afa0dae605","apn":"teal"}],"rowCount":2,"total":2,"current":1}';
+        $r = json_decode($rp, true);
+//        $r = $this->searchBase('profiles.profile', array("apn"));
         $APNArray = explode(",", $profile);
 
         foreach ($r['rows'] as $data) {
@@ -103,6 +107,42 @@ class ProfileController extends ApiMutableModelControllerBase
 
         return $customProfile;
     }
+
+    public function getSingleSubAction($imsi): array
+    {
+        $backend = new Backend();
+        $profileClass = new ProfileController();
+        $userRepository = new UserRepository($backend);
+        $data = $userRepository->getUser($imsi);
+        $item = array();
+        if ($data != null) {
+            foreach ($data as $process) {
+                $item['imsi'] = $process['imsi'];
+                $item['attached'] = $process['apn'];
+            }
+        }
+        $customProfile = [];
+        $r = $this->searchBase('profiles.profile', array("apn"));
+        $APNArray = explode(",", $item['attached']);
+
+        foreach ($r['rows'] as $data) {
+            $customProfile[$data['uuid']] = array("value" => $data['apn'], "selected" => 0);
+        }
+
+// Iterate over the APNArray to set selected to 1 for matching APNs
+        foreach ($APNArray as $apn) {
+            foreach ($r['rows'] as $data) {
+                if ($data['apn'] == $apn) {
+                    $customProfile[$data['uuid']]['selected'] = 1;
+                }
+            }
+        }
+
+        $item['profile'] = $customProfile;
+        $details['user'] = $item;
+        return $details;
+    }
+
 
     /**
      * @throws ReflectionException
@@ -144,6 +184,7 @@ class ProfileController extends ApiMutableModelControllerBase
     public function setProfileAction($uuid): array
     {
         $backend = new Backend();
+        $this->request = new Request();
         $newProfile = $this->request->getPost('profile'); //the new values for that profile
         $profileName = $newProfile['apn'];
 

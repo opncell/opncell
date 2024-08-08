@@ -442,7 +442,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     let uuid = $(this).data("row-id");
                     let urlMap = {};
 
-                    urlMap['frm_' + editDlg] = '/api/opncell/user/getSingleSub/' + imsi;   //pass the imsi of the row of interest
+                    urlMap['frm_' + editDlg] = '/api/opncell/profile/getSingleSub/' + imsi;   //pass the imsi of the row of interest
                     // urlMap['frm_' + editDlg] = gridParams['get'] + uuid;
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors

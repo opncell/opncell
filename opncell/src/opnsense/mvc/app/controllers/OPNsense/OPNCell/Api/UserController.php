@@ -289,27 +289,27 @@ class UserController extends ApiMutableModelControllerBase
      * @throws ReflectionException
      * @throws UserException
      */
-    public function getSingleSubAction($imsi): array
-    {
-        $backend = new Backend();
-        $profileClass = new ProfileController();
-        $userRepository = new UserRepository($backend);
-        $data = $userRepository->getUser($imsi);
-        $item = array();
-        if ($data != null) {
-            foreach ($data as $process) {
-                $item['imsi'] = $process['imsi'];
-                $item['attached'] = $process['apn'];
-            }
-        }
-        $allProfiles = $profileClass->singleSearchAction($item['attached']);
-        $item['profile'] = $allProfiles;
-        $details['user'] = $item;
-        return $details;
-    }
+//    public function getSingleSubAction($imsi): array
+//    {
+//        $backend = new Backend();
+//        $profileClass = new ProfileController();
+//        $userRepository = new UserRepository($backend);
+//        $data = $userRepository->getUser($imsi);
+//        $item = array();
+//        if ($data != null) {
+//            foreach ($data as $process) {
+//                $item['imsi'] = $process['imsi'];
+//                $item['attached'] = $process['apn'];
+//            }
+//        }
+//        $allProfiles = $profileClass->singleSearchAction($item['attached']);
+////$allProfiles = '{"ed619531-e8ca-46bd-8e6f-202500bee16e":{"value":"Airtel","selected":0},"e9d5d255-116e-43a3-9858-01afa0dae605":{"value":"teal","selected":1}}';
+//        $item['profile'] = $allProfiles;
+//        $details['user'] = $item;
+//        return $details;
+//    }
 
     /**
-     * @throws ReflectionException
      * @throws Exception
      */
 
