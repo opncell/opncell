@@ -71,7 +71,7 @@ if len(sys.argv) > 1:
 
 
     def config(service_list, process_name, pid, name):
-        yaml_path = '/usr/ports/open5gs/install/etc/open5gs/'
+        yaml_path = '/usr/local/etc/open5gs/'
         if process_name in service_list:
             yaml_file = yaml_path + process_name + '.yaml'
             # Copy the file to a directory where you have write permissions i.e /tmp/yaml .

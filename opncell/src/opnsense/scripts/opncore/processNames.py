@@ -71,7 +71,7 @@ if len(sys.argv) > 1:
             try:
                 process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip()
                 name = process_name.replace("open5gs-", "").rstrip("d")
-                yaml_file_path = '/usr/ports/open5gs/install/etc/open5gs/' + name + '.yaml'
+                yaml_file_path = '/usr/local/etc/open5gs/' + name + '.yaml'
     
                 with open(yaml_file_path, 'r') as file:
                     yaml_data = yaml.safe_load(file)

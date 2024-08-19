@@ -86,9 +86,7 @@ class ProfileController extends ApiMutableModelControllerBase
     public function singleSearchAction($profile): array
     {
         $customProfile = [];
-        $rp ='{"rows":[{"uuid":"ed619531-e8ca-46bd-8e6f-202500bee16e","apn":"Airtel"},{"uuid":"e9d5d255-116e-43a3-9858-01afa0dae605","apn":"teal"}],"rowCount":2,"total":2,"current":1}';
-        $r = json_decode($rp, true);
-//        $r = $this->searchBase('profiles.profile', array("apn"));
+        $r = $this->searchBase('profiles.profile', array("apn"));
         $APNArray = explode(",", $profile);
 
         foreach ($r['rows'] as $data) {

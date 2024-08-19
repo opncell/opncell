@@ -12,7 +12,7 @@ desc="Mobility Management Entity Daemon"
 rcvar=${name}_enable
 config_file="/usr/local/etc/open5gs/mme.yaml"
 log_file="/var/log/opncell/mme.log"
-command="/usr/local/bin/open5gs/open5gs-${service_name}"
+command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
 start_cmd="${name}_start"
 command_args="-D > /dev/null 2>&1"
 

@@ -119,9 +119,7 @@ class GeneralController extends ApiMutableModelControllerBase
                 $status = ($model->$node->__toString() == 1) ? "stopped" : "disabled";
             } elseif (strpos($response, "is running") > 0) {
                 $status = "running";
-            } elseif ($model->enablemmed->__toString() == 0) {
-                $status = "disabled";
-            } else {
+            }  else {
                 $status = "unknown";
             }
             return  $status ;

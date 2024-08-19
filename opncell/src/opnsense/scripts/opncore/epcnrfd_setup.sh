@@ -9,6 +9,7 @@ chmod 777 /var/run/epc
 
 # logfile
 mkdir -p /var/log/opncell
+touch /var/log/opncell/nrf.log
 #ln -s /usr/ports/open5gs/install/var/log/open5gs/nrf.log  /var/log/opncore/nrf.log
 chown -R $user:$group /var/log/opncell/nrf.log
 chmod +r /var/log/opncell/nrf.log

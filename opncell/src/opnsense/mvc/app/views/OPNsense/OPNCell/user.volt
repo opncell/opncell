@@ -114,9 +114,14 @@ POSSIBILITY OF SUCH DAMAGE.
             {{ lang._('Subscriber deleted successfully') }}
             </div>
         </div>
-        <button class="btn btn-danger" style="display: none; margin-left: 6px;text-align: center" id="deleting" type="button">
-            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>
-        </button>
+        <div class="col-md-3 __mt">
+            <div id="deleting" class="alert alert-dismissible alert-danger" style="display: none" role="alert">
+                {{ lang._('Deleting.......') }}
+            </div>
+        </div>
+<!--        <button class="btn btn-danger" style="display: none;  float: left; margin-right: 78px;text-align: center" id="deleting" type="button">-->
+<!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
+<!--        </button>-->
 
         <table id="grid-user-list" class="table table-condensed table-hover table-striped table-responsive"
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
@@ -464,7 +469,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 console.log(data)
                                 $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').removeClass("fa fa-spinner")
                                 // $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
-                                ajaxCall(url = "/api/opncell/user/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
+                                ajaxCall(url = "/api/opncell/service/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
                                     updateServiceControlUI('opncell');
 
                                     // $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");

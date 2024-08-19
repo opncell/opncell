@@ -58,8 +58,7 @@ def fetch_users():
         print(ujson.dumps(user_details))
 
     except subprocess.CalledProcessError as e:
-        #print(f"Error running the Bash script: {e}")
-        #print(f"Command output: {e.output}")
+
         pass
 
     return user_details
