@@ -9,6 +9,6 @@ chmod 777 /var/run/epc
 
 # logfile
 mkdir -p /var/log/opncell
-#ln -s /usr/ports/open5gs/install/var/log/open5gs/mme.log /var/log/opncore/mme.log
+touch /var/log/opncell/mme.log
 chown -R $user:$group /var/log/opncell/mme.log
 chmod +r /var/log/opncell/mme.log

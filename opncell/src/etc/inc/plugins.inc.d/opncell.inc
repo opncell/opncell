@@ -89,7 +89,7 @@ function opncell_services():array
     );
 
     if (fourG_enabled()) {
-        $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf');
+        $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf','scp','nrf');
     } elseif (fiveGSA_enabled()) {
         $serviceTypes = array('nrf','scp','amf','smf','upf','ausf', 'udm', 'udr', 'pcf',  'nssf', 'bsf');
     } elseif (fiveGNSA_enabled()) {

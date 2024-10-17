@@ -31,9 +31,16 @@ echo "=====> "
 echo "Disabling the packet filter ..."
 pfctl -d
 
+# We have a custom mongod file, hence we need to move the mongod file that ships with the
+# mongod installation. This prevents the conflict when opncell tries to move the custom mongod file
+# into /usr/local/etc/rc.d/ . We could rename our custom file to something else but :) too much work!
+
+mv /usr/local/etc/rc.d/mongod /usr/local/etc/rc.d/mongod.back
+
 cd /usr/local/opnsense/mvc/app/tmp || exit 1
 
 cp mongod /usr/local/etc/rc.d/
+chmod +x /usr/local/etc/rc.d/mongod
 
 cd -
 
@@ -53,47 +60,6 @@ checkMongo(){
    fi
 
 }
-
-#checkMongo() {
-#
-#    command="ps aux | grep mongod | awk '\$8 == \"I+\" || \$8 == \"Is\" || \$8 == \"T\" {print \$8}'"
-#    status=$(eval "$command")
-#    if test "$status" == "T"; then
-#       pid_command="ps aux | grep mongod | awk '\$8 == \"T\" {print \$2}'"
-#       pid=$(eval "$pid_command")
-#       kill -9 "$pid"
-#      mongo_binary_path=$(which mongod)
-#      directory_path=$(dirname "$mongo_binary_path")
-#      cd "$directory_path" || exit 1
-#      mongod --dbpath ./data/db &
-#      if pgrep open5gs-hssd; then
-#         pid_hss=$(pgrep open5gs-hssd)
-#         kill -9 ${pid_hss}
-#      fi
-#      sleep 5
-#      cd /usr/ports/open5gs/ || exit 1
-#      #/usr/ports/open5gs/install/bin/open5gs-hssd &
-#      configctl hssd start
-#      sleep 2
-#    fi
-#
-#   if test -z  "$status" ; then
-#      mongo_binary_path=$(which mongod)
-#      directory_path=$(dirname "$mongo_binary_path")
-#      cd "$directory_path" || exit 1
-#      mkdir -p ./data/db
-#      mongod --dbpath ./data/db &
-#      sleep 5
-#       if pgrep open5gs-hssd; then
-#         pid_hss=$(pgrep open5gs-hssd)
-#         kill -9 ${pid_hss}
-#       fi
-#       cd /usr/ports/open5gs/ || exit 1
-#     # /usr/ports/open5gs/install/bin/open5gs-hssd &
-#       configctl hssd start
-#sleep 2
-# fi
-#}
 
   echo "=====> Installation complete."
   echo "=====> The below Virtual IPs should be enabled on the loopback address via the GUI. These are required for the smooth running of open5gs services."

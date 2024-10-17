@@ -103,7 +103,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 {{ lang._('An Error occurred. Check if the db is up and running, then try again.') }}<br>
             </div>
             <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
-                {{ lang._('Subscriber added. Kindly try again.') }}<br>
+                {{ lang._('Subscriber added.') }}<br>
             </div>
         </div>
         <div class="col-md-12 __mt">
@@ -114,9 +114,14 @@ POSSIBILITY OF SUCH DAMAGE.
             {{ lang._('Subscriber deleted successfully') }}
             </div>
         </div>
-        <button class="btn btn-danger" style="display: none; margin-left: 6px;text-align: center" id="deleting" type="button">
-            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>
-        </button>
+        <div class="col-md-3 __mt">
+            <div id="deleting" class="alert alert-dismissible alert-danger" style="display: none" role="alert">
+                {{ lang._('Deleting.......') }}
+            </div>
+        </div>
+<!--        <button class="btn btn-danger" style="display: none;  float: left; margin-right: 78px;text-align: center" id="deleting" type="button">-->
+<!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
+<!--        </button>-->
 
         <table id="grid-user-list" class="table table-condensed table-hover table-striped table-responsive"
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
@@ -389,7 +394,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 $("#" + gridUserId).bootgrid("reload");
                                 if (data.result === "failed") {
                                     $("#failedSave").attr("style", "display:block");
-                                } else if(data.result === "saved"){
+                                } else if(data.result === "saved"  || data.result === "Success" ) {
                                     $("#successfulSave").attr("style", "display:block");
                                 } else {
                                     $("#Error").attr("style", "display:block");
@@ -442,7 +447,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     let uuid = $(this).data("row-id");
                     let urlMap = {};
 
-                    urlMap['frm_' + editDlg] = '/api/opncell/user/getSingleSub/' + imsi;   //pass the imsi of the row of interest
+                    urlMap['frm_' + editDlg] = '/api/opncell/profile/getSingleSub/' + imsi;   //pass the imsi of the row of interest
                     // urlMap['frm_' + editDlg] = gridParams['get'] + uuid;
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
@@ -464,7 +469,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 console.log(data)
                                 $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').removeClass("fa fa-spinner")
                                 // $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
-                                ajaxCall(url = "/api/opncell/user/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
+                                ajaxCall(url = "/api/opncell/service/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
                                     updateServiceControlUI('opncell');
 
                                     // $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");

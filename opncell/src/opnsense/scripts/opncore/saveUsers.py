@@ -74,6 +74,8 @@ if len(sys.argv) > 1:
          #   print(output_list)
             if len(output_list) > 1 and output_list[-2] == "Success":
                 result = "Success"
+            elif output_list[0] == "Success":
+                result = "Success"
             elif "Duplicate" in output_list[0]:
                 result = "Duplicate"
             else:

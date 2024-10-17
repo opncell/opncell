@@ -35,7 +35,7 @@ namespace OPNsense\Base;
 namespace OPNsense\OPNCell\Api;
 
 use Exception;
-use http\Client\Request;
+
 use OPNsense\Base\ApiControllerBase;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\OPNCell\Api\FileUploadService;
@@ -45,10 +45,9 @@ use OPNsense\Core\Config;
 use OPNsense\Core\Backend;
 use OPNsense\OPNCell\User;
 use OPNsense\Phalcon\Filter\Filter;
-use Phalcon\Http\RequestInterface;
+
 use Phalcon\Messages\Message;
-use phpDocumentor\Reflection\Type;
-use Psr\Http\Message\ServerRequestInterface;
+
 use ReflectionException;
 
 header("Access-Control-Allow-Origin: *");
@@ -59,7 +58,7 @@ class UserController extends ApiMutableModelControllerBase
 
     protected static $internalModelClass = '\OPNsense\OPNCell\User';
     protected static $internalModelName = 'user';
-//    public \OPNsense\Mvc\Request $request;
+    public \OPNsense\Mvc\Request $request;
 
 
     public function multipartValues($value, $key): array
@@ -127,7 +126,7 @@ class UserController extends ApiMutableModelControllerBase
             }
 
         }
-//        $this->request = new \OPNsense\Mvc\Request();
+        $this->request = new \OPNsense\Mvc\Request();
 
         // fetch query parameters (limit results to prevent out of memory issues)
         if ($this->request->isPost()) {
@@ -281,36 +280,12 @@ class UserController extends ApiMutableModelControllerBase
         }
     }
 
-//    public function searchSubAction(): array
-//    {
-//        $profile_array = $this->searchBase('users.user', array("imsi","profile"));
-//        return $profile_array;
-//    }
     /**
      * @throws ReflectionException
      * @throws UserException
      */
-    public function getSingleSubAction($imsi): array
-    {
-        $backend = new Backend();
-        $profileClass = new ProfileController();
-        $userRepository = new UserRepository($backend);
-        $data = $userRepository->getUser($imsi);
-        $item = array();
-        if ($data != null) {
-            foreach ($data as $process) {
-                $item['imsi'] = $process['imsi'];
-                $item['attached'] = $process['apn'];
-            }
-        }
-        $allProfiles = $profileClass->singleSearchAction($item['attached']);
-        $item['profile'] = $allProfiles;
-        $details['user'] = $item;
-        return $details;
-    }
 
     /**
-     * @throws ReflectionException
      * @throws Exception
      */
 
@@ -348,7 +323,7 @@ class UserController extends ApiMutableModelControllerBase
         $mdlUser = new User();
         $result = array();
         $userRepository = new UserRepository($backend);
-//        $this->request = new \OPNsense\Mvc\Request();
+        $this->request = new \OPNsense\Mvc\Request();
         $userDetails = $this->request->getPost("user");
         $selected_profile_uuid = explode(",", $userDetails['profile']);
         $numberOfProfiles = count($selected_profile_uuid);
@@ -383,7 +358,7 @@ class UserController extends ApiMutableModelControllerBase
         if ($data == "Success") {
             return array("result" => $data);
         } else {
-            return array("result" => $sub);
+            return array("result" => $data);
         }
     }
 
@@ -391,7 +366,7 @@ class UserController extends ApiMutableModelControllerBase
     {
         try {
             $backend = new Backend();
-//            $this->request = new \OPNsense\Mvc\Request();
+            $this->request = new \OPNsense\Mvc\Request();
             $updatedUserDetails = $this->request->getPost('user');
 
             // Fetch user details

@@ -29,9 +29,9 @@ if len(sys.argv) > 1:
     # Define the target keys
     target_keys = ['metrics','dns','tai','network_name','nsi','s1ap','ngap']
     
-    fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf"]
+    fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf","nrf","scp"]
     upfServices = ["amf", "udm", "nssf",  "smf", "udr","pcf", "upf","ausf"]
-    # fiveNSAGServices = ["hss", "mme","pcrf", "sgwu", "sgwc","smf", "upf"]
+    fiveNSAGServices = ["hss", "mme","pcrf", "sgwu", "sgwc","smf", "upf"]
     fiveGSAServices = ["nrf", "scp", "amf", "smf", "upf", "ausf", "udm", "udr","pcf", "nssf","bsf"]
     
     
@@ -71,7 +71,7 @@ if len(sys.argv) > 1:
             try:
                 process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip()
                 name = process_name.replace("open5gs-", "").rstrip("d")
-                yaml_file_path = '/usr/ports/open5gs/install/etc/open5gs/' + name + '.yaml'
+                yaml_file_path = '/usr/local/etc/open5gs/' + name + '.yaml'
     
                 with open(yaml_file_path, 'r') as file:
                     yaml_data = yaml.safe_load(file)

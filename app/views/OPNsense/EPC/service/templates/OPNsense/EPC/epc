@@ -1,6 +1,0 @@
-{% if helpers.exists('OPNsense.epc.general.enabled') and OPNsense.epc.general.enabled == '1' %}
-epc_setup="/usr/local/opnsense/scripts/epc/setup.sh"
-epc_enable="YES"
-{% else %}
-epc_enable="NO"
-{% endif %}

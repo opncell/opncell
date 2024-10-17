@@ -1,5 +1,3 @@
-opncore.conf:/usr/local/etc/opncore/opncore.conf
-opncore:/etc/rc.conf.d/opncore
 epcmmed:/etc/rc.conf.d/epcmmed
 epcamfd:/etc/rc.conf.d/epcamfd
 epcausfd:/etc/rc.conf.d/epcausfd
@@ -16,6 +14,4 @@ epcsmfd:/etc/rc.conf.d/epcsmfd
 epcudmd:/etc/rc.conf.d/epcudmd
 epcudrd:/etc/rc.conf.d/epcudrd
 epcupfd:/etc/rc.conf.d/epcupfd
-epcfour:/etc/rc.conf.d/epcfour
-epcfivesa:/etc/rc.conf.d/epcfivesa
-epcfivensa:/etc/rc.conf.d/epcfivensa
+

@@ -134,7 +134,8 @@ class BulkController extends ApiMutableModelControllerBase
                     $duplicates[] = $userDetails["imsi"];
                 }
             }
-        } else {
+        }
+        else {
             echo "Error: outputKeyValue not found in session.";
         }
 
