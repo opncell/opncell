@@ -97,7 +97,7 @@ class ServiceController extends ApiControllerBase
         'enablefour' => [
             "enablehssd" => "hssd", "enablemmed" => "mmed", "enablepcrfd" => "pcrfd",
             "enablesgwud" => "sgwud", "enablesgwcd" => "sgwcd", "enablesmfd" => "smfd",
-            "enableupfd" => "upfd"
+            "enableupfd" => "upfd","enablescpd" => "scpd","enablenrfd" => "nrfd"
         ],
         'enablefiveNSA' => [
             "enablehssd" => "hssd", "enablemmed" => "mmed", "enablepcrfd" => "pcrfd",
@@ -108,7 +108,7 @@ class ServiceController extends ApiControllerBase
             "enablenrfd" => "nrfd", "enablescpd" => "scpd", "enableamfd" => "amfd",
             "enablesmfd" => "smfd", "enableupfd" => "upfd", "enableausfd" => "ausfd",
             "enableudmd" => "udmd", "enableudrd" => "udrd", "enablepcfd" => "pcfd",
-            "enablenssfd" => "nssfd", "enablebsfd" => "bsfd"
+            "enablenssfd" => "nssfd", "enablebsfd" => "bsfd","enablesepp" =>"sepp"
         ],
         'enableupf' => [
             "enableamfd" => "amfd", "enablesmfd" => "smfd", "enableupfd" => "upfd", "enableausfd" => "ausfd",
@@ -135,7 +135,7 @@ class ServiceController extends ApiControllerBase
         }
 
         // Start the services that belong to the current network
-        foreach ($services as $daemonKey => $daemon) {
+        foreach ($services as $daemon) {
             $this->stopAction($daemon);
             $this->startAction($daemon);
         }

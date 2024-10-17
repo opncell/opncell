@@ -1,4 +1,4 @@
-{% if OPNsense.opncell.general.enablefour == "1" or OPNsense.opncell.general.enablefiveNSA == "1"  or OPNsense.opncell.general.enableupf == '1'  or OPNsense.opncell.general.enablefiveSA == '1'%}
+{% if OPNsense.opncell.general.enablefour == "1" or OPNsense.opncell.general.enablefiveNSA == "1"  or OPNsense.opncell.general.enableupf == '1'  or OPNsense.opncell.general.enablefiveSA == '1' %}
 epcupfd_enable="YES"
 epcupfd_setup="/usr/local/opnsense/scripts/opncore/epcupfd_setup.sh"
 {% else %}

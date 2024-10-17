@@ -29,9 +29,9 @@ if len(sys.argv) > 1:
     # Define the target keys
     target_keys = ['metrics','dns','tai','network_name','nsi','s1ap','ngap']
     
-    fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf"]
+    fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf","nrf","scp"]
     upfServices = ["amf", "udm", "nssf",  "smf", "udr","pcf", "upf","ausf"]
-    # fiveNSAGServices = ["hss", "mme","pcrf", "sgwu", "sgwc","smf", "upf"]
+    fiveNSAGServices = ["hss", "mme","pcrf", "sgwu", "sgwc","smf", "upf"]
     fiveGSAServices = ["nrf", "scp", "amf", "smf", "upf", "ausf", "udm", "udr","pcf", "nssf","bsf"]
     
     

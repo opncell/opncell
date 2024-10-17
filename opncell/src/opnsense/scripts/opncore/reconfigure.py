@@ -143,7 +143,7 @@ if len(sys.argv) > 1:
             copy_file = f"cp {new} {yaml_path}"
             os.system(copy_file)
 
-            command = "/usr/ports/open5gs/install/bin/" + name + " -D "
+            command = "/usr/ports/open5gs/install/bin/" + name + " -D " + " -c " + "/usr/local/etc/open5gs/" + process_name + ".yaml" + "l" + "/var/log/opncell/" + process_name + ".log"
             subprocess.run(command, shell=True, text=True)
 
 
