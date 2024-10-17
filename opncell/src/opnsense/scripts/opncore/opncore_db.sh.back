@@ -998,7 +998,7 @@ if [ "$1" = "showone" ]; then
     fi
 fi
 if [ "$1" = "showpretty" ]; then
-   mongo --eval "db.subscribers.find().pretty()" $DB_URI
+   mongo --eval "db.subscribers.find().pretty().batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showfiltered" ]; then

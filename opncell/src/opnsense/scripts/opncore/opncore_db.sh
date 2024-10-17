@@ -976,7 +976,7 @@ if [ "$1" = "subscriber_status" ]; then
     exit 1
 fi
 if [ "$1" = "showall" ]; then
-   mongo --eval "db.subscribers.find()" $DB_URI
+   mongo --eval "db.subscribers.find().batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showone" ]; then
@@ -987,11 +987,11 @@ if [ "$1" = "showone" ]; then
     fi
 fi
 if [ "$1" = "showpretty" ]; then
-   mongo --eval "db.subscribers.find().pretty()" $DB_URI
+   mongo --eval "db.subscribers.find().pretty().batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showfiltered" ]; then
-   mongo --quiet --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1})" $DB_URI
+   mongo --quiet --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1}).batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 
