@@ -49,9 +49,13 @@ POSSIBILITY OF SUCH DAMAGE.
             title: "{{ lang._('Activating Network') }}",
             closable: true,
             onshow: function(dialogRef){
+
                 dialogRef.getModalBody().html(
-                    "{{ lang._(' Network set-up in progress, please wait...') }}" +
-                    ' <i class="fa fa-cog fa-spin"></i>'
+                    '<div style="padding: 15px;">' +
+                    "{{ lang._('Network set-up in progress, please wait...') }}" +
+                    ' <i class="fa fa-cog fa-spin"></i>' +
+                    '</div>'
+
                 );
                 ajaxCall(url = "/api/opncell/service/reconfigureAct/" + net, sendData = {}, callback = function (data, status) {
                     updateServiceControlUI('opncell');
@@ -249,8 +253,10 @@ POSSIBILITY OF SUCH DAMAGE.
                     closable: true,
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
+                            '<div style="padding: 15px;">' +
                             "{{ lang._(' The service is starting, please wait...') }}" +
-                        ' <i class="fa fa-cog fa-spin"></i>'
+                        ' <i class="fa fa-cog fa-spin"></i>' +
+                            '</div>'
                     );
 
                         ajaxCall(url = '/api/opncell/service/start/' + serviceName, sendData = {}, callback = function (data, status) {
@@ -280,8 +286,9 @@ POSSIBILITY OF SUCH DAMAGE.
                     closable: true,
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
+                            '<div style="padding;15px;">' +
                             "{{ lang._('The service is restarting , please wait...') }}" +
-                            ' <i class="fa fa-cog fa-spin"></i>'
+                            ' <i class="fa fa-cog fa-spin"></i>' + '</div>'
                         );
                         ajaxCall(url = '/api/opncell/service/restart/' + serviceName, sendData = {}, callback = function (data, status) {
                             console.log(status)
@@ -303,12 +310,14 @@ POSSIBILITY OF SUCH DAMAGE.
                 console.log(serviceName)
                 BootstrapDialog.show({
                     type:BootstrapDialog.TYPE_INFO,
-                    title: "{{ lang._('Stopping Service') }}",
+                    title: "{{ lang._(' Stopping Service') }}",
                     closable: true,
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
-                            "{{ lang._('The service is stopping , please wait...') }}" +
-                        ' <i class="fa fa-cog fa-spin"></i>'
+                            '<div style="padding:15px;">' +
+                            "{{ lang._(' The service is stopping , please wait...') }}" +
+                        ' <i class="fa fa-cog fa-spin"></i>' +
+                            '</div>'
                     );
                         ajaxCall(url = '/api/opncell/service/stop/' + serviceName, sendData = {}, callback = function (data, status) {
                             console.log(status)

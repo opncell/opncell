@@ -127,9 +127,9 @@ POSSIBILITY OF SUCH DAMAGE.
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
             <thead>
             <tr>
-                <th data-column-id="imsi" data-type="string" data-visible="true">{{ lang._('IMSI') }}</th>
-                <th data-column-id="profile" data-type="string" data-visible="true">{{ lang._('Profile') }}</th>
-                <th data-column-id="commands" data-width="7em" data-formatter="commands" data-sortable="false">{{
+                <th data-column-id="imsi" data-type="string" data-visible="true" >{{ lang._('IMSI') }}</th>
+                <th data-column-id="profile" data-type="string" data-visible="true" >{{ lang._('Profile') }}</th>
+                <th data-column-id="commands" data-width="7em" data-formatter="commands" >{{
                     lang._('Commands') }}
                 </th>
                 <th data-column-id="uuid" data-type="string" data-identifier="true" data-visible="false">{{ lang._('ID')
@@ -159,8 +159,8 @@ POSSIBILITY OF SUCH DAMAGE.
                data-editDialog="DialogProfile">
             <thead>
             <tr>
-                <th data-column-id="apn" data-type="string" data-visible="true">{{ lang._('Name') }}</th>
-                <th data-column-id="count" data-type="string" data-visible="true">{{ lang._('Subscribed users') }}</th>
+                <th data-column-id="apn" data-type="string" data-visible="true" data-sortable="true">{{ lang._('Name') }}</th>
+                <th data-column-id="count" data-type="string" data-visible="true" data-sortable="true">{{ lang._('Subscribed users') }}</th>
                 <th data-column-id="commands" data-width="7em" data-formatter="commands" data-sortable="false">{{
                     lang._('Commands') }}
                 </th>

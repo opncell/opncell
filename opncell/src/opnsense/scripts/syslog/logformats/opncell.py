@@ -54,14 +54,15 @@ class OpncoreMMELogFormat(NewBaseLogFormat):
     def severity(self):
         # Grab the log level Put in a try block because each service on startup has
         # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
+
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
         try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -114,15 +115,17 @@ class OpncoreUPFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
+
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
         try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -176,15 +179,17 @@ class OpncoreUDMLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
+
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
         try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -238,16 +243,17 @@ class OpncoreSGWCLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -300,16 +306,17 @@ class OpncoreSGWULogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -362,16 +369,17 @@ class OpncorePCRFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -424,16 +432,17 @@ class OpncoreSMFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -486,16 +495,17 @@ class OpncoreNRFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -548,16 +558,17 @@ class OpncoreSCPLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -610,16 +621,17 @@ class OpncoreAMFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -672,15 +684,17 @@ class OpncoreAUSFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
+
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
         try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -733,15 +747,17 @@ class OpncoreUDRLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
+
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
         try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -794,16 +810,17 @@ class OpncorePCFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -856,16 +873,17 @@ class OpncoreBSFLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):
@@ -918,16 +936,17 @@ class OpncoreHSSLogFormat(NewBaseLogFormat):
 
     @property
     def severity(self):
-        # Grab the log level
-        try:
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
 
+        options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
+        try:
             severity = self._parts[3].strip(":")
-            options = {"INFO": 6, "ERROR": 3, "FATAL": 2, "WARNING":4 }
             if severity in options:
                 return options[severity]
             return None
         except:
-            pass
+            return options["INFO"]
 
     @property
     def process_name(self):

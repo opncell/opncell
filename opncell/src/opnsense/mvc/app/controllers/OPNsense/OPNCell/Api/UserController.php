@@ -107,8 +107,7 @@ class UserController extends ApiMutableModelControllerBase
      * @throws ReflectionException
      */
 
-
-    public function searchSubAction(): array
+    public function fetchUsersAction():array
     {
         $backend = new Backend();
         $userRepository = new UserRepository($backend);
@@ -124,22 +123,37 @@ class UserController extends ApiMutableModelControllerBase
                 $item['profile'] = $process['apn'];
                 $details[] = $item;
             }
-
         }
-        $this->request = new \OPNsense\Mvc\Request();
+        return $details;
+    }
 
+    /**
+     * @throws ReflectionException
+     */
+    public function searchSubAction()
+    {
+
+        $this->request = new \OPNsense\Mvc\Request();
+        if ($this->request->has('sort') &&
+            is_array($this->request->getPost("sort")) &&
+            !empty($this->request->getPost("sort"))
+        ) {
+            $tmp = array_keys($this->request->getPost("sort"));
+            $sortBy = $tmp[0] . " " . $this->request->getPost("sort")[$tmp[0]];
+        }
         // fetch query parameters (limit results to prevent out of memory issues)
         if ($this->request->isPost()) {
             $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
             $currentPage = $this->request->getPost('current', 'int', 1);
+
             $offset = ($currentPage - 1) * $itemsPerPage;
             $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
-            $filteredResult = $this->filterResults($details, $searchPhrase);
+            $filteredResult = $this->filterResults($this->fetchUsersAction(), $searchPhrase);
             $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
-
         }
 
-        return ['total' => count($filteredResult), 'rowCount' => $itemsPerPage, 'current' => $currentPage, 'rows' => $paginatedResult,];
+        return ['total' => count($filteredResult), 'rowCount' => $itemsPerPage, 'current' => $currentPage,
+            'rows' => $paginatedResult, $sortBy];
     }
 
     private function filterResults(array $results, string $searchPhrase): array
@@ -167,11 +181,11 @@ class UserController extends ApiMutableModelControllerBase
     public function profileAndUsersListAction(): array
     {
         $result = [];
-        $user = $this->searchSubAction();
+        $user = $this->fetchUsersAction();
         if (count($user) > 0) {
-            $profiles = array_column($user['rows'], 'profile');
+            $profiles = array_column($user, 'profile');
             $initialProfileCount = [];
-            #Cater for situations where one imsi has multiple profiles attached.
+//            #Cater for situations where one imsi has multiple profiles attached.
             foreach ($profiles as $profile) {
                 $split_elements = explode(",", $profile);
                 $initialProfileCount = array_merge($initialProfileCount, $split_elements);
@@ -181,6 +195,7 @@ class UserController extends ApiMutableModelControllerBase
                 $result[$profile] = $count;
             }
         }
+
 
         return $result;
     }

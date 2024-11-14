@@ -17,6 +17,12 @@ class UserRepository
         $response = $this->backend->configdpRun("opncore showUsers");
         return json_decode((string)$response, true);
     }
+//    public function getUsers()
+//    {
+//        $response = $this->backend->configdpRun("opncore showUsers", [$searchPhrase, $itemsPerPage,
+//                ($currentPage - 1) * $itemsPerPage, $ruleId, $sortBy]);
+//        return json_decode((string)$response, true);
+//    }
 
     public function getUser($imsi)
     {
