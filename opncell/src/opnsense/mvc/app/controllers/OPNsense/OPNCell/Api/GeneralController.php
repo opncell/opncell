@@ -57,15 +57,13 @@ class GeneralController extends ApiMutableModelControllerBase
     /**
      * @throws ReflectionException
      */
-    public function getAction(): array
+    public function getAction()
     {
         $result = array();
-        if ($this->request->isGet()) {
 //            $mdlGeneral = $this->getModel();
             $mdlGeneral = new General();
             $result['general'] = $mdlGeneral->getNodes();
-        }
-        return $result;
+            return $result;
     }
 
     public function getUserAction(): array
@@ -119,7 +117,7 @@ class GeneralController extends ApiMutableModelControllerBase
                 $status = ($model->$node->__toString() == 1) ? "stopped" : "disabled";
             } elseif (strpos($response, "is running") > 0) {
                 $status = "running";
-            }  else {
+            } else {
                 $status = "unknown";
             }
             return  $status ;

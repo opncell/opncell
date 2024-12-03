@@ -13,6 +13,7 @@ if len(sys.argv) > 1:
     y = x.replace('[', "")
     t = y.replace(']', '')
     json_data = json.loads(t)
+
     #json_data = json.loads(json_data2)
    # print(type(json_data))
     # create a temporary directory with write permissions- to use for file editing
@@ -42,7 +43,6 @@ if len(sys.argv) > 1:
                 network = value
             if key == 'network_name':
                 network_name = value
-
 
 
     def running_processes():
@@ -182,7 +182,6 @@ if len(sys.argv) > 1:
         for process in final_list:
             name = "open5gs-" + process + "d"
             configureProcess(process, 0, name)
-
 
     reconfigure(pList)
 else:

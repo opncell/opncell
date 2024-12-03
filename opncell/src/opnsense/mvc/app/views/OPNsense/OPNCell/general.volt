@@ -32,7 +32,6 @@ POSSIBILITY OF SUCH DAMAGE.
     function getVar() {
         return localStorage.getItem('networkName');
     }
-    // const storedValue = localStorage.getItem("networkName");
 
     function UpdateOptions() {
         network = $('input:radio[name=network]:checked').val();
@@ -162,22 +161,43 @@ POSSIBILITY OF SUCH DAMAGE.
             updateServiceControlUI('opncell');
         });
 
-        function updateUI() {
-
-            if (network !== "") {
-                const networks = $('input:radio[name=network]')
-                var storedValue = getVar()
-                for (const networkVal of networks) {
-                    if (storedValue === networkVal.value) {
-                        console.log(storedValue)
-                        ShowHideConfigFields()
-                        var labelId = networkVal.getAttribute("data-label");
-                        var label = document.getElementById(labelId);
-                        label.classList.add("active");
-                        break; // No need to continue checking once we've found the match
-                    }
+        function active(val){
+            const networks = $('input:radio[name=network]')
+            console.log(networks)
+            for (const networkVal of networks) {
+                if (val === networkVal.value) {
+                    ShowHideConfigFields()
+                    var labelId = networkVal.getAttribute("data-label");
+                    var label = document.getElementById(labelId);
+                    label.classList.add("active");
+                    break; // No need to continue checking once we've found the match
                 }
             }
+        }
+
+        function updateUI() {
+
+            if (network && network !== "") {
+                const storedValue = getVar();
+                if (storedValue != null){
+                    active(storedValue)
+               }
+                else {
+                    ajaxCall(url = '/api/opncell/general/get' , sendData = {}, callback = function (data) {
+                        console.log(data.general)
+                        const getNodes = data.general
+
+                        const result = Object.keys(getNodes)
+                            .filter(key => key.startsWith("enable")) // Filter keys starting with "enable"
+                            .find(key => getNodes[key] === "1"); // Find the key with value 1 ergo, checked network
+                        active(result)
+                        console.log(result);
+
+                    });
+                }
+
+            }
+
         }
         let noEdit = ['sgwcd','pcrfd','mongod','hssd'];
 
@@ -286,9 +306,10 @@ POSSIBILITY OF SUCH DAMAGE.
                     closable: true,
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
-                            '<div style="padding;15px;">' +
+                            '<div style="padding: 15px;">' +
                             "{{ lang._('The service is restarting , please wait...') }}" +
-                            ' <i class="fa fa-cog fa-spin"></i>' + '</div>'
+                            ' <i class="fa fa-cog fa-spin"></i>' +
+                            '</div>'
                         );
                         ajaxCall(url = '/api/opncell/service/restart/' + serviceName, sendData = {}, callback = function (data, status) {
                             console.log(status)
