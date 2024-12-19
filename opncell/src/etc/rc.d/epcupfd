@@ -43,7 +43,7 @@ epcupfd_start(){
 epcupfd_stop(){
         echo "Starting open5gs-${service_name} daemon"
             pid=$(pgrep open5gs-upfd)
-    	    kill -9  ${pid}
+    	    kill -9 ${pid}
             rm /var/run/epc/epcupfd.pid
              if ifconfig | grep -q epc0; then
                ifconfig epc0 name tun0 > /dev/null 2>&1

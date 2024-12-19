@@ -199,6 +199,24 @@ POSSIBILITY OF SUCH DAMAGE.
             }
 
         }
+
+        // function updateUI() {
+        //
+        //     if (network !== "") {
+        //         const networks = $('input:radio[name=network]')
+        //         var storedValue = getVar()
+        //         for (const networkVal of networks) {
+        //             if (storedValue === networkVal.value) {
+        //                 console.log(storedValue)
+        //                 ShowHideConfigFields()
+        //                 var labelId = networkVal.getAttribute("data-label");
+        //                 var label = document.getElementById(labelId);
+        //                 label.classList.add("active");
+        //                 break; // No need to continue checking once we've found the match
+        //             }
+        //         }
+        //     }
+        // }
         let noEdit = ['sgwcd','pcrfd','mongod','hssd'];
 
         let gridOtherConfigs = {

@@ -168,6 +168,9 @@ class GeneralController extends ApiMutableModelControllerBase
         'pcrfd' => '127.0.0.9',
     ];
 
+    /**
+     * @throws \Exception
+     */
     public function getProcessNamesAction($network): array
     {
         $result = array();
