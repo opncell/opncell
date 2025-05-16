@@ -210,8 +210,10 @@ POSSIBILITY OF SUCH DAMAGE.
                 $("#no_file").attr("style", "display:none");
                 if(data.length > 0 ){
                     $("#duplicates").attr("style", "display:block");
+                    fadeOut("#duplicates")
                 } else {
                     $("#success").attr("style", "display:block");
+                    fadeOut("#success")
                 }
 
 
@@ -228,6 +230,14 @@ POSSIBILITY OF SUCH DAMAGE.
         }, true);
 
     }
+
+    function fadeOut(strings) {
+        setTimeout(function() {
+            $(strings).fadeOut("slow");
+        }, 3000);
+
+    }
+
 
     let globalFileContent;
 
@@ -250,17 +260,15 @@ POSSIBILITY OF SUCH DAMAGE.
                     contentType: false, // Don't set content type (let jQuery decide)
                     success: function (response) {
                         console.log('Response from server:', response);
-                        // if (response['result'] === 'Failed'){
-                        //     $("#format_not_supported").attr("style", "display:block");
-                        //     $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
-                        // }
                         if(response.result === 'failed'){
 
                             $("#no_file").attr("style", "display:block");
+                            fadeOut("#no_file")
                             $("#format_not_supported").attr("style", "display:none");
                             $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
                         } else if(response['result'] === 'Unsupported Format') {
                             $("#format_not_supported").attr("style", "display:block");
+                            fadeOut("#format_not_supported")
                             $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
                         }
                         else {
@@ -268,6 +276,7 @@ POSSIBILITY OF SUCH DAMAGE.
                             $("#no_file").attr("style", "display:none");
                             $("#format_not_supported").attr("style", "display:none");
                             $("#file_uploaded").attr("style", "display:block");
+                            fadeOut("#file_uploaded")
                             $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
                         }
 
@@ -279,6 +288,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
         });
     }
+
 
 
     $(document).ready(function () {
@@ -394,10 +404,13 @@ POSSIBILITY OF SUCH DAMAGE.
                                 $("#" + gridUserId).bootgrid("reload");
                                 if (data.result === "failed") {
                                     $("#failedSave").attr("style", "display:block");
+                                    fadeOut("#failedSave")
                                 } else if(data.result === "saved"  || data.result === "Success" ) {
                                     $("#successfulSave").attr("style", "display:block");
+                                    fadeOut("#successfulSave")
                                 } else {
                                     $("#Error").attr("style", "display:block");
+                                    fadeOut("#Error")
                                 }
                             }, true);
                     });
@@ -414,15 +427,18 @@ POSSIBILITY OF SUCH DAMAGE.
                     stdDialogConfirm("{{ lang._('Confirm Subscriber Removal') }}", "{{ lang._('Do you want to remove the subscriber') }}" + "{{ lang._('""')}}" + imsi + "{{ lang._('"
                     "')}}" + "{{ lang._(' ? ')}}", "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", function (data, status) {
                         $("#deleting").attr("style", "display:block");
+                        fadeOut("#deleting")
                         $("#deleting_progress").addClass("fa fa-spinner fa-pulse");
                         ajaxCall(url = "/api/opncell/user/deleteSubFromDB/"  + imsi, sendData = {}, callback = function (data, status) {
                             if (data.result === "failed"){
                                 $("#deleting").attr("style", "display:none");
                                 $("#failedDelete").attr("style", "display:block");
+                                fadeOut("#failedDelete")
 
                             } else {
                                 $("#deleting").attr("style", "display:none");
                                  $("#successfulDelete").attr("style", "display:block");
+                                 fadeOut("#successfulDelete")
                             }
                             console.log(data.result)
                             updateServiceControlUI('opncell');
