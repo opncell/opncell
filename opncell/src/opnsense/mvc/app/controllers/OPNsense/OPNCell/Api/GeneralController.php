@@ -114,7 +114,11 @@ class GeneralController extends ApiMutableModelControllerBase
             $mynode = "enable".$serviceName;
             $node = str_replace('"', '', $mynode);
             if (strpos($response, "not running") > 0) {
-                $status = ($model->$node->__toString() == 1) ? "stopped" : "disabled";
+                if ($serviceName == 'mongod') {
+                    $status = "stopped";
+                } else {
+                    $status = ($model->$node->__toString() == 1) ? "stopped" : "disabled";
+                }
             } elseif (strpos($response, "is running") > 0) {
                 $status = "running";
             } else {
@@ -157,7 +161,7 @@ class GeneralController extends ApiMutableModelControllerBase
         'nrf' => 'Network Repository Function',
         'scp' => 'Service Communication Proxy',
         'bsf' => 'Binding Support Function',
-        'mongod' => 'Mongo DB',
+        'mongo' => 'Mongo DB',
         'udr' => 'Unified Data Repository',
     ];
 

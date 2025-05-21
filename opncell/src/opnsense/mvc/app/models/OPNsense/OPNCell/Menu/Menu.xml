@@ -19,6 +19,7 @@
           <UDMLogs VisibleName="udm log" url = "/ui/diagnostics/log/opncell/udm" />
           <PCFLogs VisibleName="pcf log" url = "/ui/diagnostics/log/opncell/pcf" />
           <NSSF VisibleName="nssf log " url = "/ui/diagnostics/log/opncell/nssf" />
+<!--          <Mongo VisibleName="mongo log" url = "/ui/diagnostics/log/opncell/mongod" />-->
       </FourG>
   </Cellular>
 </menu>

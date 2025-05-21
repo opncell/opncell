@@ -39,7 +39,6 @@ function fiveGSA_enabled(): bool
 {
     $model = new General();
     return $model->enablefiveSA->__toString() == "1";
-
 }
 
 function fiveGNSA_enabled(): bool
@@ -83,19 +82,19 @@ function opncell_services():array
         'nrf' => gettext('Network Repository Function'),
         'scp' => gettext('Service Communication Proxy'),
         'bsf' => gettext('Binding Support Function'),
-        'mongod' => gettext('Mongo DB'),
+        'mongo' => gettext('Mongo DB'),
         'udr' => gettext('Unified Data Repository'),
 
     );
 
     if (fourG_enabled()) {
-        $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf','scp','nrf');
+        $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf','scp','nrf','mongo');
     } elseif (fiveGSA_enabled()) {
-        $serviceTypes = array('nrf','scp','amf','smf','upf','ausf', 'udm', 'udr', 'pcf',  'nssf', 'bsf');
+        $serviceTypes = array('nrf','scp','amf','smf','upf','ausf', 'udm', 'udr', 'pcf',  'nssf', 'bsf','mongo');
     } elseif (fiveGNSA_enabled()) {
-        $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf');
+        $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf','scp','nrf','mongo');
     } elseif (upf_enabled()) {
-        $serviceTypes = array('amf', 'smf', 'upf', 'udm','nssf','udr','pcf', 'ausf');
+        $serviceTypes = array('amf', 'smf', 'upf', 'udm','nssf','udr','pcf', 'ausf','mongo');
     } else {
         return $services;
     }
@@ -110,7 +109,7 @@ function opncell_services():array
             $service['configd'][$key] = array(sprintf($commands[0], $type));
         }
 
-        $service['pidfile'] = sprintf($commonServiceData['pidfile'], $type);
+            $service['pidfile'] = sprintf($commonServiceData['pidfile'], $type);
 
         $services[] = $service;
     }

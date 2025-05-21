@@ -61,15 +61,15 @@ if len(sys.argv) > 1:
        # print(output_mongo)
         try:
             pid_mongo = output_mongo.strip().split("\n")
-            process_name_mongo = subprocess.check_output(f"ps -p {pid_mongo[0]} -o comm=", shell=True, text=True).strip()
+            process_name_mongo = subprocess.check_output(f"ps -p {pid_mongo[0]} -o comm=", shell=True, text=True).strip().rstrip("d")
             p = {"PID":pid_mongo[0], "Name":process_name_mongo, "config":{"mongod.bind": [{"address":"127.0.0.1"}]}}
         except:
             #pass
-            p = {"PID": "Stopped", "Name": "mongod", "config":{"mongod.bind": [{"address":"127.0.0.1"}]}}
+            p = {"PID": "Stopped", "Name": "mongo", "config":{"mongod.bind": [{"address":"127.0.0.1"}]}}
         # Iterate through the list of PIDs
         for pid in pid_list:
             try:
-                process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip()
+                process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip().rstrip("d")
                 name = process_name.replace("open5gs-", "").rstrip("d")
                 yaml_file_path = '/usr/local/etc/open5gs/' + name + '.yaml'
     

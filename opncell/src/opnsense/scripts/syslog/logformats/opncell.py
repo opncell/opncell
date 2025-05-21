@@ -970,3 +970,67 @@ class OpncoreHSSLogFormat(NewBaseLogFormat):
                 return f"{self._parts[0]} {self._parts[1]} {self._parts[2] }"
             else:
                 return f"{self._parts[0]}"
+
+#Mongod
+class OpncoreMongoLogFormat(NewBaseLogFormat):
+    def __init__(self, filename):
+        super().__init__(filename)
+        self._priority = 1
+        self._parts = list()
+
+    def match(self, line):
+        return self._filename.find('opncell/mongod.log') > -1
+
+    def set_line(self, line):
+        super().set_line(line)
+        self._parts = self._line.split(",", maxsplit=5)
+
+    @property
+
+    def timestamp(self):
+        # opncore format return actual log data
+        try:
+            part_two = parts[0]
+            date = part_two.split('"$date":"')
+            formatted_date = date[1]
+            d = formatted_date.strip('"}')
+            dt = datetime.datetime.fromisoformat(d)
+            return dt.isoformat()
+        except:
+             pass
+
+    @property
+    def severity(self):
+        # Grab the log level Put in a try block because each service on startup has
+        # "Open5GS daemon v2.6.6-26-ge12b1be" which breaks.
+
+        options = {"I": 6, "E": 3, "W":4,"INFO": 6}
+        try:
+            severity_parts = self._parts[1].split(":")
+            severity = severity_parts[1].strip('"')
+            if severity in options:
+                return options[severity]
+            return None
+        except:
+            return options["INFO"]
+
+    @property
+    def process_name(self):
+        # Grab the type of log message
+        try:
+
+            return f'{self._parts[2].strip()} {self._parts[3].strip()}'
+        except:
+            pass
+
+
+    @property
+    def line(self):
+        try:
+            # Only grab the left over message
+            return f"{self._parts[4].strip('}')} {self._parts[5].strip('}')}"
+        except:
+            if len(self._parts) > 1:
+                return f"{self._parts[0]} {self._parts[1]} {self._parts[2] }"
+            else:
+                return f"{self._parts[0]}"

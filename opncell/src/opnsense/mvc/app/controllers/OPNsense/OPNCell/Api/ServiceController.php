@@ -1,8 +1,8 @@
 <?php
 
 /*
-    Copyright (C) 2023 Digital Solutions
-    Copyright (C) 2023 Wire Labs
+    Copyright (C) 2025 Digital Solutions
+    Copyright (C) 2025 Wire Labs
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,6 @@ use OPNsense\Base\ApiControllerBase;
 use OPNsense\Core\Backend;
 use OPNsense\Mvc\Request;
 use OPNsense\OPNCell\General;
-use OPNsense\OPNCell\Opncore;
 use OPNsense\Core\Config;
 use Phalcon\Messages\Message;
 
@@ -90,7 +89,6 @@ class ServiceController extends ApiControllerBase
     }
     public function statusAction()
     {
-
     }
 
     private array $serviceMapping = [
@@ -102,7 +100,7 @@ class ServiceController extends ApiControllerBase
         'enablefiveNSA' => [
             "enablehssd" => "hssd", "enablemmed" => "mmed", "enablepcrfd" => "pcrfd",
             "enablesgwud" => "sgwud", "enablesgwcd" => "sgwcd", "enablesmfd" => "smfd",
-            "enableupfd" => "upfd"
+            "enableupfd" => "upfd", "enablescpd" => "scpd","enablenrfd" => "nrfd"
         ],
         'enablefiveSA' => [
             "enablenrfd" => "nrfd", "enablescpd" => "scpd", "enableamfd" => "amfd",
@@ -140,6 +138,7 @@ class ServiceController extends ApiControllerBase
             $this->startAction($daemon);
         }
     }
+
 
     /**
      * @throws Exception

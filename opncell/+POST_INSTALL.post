@@ -33,16 +33,21 @@ pfctl -d
 
 # We have a custom mongod file, hence we need to move the mongod file that ships with the
 # mongod installation. This prevents the conflict when opncell tries to move the custom mongod file
-# into /usr/local/etc/rc.d/ . We could rename our custom file to something else but :) too much work!
+# into /usr/local/etc/rc.d/ . We could rename our custom file to something else but :) Too many moving parts
 
 mv /usr/local/etc/rc.d/mongod /usr/local/etc/rc.d/mongod.back
 
-cd /usr/local/opnsense/mvc/app/tmp || exit 1
+mv /usr/local/etc/rc.d/mongod_custom  /usr/local/etc/rc.d/mongod
 
-cp mongod /usr/local/etc/rc.d/
+cp /usr/local/etc/rc.d/mongod  /usr/local/etc/rc.d/mongod_custom
+
 chmod +x /usr/local/etc/rc.d/mongod
 
 cd -
+
+rm -rf /var/log/opncell
+
+pgrep open5gs | xargs kill -9
 
 checkMongo(){
     if pgrep mongod; then
