@@ -2,7 +2,7 @@
 
 This file is Copyright © 2025 by Digital Solutions
 Copyright (C) 2024 - 2025 Primrose Namirimu primrose@ds.co.ug>
-Copyright (C) 2025 Wireless Laboratories <rob.hamblet@wire-labs.com>
+Copyright (C) 2024 - 2025 Wireless Laboratories <rob.hamblet@wire-labs.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -546,7 +546,7 @@ POSSIBILITY OF SUCH DAMAGE.
     </div>
     <div id="license" class="tab-pane fade in">
         <section class="col-xs-11 __mt">
-            <p>OPNcell is Copyright &copy; 2023-2024<br>All rights reserved.</p>
+            <p>OPNcell is Copyright &copy; 2023-2025<br>All rights reserved.</p>
             <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
             <ol><li>Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</li>
                 <li>Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</li></ol>
@@ -561,7 +561,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
                 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
 
-            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2023 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
+            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2025 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
             <p>OPNcell includes various freely available software packages and ports.
                 The incorporated third party tools are listed <a href="/ui/core/firmware#packages">here</a>.</p>
             <p>The authors of OPNcell would like to thank all contributors for their efforts.</p>
