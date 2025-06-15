@@ -1,7 +1,8 @@
 {#
 
-This file is Copyright © 2024 by Digital Solutions
-Copyright (C) 2024 - 2026 Primrose Namirimu primrose@ds.co.ug>
+This file is Copyright © 2025 by Digital Solutions
+Copyright (C) 2024 - 2025 Primrose Namirimu primrose@ds.co.ug>
+Copyright (C) 2025 Wireless Laboratories <rob.hamblet@wire-labs.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
