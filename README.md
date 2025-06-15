@@ -1,12 +1,11 @@
 ## What is OPNcell
   OPNcell is a native plugin for [OPNsense](https://opnsense.org/) that adds standalone 4G LTE or 5G NR core signalling network capabilities.
   The plugin offers 4G or 5G SA (Stand Alone) interoperability, NSA (Non Stand Alone supporting both 4G gNB and 5G gNB radios) as well as UPF (PGW) deployment (where strategicaly necessary) services to OPNsense using open5gs's 3GPP Release 17 open source [Open5Gs](https://open5gs.org/open5gs/docs/) core software. By
-  combining advanced deep packet filtering &amp; management with 4G/5G capability, OPNcell offers a complete FOSS solution for enterprise, community and private cellular network deployments.  The entire code base is feeely available for audit with a certified compliant distribution as an available option.
+  combining advanced deep packet filtering &amp; management with 4G/5G capability, OPNcell offers a complete FOSS solution for Enterprise, Government, Community and Private Cellular network deployments.  The entire code base is feeely available for audit with a certified compliant distribution as an available option.
 
 ## What is Open5Gs
-
  
-[Open5Gs](href="https://open5gs.org/open5gs/docs) is a C-language Open Source implementation of 5GC and EPC, i.e. the core network of NR/LTE network. Open5GS natively supports  4G/5G Standalone mode as well as non-standalone (supporting both 4G and 5G).
+[Open5Gs](href="https://open5gs.org/open5gs/docs) is a C-language Open Source implementation of 5GC and EPC, i.e. the core network of NR/LTE network. Open5GS natively supports 4G/5G Standalone mode as well as non-standalone (supporting both 4G and 5G).
 ## 4G/5G NSA
 The Open5GS 4G/ 5G NSA Core contains the following components:<br>
 * MME - Mobility Management Entity
@@ -56,10 +55,9 @@ This establishes the repository holding the cellular package installer, includin
 
 ## Getting into it
 
-Once you have the repo set up on your machine, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
+Once you have the repo set up on your host instance, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
 
-All Open5GS components are set to communicate with each other using the local 
-loopback address space (127.0.0.X). This allows a user to have all services necessary to set up any given network core on a single computer without the need to have multiple computers to accommodate all the different components.The default addresses for each of the bind interfaces for these components and functions are as follows:
+All Open5GS services are set to communicate with each other using the local loopback address space (127.0.0.X). This allows a user to have all services necessary to set up any given network core on a single computer without the need to have multiple computers to accommodate all the different components.The default addresses for each of the bind interfaces for these components and functions are as follows:
 
 * MongoDB   = 127.0.0.1 (subscriber database) - http://localhost:9999
 * MME-s1ap  = 127.0.0.2 :36412 for S1-MME
@@ -136,6 +134,8 @@ All log files in OPNcell for the different services can be found under the Diagn
 All the logs are viewable under; <br>
 
 'Cellular > Diagnostics'
+
+Log files are located in /var/log/opncell and can be easily tailed "tail -fn 200 /var/log/opncell/XXXXX.log"
 
 ## Uninstalling OPNcell.
 
