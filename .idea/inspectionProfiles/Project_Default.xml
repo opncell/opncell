@@ -7,6 +7,11 @@
         <language minSize="241" name="PHP" />
       </Languages>
     </inspection_tool>
+    <inspection_tool class="MisspelledHeader" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="CUSTOM_HEADERS">
+        <header value="PLUGIN_DEPENDS=&#9;        libmicrohttpd \" />
+      </option>
+    </inspection_tool>
     <inspection_tool class="PhpCSValidationInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
   </profile>
 </component>

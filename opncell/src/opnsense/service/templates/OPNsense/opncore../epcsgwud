@@ -1,6 +1,0 @@
-{% if OPNsense.opncore.general.enablefour == "1" or OPNsense.opncore.general.enablefiveNSA == "1"  %}
-epcsgwud_enable="YES"
-epcsgwud_setup="/usr/local/opnsense/scripts/opncore/epcsgwud_setup.sh"
-{% else %}
-epcsgwud_enable="NO"
-{% endif %}

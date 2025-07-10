@@ -994,9 +994,13 @@ class OpncoreMongoLogFormat(NewBaseLogFormat):
             date = part_two.split('"$date":"')
             formatted_date = date[1]
             d = formatted_date.strip('"}')
+<<<<<<< HEAD
 
             t = '2025-03-10T14:59:58.177000'
             dt = datetime.datetime.fromisoformat(t)
+=======
+            dt = datetime.datetime.fromisoformat(d)
+>>>>>>> 9b5a3e83fcbe5f5c84375af9035069ce2643bc0b
             return dt.isoformat()
         except:
              pass

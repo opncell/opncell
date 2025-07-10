@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (C) 2015-2020 Deciso B.V.
+ * Copyright (C) 2015-2024 Deciso B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ namespace OPNsense\Base\FieldTypes;
 use Exception;
 use Generator;
 use InvalidArgumentException;
-use OPNsense\Phalcon\Filter\Validation\Validator\PresenceOf;
+use OPNsense\Base\Validators\PresenceOf;
 use ReflectionClass;
 use ReflectionException;
 use SimpleXMLElement;
@@ -48,12 +48,12 @@ abstract class BaseField
     /**
      * @var array child nodes
      */
-    protected $internalChildnodes = array();
+    protected $internalChildnodes = [];
 
     /**
      * @var array constraints for this field, additional to fieldtype
      */
-    protected $internalConstraints = array();
+    protected $internalConstraints = [];
 
     /**
      * @var null pointer to parent
@@ -106,9 +106,14 @@ abstract class BaseField
     protected $internalIsVirtual = false;
 
     /**
+     * @var bool node (and subnodes) is volatile (non persistent, but should validate when offered)
+     */
+    protected $internalIsVolatile = false;
+
+    /**
      * @var array key value store for attributes (will be saved as xml attributes)
      */
-    protected $internalAttributes = array();
+    protected $internalAttributes = [];
 
     /**
      * @var string $internalToLower
@@ -142,14 +147,14 @@ abstract class BaseField
     {
         return sprintf(
             '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff)
+            random_int(0, 0xffff),
+            random_int(0, 0xffff),
+            random_int(0, 0xffff),
+            random_int(0, 0x0fff) | 0x4000,
+            random_int(0, 0x3fff) | 0x8000,
+            random_int(0, 0xffff),
+            random_int(0, 0xffff),
+            random_int(0, 0xffff)
         );
     }
 
@@ -222,6 +227,10 @@ abstract class BaseField
         $this->internalIsVirtual = false;
         $this->internalValue = "";
         $this->internalReference = null;
+        /* clone children */
+        foreach ($this->internalChildnodes as $nodeName => $node) {
+            $this->internalChildnodes[$nodeName] = clone $node;
+        }
     }
 
     /**
@@ -310,6 +319,23 @@ abstract class BaseField
         foreach ($this->internalChildnodes as $key => $value) {
             if ($value->internalIsVirtual == false) {
                 yield $key => $value;
+            }
+        }
+    }
+
+    /**
+     * iterate all nodes recursively.
+     * @return Generator
+     */
+    public function iterateRecursiveItems()
+    {
+        if (count($this->getChildren()) == 0) {
+            yield $this;
+        } else {
+            foreach ($this->iterateItems() as $node) {
+                foreach ($node->iterateRecursiveItems() as $child) {
+                    yield $child;
+                }
             }
         }
     }
@@ -446,6 +472,11 @@ abstract class BaseField
         }
     }
 
+    public function isRequired()
+    {
+        return $this->internalIsRequired;
+    }
+
     /**
      * check if this field is unused and required
      * @return bool
@@ -490,7 +521,7 @@ abstract class BaseField
      */
     private function getConstraintValidators()
     {
-        $result = array();
+        $result = [];
         foreach ($this->internalConstraints as $name => $constraint) {
             if (!empty($constraint['reference'])) {
                 // handle references (should use the same level)
@@ -514,6 +545,7 @@ abstract class BaseField
         }
         return $result;
     }
+
     /**
      * return field validators for this field
      * @return array returns validators for this field type (empty if none)
@@ -522,7 +554,7 @@ abstract class BaseField
     {
         $validators = $this->getConstraintValidators();
         if ($this->isEmptyAndRequired()) {
-            $validators[] = new PresenceOf(array('message' => $this->internalValidationMessage));
+            $validators[] = new PresenceOf(['message' => gettext('A value is required.')]);
         }
         return $validators;
     }
@@ -544,6 +576,23 @@ abstract class BaseField
     public function getInternalIsVirtual()
     {
         return $this->internalIsVirtual;
+    }
+
+    /**
+     * Mark this node as volatile
+     */
+    public function setInternalIsVolatile()
+    {
+        $this->internalIsVolatile = true;
+    }
+
+    /**
+     * returns if this node is volatile, the framework uses this to determine if this node should be stored.
+     * @return bool is volatile node
+     */
+    public function getInternalIsVolatile()
+    {
+        return $this->internalIsVolatile;
     }
 
     /**
@@ -575,7 +624,6 @@ abstract class BaseField
         return $result;
     }
 
-
     /**
      * get nodes as array structure
      * @return array
@@ -603,6 +651,16 @@ abstract class BaseField
         return (string)$this;
     }
 
+    /**
+     * Return descriptive value of the item.
+     * For simple types this is usually the internal value, complex types may return what this value represents.
+     * (descriptions of selected items)
+     * @return null|string
+     */
+    public function getDescription()
+    {
+        return (string)$this;
+    }
 
     /**
      * update model with data returning missing repeating tag types.
@@ -637,7 +695,6 @@ abstract class BaseField
         }
     }
 
-
     /**
      * Add this node and its children to the supplied simplexml node pointer.
      * @param SimpleXMLElement $node target node
@@ -663,8 +720,8 @@ abstract class BaseField
         }
 
         foreach ($this->iterateItems() as $key => $FieldNode) {
-            if ($FieldNode->getInternalIsVirtual()) {
-                // Virtual fields should never be persisted
+            if ($FieldNode->getInternalIsVirtual() || $FieldNode->getInternalIsVolatile()) {
+                // Virtual and volatile fields should never be persisted
                 continue;
             }
             $FieldNode->addToXMLNode($subnode);
@@ -687,6 +744,24 @@ abstract class BaseField
     public function applyDefault()
     {
         $this->internalValue = $this->internalDefaultValue;
+    }
+
+    /**
+     * @return string default validation message
+     */
+    protected function defaultValidationMessage()
+    {
+        return gettext('Validation failed.');
+    }
+
+    /**
+     * @return string current validation message
+     */
+    protected function getValidationMessage()
+    {
+        return $this->internalValidationMessage !== null ?
+            gettext($this->internalValidationMessage) :
+            $this->defaultValidationMessage();
     }
 
     /**
@@ -758,5 +833,13 @@ abstract class BaseField
     {
         $parts = explode("\\", get_class($this));
         return $parts[count($parts) - 1];
+    }
+
+    /**
+     * normalize the internal value to allow passing validation
+     */
+    public function normalizeValue()
+    {
+        /* implemented where needed */
     }
 }

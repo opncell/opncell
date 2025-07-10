@@ -1,0 +1,6 @@
+{% if OPNsense.opncell.general.enablefiveSA == '1' or OPNsense.opncell.general.enablefour == '1' or OPNsense.opncell.general.enablefiveNSA == "1" %}
+epcnrfd_enable="YES"
+epcnrfd_setup="/usr/local/opnsense/scripts/opncore/epcnrfd_setup.sh"
+{% else %}
+epcnrfd_enable="NO"
+{% endif %}

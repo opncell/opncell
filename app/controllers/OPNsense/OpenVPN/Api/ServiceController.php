@@ -98,6 +98,8 @@ class ServiceController extends ApiControllerBase
                             $tmp = array_merge($stats, $client);
                             $tmp['id'] .= '_' . $client['real_address'];
                             $tmp['is_client'] = true;
+                            unset($tmp['client_list']);
+                            unset($tmp['routing_table']);
                             $records[] = $tmp;
                         }
                     } else {
@@ -155,7 +157,7 @@ class ServiceController extends ApiControllerBase
                             $route_entry['id'] = $idx;
                             $route_entry['description'] =  '';
                             if (!empty($config_payload[$idx])) {
-                                $route_entry['description'] = (string)$config_payload[$idx]->description ?? '';
+                                $route_entry['description'] = (string)$config_payload[$idx]['description'] ?? '';
                             }
                             $records[] = $route_entry;
                         }

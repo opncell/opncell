@@ -19,9 +19,10 @@
                 <Multiple>Y</Multiple>
                 <ValidationMessage>At least one valid member is required</ValidationMessage>
             </members>
+            <primary_member type=".\LaggInterfaceField"/>
             <proto type="OptionField">
               <Required>Y</Required>
-              <default>lacp</default>
+              <Default>lacp</Default>
               <OptionValues>
                   <none>None</none>
                   <lacp>lacp</lacp>
@@ -32,7 +33,7 @@
               </OptionValues>
             </proto>
             <lacp_fast_timeout type="BooleanField">
-                <default>0</default>
+                <Default>0</Default>
                 <Required>Y</Required>
             </lacp_fast_timeout>
             <use_flowid type="OptionField">
@@ -58,14 +59,10 @@
                 </OptionValues>
             </lacp_strict>
             <mtu type="IntegerField">
-                <Required>N</Required>
                 <MinimumValue>576</MinimumValue>
                 <MaximumValue>65535</MaximumValue>
             </mtu>
-            <descr type="TextField">
-                <mask>/^([\t\n\v\f\r 0-9a-zA-Z.\-,_\x{00A0}-\x{FFFF}]){0,255}$/u</mask>
-                <ValidationMessage>Description should be a string between 1 and 255 characters</ValidationMessage>
-            </descr>
+            <descr type="DescriptionField"/>
         </lagg>
     </items>
 </model>

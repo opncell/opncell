@@ -29,14 +29,14 @@
         var data_get_map = {'frm_GeneralSettings':"/api/unbound/settings/get"};
         mapDataToFormUI(data_get_map).done(function(data) {
             formatTokenizersUI();
-            $('.selectpicker').selectpicker({title: 'All (recommended)'}).selectpicker('render');
+            $('.selectpicker').selectpicker({title: '{{ lang._('All (recommended)') }}'}).selectpicker('render');
             $('.selectpicker').selectpicker('refresh');
         });
 
         $("#reconfigureAct").SimpleActionButton({
             onPreAction: function () {
               const dfObj = new $.Deferred();
-              saveFormToEndpoint("/api/unbound/settings/set", 'frm_GeneralSettings', function () { dfObj.resolve(); }, false, function () { dfObj.reject(); });
+              saveFormToEndpoint("/api/unbound/settings/set", 'frm_GeneralSettings', function () { dfObj.resolve(); }, true, function () { dfObj.reject(); });
               return dfObj;
             }
         });
@@ -47,10 +47,10 @@
 
 <div class="content-box" style="padding-bottom: 1.5em;">
 {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_GeneralSettings'])}}
-    <div class="col-md-12">
-        <hr/>
+    <div class="col-md-12 __mt">
         <button class="btn btn-primary" id="reconfigureAct"
                 data-endpoint='/api/unbound/service/reconfigureGeneral'
+                data-service-widget="unbound"
                 data-label="{{ lang._('Apply') }}"
                 data-error-title="{{ lang._('Error reconfiguring unbound') }}"
                 type="button">

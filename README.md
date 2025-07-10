@@ -1,12 +1,11 @@
 ## What is OPNcell
-  OPNcell is an out-of-box [OPNsense](https://opnsense.org/) plugin that adds Private 5G & LTE network capability.
-  The plugin adds 5G/LTE services to OPNsense using the Open Source [Open5Gs](https://open5gs.org/open5gs/docs/) software. By
-  combining advanced packet filtering &amp; management with 4G/5G capability, OPNcell offers a low-cost complete solution for private LTE deployments.
+  OPNcell is a native plugin for [OPNsense](https://opnsense.org/) that adds standalone 4G LTE or 5G NR core signalling network capabilities.
+  The plugin offers 4G or 5G SA (Stand Alone) interoperability, NSA (Non Stand Alone supporting both 4G gNB and 5G gNB radios) as well as UPF (PGW) deployment (where strategicaly necessary) services to OPNsense using open5gs's 3GPP Release 17 open source [Open5Gs](https://open5gs.org/open5gs/docs/) core software. By
+  combining advanced deep packet filtering &amp; management with 4G/5G capability, OPNcell offers a complete FOSS solution for Enterprise, Government, Community and Private Cellular network deployments.  The entire code base is feeely available for audit with a certified compliant distribution as an available option.
 
 ## What is Open5Gs
-
  
-[Open5Gs](href="https://open5gs.org/open5gs/docs)is a C-language Open Source implementation of 5GC and EPC, i.e. the core network of NR/LTE network. Open5GS natively supports  4G/5G Standalone mode as well as non-standalone (both 4G and 5G.)
+[Open5Gs](href="https://open5gs.org/open5gs/docs) is a C-language Open Source implementation of 5GC and EPC, i.e. the core network of NR/LTE network. Open5GS natively supports 4G/5G Standalone mode as well as non-standalone (supporting both 4G and 5G).
 ## 4G/5G NSA
 The Open5GS 4G/ 5G NSA Core contains the following components:<br>
 * MME - Mobility Management Entity
@@ -40,7 +39,7 @@ With the exception of the SMF and UPF, all configuration files for the 5G SA cor
 
 ## What is OPNsense
 
-[OPNsense](https://opnsense.org/) is a mature open source, FreeBSD-based firewall, intrusion-detection, routing & web-filtering system.<br>
+[OPNsense](https://opnsense.org/) is a mature popular open source, FreeBSD-based firewall, intrusion-detection, routing & packet filtering system.<br>
 OPNsense offers a variety of pros which compelled the decision to build OPNcell behind the firewall. These include;<br>
 * It is free to use with no licensing fees, reducing overall cost for network set up.
 * Intuitive and easy-to-use web-based interface which simplifies management and configuration.
@@ -48,19 +47,18 @@ OPNsense offers a variety of pros which compelled the decision to build OPNcell 
 * Built-in VPN support (IPsec, OpenVPN) for secure remote access.
 * Features such as failover and load balancing ensure continuous network availability and performance.
 
-
 ## Installing OPNcell
 
 Run the below command in the console of the machine running the OPNsense firewall.<br><br>
-`fetch -o /usr/local/etc/pkg/repos/opncell.conf http://repo.opncell.io/cellular.conf && pkg update` <br><br>
+`fetch -o /usr/local/etc/pkg/repos/OPNcell.conf http://repo.opncell.io/cellular.conf && pkg update` <br><br>
 This establishes the repository holding the cellular package installer, including other necessary pieces of the service.
 
 ## Getting into it
 
-Once you have the repo set up on your machine, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
+Once you have the repo set up on your host instance, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
 
-All Open5GS components are set to communicate with each other using the local 
-loopback address space (127.0.0.X). This allows a user to have all services necessary to set up any given network core on a single computer without the need to have multiple computers to accommodate all the different components.The default addresses for each of the bind interfaces for these components and functions are as follows:
+All Open5GS services are set to communicate with each other using the local loopback address space (127.0.0.X). This allows a user to have all services necessary to set up any given network core on a single computer without the need to have multiple computers to accommodate all the different components.The default addresses for each of the bind interfaces for these components and functions are as follows:
+
 * MongoDB   = 127.0.0.1 (subscriber database) - http://localhost:9999
 * MME-s1ap  = 127.0.0.2 :36412 for S1-MME
 * MME-gtpc  = 127.0.0.2 :2123 for S11
@@ -77,7 +75,7 @@ loopback address space (127.0.0.X). This allows a user to have all services nece
 * SGWU-pfcp = 127.0.0.6 :8805 for Sxa
 * SGWU-gtpu = 127.0.0.6 :2152 for S1-U, S5u <br>
   
-Full list of all the services with their loopback addresses is [here](docs.md)<br>
+A full list of all the services with their loopback addresses is [here](docs.md)<br>
 
 In the GUI, set up the loop back addresses for each of the open5gs services.<br>
 Add the virtual addresses under; <br>
@@ -119,9 +117,9 @@ OPNcell offers the option of adding multiple user at a go through the bulk inser
 
 [//]: # (<img width="1329" alt="template" src="https://github.com/opncell/opncell/assets/170442159/2f6a1b00-db09-45c6-9bb5-3287cc3a4147">)
 
-| imsi | ki  | opc |
+| imsi, | ki,  | opc, |
 | --- | --- | --- |
-| 9997080930195106 | EF84CE78D9C47D64A6765B87972119F7 | 4723E4872557013C4F39A1D8E4D59CE4 |
+| 9997080930195106, | EF84CE78D9C47D64A6765B87972119F7, | 4723E4872557013C4F39A1D8E4D59CE4 |
 
 1. To add multiple subscribers at a go, you can do that in the following order: <br>
 2. Go to Users Menu.
@@ -133,13 +131,15 @@ OPNcell offers the option of adding multiple user at a go through the bulk inser
 
 All log files in OPNcell for the different services can be found under the Diagnostics sub menu.
 
-Add the rule under; <br>
+All the logs are viewable under; <br>
 
 'Cellular > Diagnostics'
 
+Log files are located in /var/log/opncell and can be easily tailed "tail -fn 200 /var/log/opncell/XXXXX.log"
+
 ## Uninstalling OPNcell.
 
-To uninstall the package, run pkg install os-cellular-devel in the console.
+To uninstall the package, run "pkg remove os-cellular-devel" in the console.
 
 ## Sponsors
 
@@ -147,7 +147,7 @@ If you find OPNcell useful please consider supporting this Open Source project b
 
 ## Documentation
 
-A more in depth documentation is [Here.](docs.md)
+More in depth documentation is available [Here.](docs.md)
 
 
 

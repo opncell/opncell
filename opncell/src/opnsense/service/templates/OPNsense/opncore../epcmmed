@@ -1,6 +1,0 @@
-{% if OPNsense.opncore.general.enablefour == "1" or OPNsense.opncore.general.enablefiveNSA == "1"  %}
-epcmmed_enable="YES"
-epcmmed_setup="/usr/local/opnsense/scripts/opncore/epcmmed_setup.sh"
-{% else %}
-epcmmed_enable="NO"
-{% endif %}

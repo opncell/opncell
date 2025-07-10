@@ -29,11 +29,9 @@
 namespace OPNsense\Firewall\FieldTypes;
 
 use OPNsense\Base\FieldTypes\BaseField;
+use OPNsense\Base\Messages\Message;
 use OPNsense\Base\Validators\CallbackValidator;
-use OPNsense\Phalcon\Filter\Validation\Validator\Regex;
-use OPNsense\Phalcon\Filter\Validation\Validator\ExclusionIn;
 use OPNsense\Core\Config;
-use Phalcon\Messages\Message;
 use OPNsense\Firewall\Util;
 
 /**
@@ -46,11 +44,6 @@ class AliasContentField extends BaseField
      * @var bool marks if this is a data node or a container
      */
     protected $internalIsContainer = false;
-
-    /**
-     * @var string default validation message string
-     */
-    protected $internalValidationMessage = "alias name required";
 
     /**
      * @var array list of known countries
@@ -81,7 +74,6 @@ class AliasContentField extends BaseField
         }
         return $result;
     }
-
 
     /**
      * split and yield items
@@ -344,7 +336,6 @@ class AliasContentField extends BaseField
         }
         return $messages;
     }
-    //
 
     /**
      * retrieve field validators for this field type

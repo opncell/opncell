@@ -28,8 +28,9 @@
 
 namespace OPNsense\IPsec;
 
-use Phalcon\Messages\Message;
+use OPNsense\Base\Messages\Message;
 use OPNsense\Base\BaseModel;
+use OPNsense\Core\Config;
 use OPNsense\Firewall\Util;
 
 /**
@@ -38,6 +39,27 @@ use OPNsense\Firewall\Util;
  */
 class Swanctl extends BaseModel
 {
+    /**
+     * convert group ids to group (class) names
+     */
+    private function gidToNames($gids)
+    {
+        $result = [];
+        $cnf = Config::getInstance()->object();
+        $mapping = [];
+        if (isset($cnf->system->group)) {
+            foreach ($cnf->system->group as $group) {
+                $mapping[(string)$group->gid] = (string)$group->name;
+            }
+        }
+        foreach (explode(',', $gids) as $gid) {
+            if (!empty($mapping[$gid])) {
+                $result[] = $mapping[$gid];
+            }
+        }
+        return implode(',', $result);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -62,8 +84,24 @@ class Swanctl extends BaseModel
         }
         foreach ($vtis as $key => $node) {
             $vti_inets = [];
-            foreach (['local', 'remote', 'tunnel_local', 'tunnel_remote'] as $prop) {
-                $vti_inets[$prop] = strpos((string)$node->$prop, ':') > 0 ? 'inet6' : 'inet';
+            foreach (['local', 'remote', 'tunnel_local', 'tunnel_remote', 'tunnel_local2', 'tunnel_remote2'] as $prop) {
+                if (empty((string)$node->$prop)) {
+                    $vti_inets[$prop] = '-';
+                } else {
+                    $vti_inets[$prop] = strpos((string)$node->$prop, ':') > 0 ? 'inet6' : 'inet';
+                }
+            }
+
+            if (
+                (empty((string)$node->local) && !empty((string)$node->remote)) ||
+                (!empty((string)$node->local) && empty((string)$node->remote))
+            ) {
+                $messages->appendMessage(
+                    new Message(
+                        gettext("A local and remote address should be provided or both should be left empty"),
+                        $key . ".local"
+                    )
+                );
             }
 
             if ($vti_inets['local'] != $vti_inets['remote']) {
@@ -71,6 +109,14 @@ class Swanctl extends BaseModel
             }
             if ($vti_inets['tunnel_local'] != $vti_inets['tunnel_remote']) {
                 $messages->appendMessage(new Message(gettext("Protocol families should match"), $key . ".tunnel_local"));
+            }
+            if ($vti_inets['tunnel_local2'] != $vti_inets['tunnel_remote2']) {
+                $messages->appendMessage(
+                    new Message(
+                        gettext("Protocol families should match"),
+                        $key . ".tunnel_local2"
+                    )
+                );
             }
         }
 
@@ -163,6 +209,8 @@ class Swanctl extends BaseModel
                             $pool_names[$node_uuid] = (string)$attr;
                         }
                         continue;
+                    } elseif (is_a($attr, 'OPNsense\Base\FieldTypes\AuthGroupField')) {
+                        $thisnode[$attr_name] = $this->gidToNames((string)$attr);
                     } elseif (is_a($attr, 'OPNsense\Base\FieldTypes\BooleanField')) {
                         $thisnode[$attr_name] = (string)$attr == '1' ? 'yes' : 'no';
                     } elseif (is_a($attr, 'OPNsense\Base\FieldTypes\CertificateField')) {
@@ -172,11 +220,18 @@ class Swanctl extends BaseModel
                         }
                         $thisnode[$attr_name] = implode(',', $tmp);
                     } elseif ($attr_name == 'pubkeys') {
+                        if ((string)$node->auth != 'pubkey') {
+                            // explicit skip, pubkeys bound to auth type selection
+                            continue;
+                        }
                         $tmp = [];
                         foreach (explode(',', (string)$attr) as $item) {
                             $tmp[] = $item . '.pem';
                         }
                         $thisnode[$attr_name] = implode(',', $tmp);
+                    } elseif ($attr_name == 'eap_id' && strpos((string)$node->auth, 'eap') === false) {
+                        // explicit skip, eap_id is only valid for eap auth types.
+                        continue;
                     } else {
                         $thisnode[$attr_name] = (string)$attr;
                     }
@@ -224,7 +279,7 @@ class Swanctl extends BaseModel
         $result = [];
         foreach ($this->VTIs->VTI->iterateItems() as $node_uuid => $node) {
             if ((string)$node->origin != 'legacy' && (string)$node->enabled == '1') {
-                $inet = strpos((string)$node->local_tunnel, ':') > 0 ? 'inet6' : 'inet';
+                $inet = strpos((string)$node->tunnel_local, ':') > 0 ? 'inet6' : 'inet';
                 $result['ipsec' . (string)$node->reqid] = [
                     'reqid' => (string)$node->reqid,
                     'local' => (string)$node->local,
@@ -242,6 +297,19 @@ class Swanctl extends BaseModel
                         ]
                     ]
                 ];
+                if (!empty((string)$node->tunnel_local2)) {
+                    // add optional secondary address
+                    $inet = strpos((string)$node->tunnel_local2, ':') > 0 ? 'inet6' : 'inet';
+                    $result['ipsec' . (string)$node->reqid]['networks'][] = [
+                        'inet' => $inet,
+                        'tunnel_local' => (string)$node->tunnel_local2,
+                        'tunnel_remote' => (string)$node->tunnel_remote2,
+                        'mask' => Util::smallestCIDR(
+                            [(string)$node->tunnel_local2, (string)$node->tunnel_remote2],
+                            $inet
+                        )
+                    ];
+                }
             }
         }
         return $result;
@@ -268,5 +336,26 @@ class Swanctl extends BaseModel
             }
         }
         return $certrefs;
+    }
+
+    /**
+     * @return bool is there at least one connection using radius groups?
+     */
+    public function radiusUsesGroups()
+    {
+        foreach ($this->remotes->iterateRecursiveItems() as $node) {
+            if ($node->getInternalXMLTagName() == 'auth' && (string)$node == 'eap-radius') {
+                $auth = $node->getParentNode();
+                $connid = (string)$auth->connection;
+                if (
+                    !empty((string)$auth->groups) &&
+                    isset($this->Connections->Connection->$connid) &&
+                    !empty((string)$this->Connections->Connection->$connid->enabled)
+                ) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

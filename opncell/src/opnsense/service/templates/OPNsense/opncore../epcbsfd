@@ -1,6 +1,0 @@
-{% if helpers.exists('OPNsense.opncore.general.enablefiveSA') and OPNsense.opncore.general.enablefiveSA == '1' %}
-epcbsfd_enable="YES"
-epcbsfd_setup="/usr/local/opnsense/scripts/opncore/epcbsf_setup.sh"
-{% else %}
-epcbsfd_enable="NO"
-{% endif %}

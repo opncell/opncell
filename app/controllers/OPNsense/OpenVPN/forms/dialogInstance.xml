@@ -14,9 +14,7 @@
         <id>instance.role</id>
         <label>Role</label>
         <type>dropdown</type>
-        <help>
-            Define the role of this instance
-        </help>
+        <help>Define the role of this instance.</help>
     </field>
     <field>
         <id>instance.description</id>
@@ -39,7 +37,7 @@
         <id>instance.port</id>
         <label>Port number</label>
         <type>text</type>
-        <help>Portnumber to use, defaults to 1194 when in server role, nobind for clients</help>
+        <help>Port number to use. Defaults to 1194 when in server role or when client mode specifies a bind address, or nobind when client does not have a specific bind address.</help>
     </field>
     <field>
         <id>instance.local</id>
@@ -54,10 +52,10 @@
         <id>instance.dev_type</id>
         <label>Type</label>
         <type>dropdown</type>
-        <advanced>true</advanced>
         <help>
             Choose the type of tunnel, OSI Layer 3 [tun] is the most common option to route IPv4 or IPv6 traffic,
             [tap] offers Ethernet 802.3 (OSI Layer 2) connectivity between hosts and is usually combined with a bridge.
+            DCO is a faster Layer 3 implementation, but has some additional constraints.
         </help>
     </field>
     <field>
@@ -93,7 +91,7 @@
         <id>instance.server</id>
         <label>Server (IPv4)</label>
         <type>text</type>
-        <style>role role_server</style>
+        <style>role role_server_tun</style>
         <help>
             This directive will set up an OpenVPN server which will allocate addresses to clients out of the given network/netmask.
             The server itself will take the .1 address of the given network for use as the server-side endpoint of the local TUN/TAP interface
@@ -103,11 +101,27 @@
         <id>instance.server_ipv6</id>
         <label>Server (IPv6)</label>
         <type>text</type>
-        <style>role role_server</style>
+        <style>role role_server_tun</style>
         <help>
             This directive will set up an OpenVPN server which will allocate addresses to clients out of the given network/netmask.
             The server itself will take the next base address (+1) of the given network for use as the server-side endpoint of the local TUN/TAP interface
         </help>
+    </field>
+    <field>
+        <id>instance.bridge_gateway</id>
+        <label>Bridge gateway</label>
+        <type>text</type>
+        <style>role role_server_tap</style>
+        <help>
+            This directive will set up an OpenVPN server which will allocate addresses to clients out of the given network pool.
+        </help>
+    </field>
+    <field>
+        <id>instance.bridge_pool</id>
+        <label>Bridge DHCP pool</label>
+        <type>text</type>
+        <style>role role_server_tap</style>
+        <help>Specify an ip range which should be used to offer IPv4 addresses to the client.</help>
     </field>
     <field>
         <id>instance.topology</id>
@@ -125,9 +139,14 @@
         <type>select_multiple</type>
         <allownew>true</allownew>
         <style>tokenize role role_client</style>
-        <help>Remote host name or IP address with optional port, examples:
-            my.remote.local  dead:beaf::  my.remote.local:1494  [dead:beaf::]:1494 192.168.1.1:1494
-        </help>
+        <help>Remote host name or IP address with optional port, examples: my.remote.local dead:beaf:: my.remote.local:1494 [dead:beaf::]:1494 192.168.1.1:1494</help>
+    </field>
+    <field>
+        <id>instance.carp_depend_on</id>
+        <label>Depend on (CARP)</label>
+        <type>dropdown</type>
+        <style>role role_client selectpicker</style>
+        <help>The CARP VHID to depend on. When this virtual address is not in master state, then the instance will be shutdown.</help>
     </field>
     <field>
         <type>header</type>
@@ -140,6 +159,24 @@
         <help>Select a certificate to use for this service.</help>
     </field>
     <field>
+        <id>instance.remote_cert_tls</id>
+        <label>Verify Remote Certificate</label>
+        <type>checkbox</type>
+        <help>
+            Require that the peer certificate was signed with an explicit "key usage" and "extended key usage" based on RFC 3280 rules.
+            This is a useful security option for both servers and clients. For clients, to ensure that the host they connect to is a designated server;
+            and for servers, to prevent man-in-the-middle attacks where an authorized client attempts to connect to another client by impersonating
+            the server.
+        </help>
+    </field>
+    <field>
+        <id>instance.ca</id>
+        <label>Certificate Authority</label>
+        <type>dropdown</type>
+        <advanced>true</advanced>
+        <help>Select a certificate authority when it differs from the attached certificate.</help>
+    </field>
+    <field>
         <id>instance.crl</id>
         <label>Certificate Revocation List</label>
         <type>dropdown</type>
@@ -150,7 +187,15 @@
         <id>instance.verify_client_cert</id>
         <label>Verify Client Certificate</label>
         <type>dropdown</type>
+        <style>selectpicker role role_server</style>
         <help>Specify if the client is required to offer a certificate.</help>
+    </field>
+    <field>
+        <id>instance.use_ocsp</id>
+        <label>Use OCSP (when available)</label>
+        <style>role role_server</style>
+        <type>checkbox</type>
+        <help>When the CA used supplies an authorityInfoAccess OCSP URI extension, it will be used to validate the client certificate.</help>
     </field>
     <field>
         <id>instance.cert_depth</id>
@@ -188,7 +233,7 @@
     <field>
         <id>instance.data-ciphers-fallback</id>
         <label>Data Ciphers Fallback</label>
-        <type>select_multiple</type>
+        <type>dropdown</type>
         <advanced>true</advanced>
         <style>selectpicker role role_server</style>
         <help>
@@ -297,11 +342,26 @@ Set to 0 to disable, remember to change your client as well.
         <help>Various less frequently used yes/no options which can be set for this instance.</help>
     </field>
     <field>
+        <id>instance.various_push_flags</id>
+        <label>Push Options</label>
+        <style>selectpicker role role_server</style>
+        <type>select_multiple</type>
+        <help>Various less frequently used yes/no options which can be pushed to the client for this instance.</help>
+    </field>
+    <field>
         <id>instance.redirect_gateway</id>
         <label>Redirect gateway</label>
         <type>select_multiple</type>
         <style>selectpicker role role_server</style>
         <help>Automatically execute routing commands to cause all outgoing IP traffic to be redirected over the VPN.</help>
+    </field>
+    <field>
+        <id>instance.route_metric</id>
+        <style>role role_server</style>
+        <label>Route-metric (client)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Specify a default metric m for use with --route on the connecting client (push option).</help>
     </field>
     <field>
         <id>instance.register_dns</id>
@@ -346,5 +406,26 @@ Set to 0 to disable, remember to change your client as well.
         <help>
             Set primary NTP server address (Network Time Protocol). Repeat this option to set secondary NTP server addresses.
         </help>
+    </field>
+    <field>
+        <id>instance.tun_mtu</id>
+        <label>TUN device MTU</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Take the TUN device MTU to be tun-mtu and derive the link MTU from it.</help>
+    </field>
+    <field>
+        <id>instance.fragment</id>
+        <label>Fragment size</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Enable internal datagram fragmentation so that no UDP datagrams are sent which are larger than the specified byte size.</help>
+    </field>
+    <field>
+        <id>instance.mssfix</id>
+        <label>MSS fix</label>
+        <type>checkbox</type>
+        <advanced>true</advanced>
+        <help>Announce to TCP sessions running over the tunnel that they should limit their send packet sizes such that after OpenVPN has encapsulated them, the resulting UDP packet size that OpenVPN sends to its peer will not exceed the recommended size.</help>
     </field>
 </fields>

@@ -37,7 +37,6 @@
                         <display>apn</display>
                     </template>
                 </Model>
-<!--                <asList>Y</asList>-->
                 <Multiple>Y</Multiple>
                 <Required>Y</Required>
             </profile>

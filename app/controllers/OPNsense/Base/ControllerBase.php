@@ -80,7 +80,7 @@ class ControllerBase extends ControllerRoot
             // default theme
             'css/main.css',
             // Stylesheet for fancy select/dropdown
-            '/css/bootstrap-select-1.13.3.css',
+            '/css/bootstrap-select.css',
             // bootstrap dialog
             '/css/bootstrap-dialog.css',
             // Font awesome
@@ -230,6 +230,8 @@ class ControllerBase extends ControllerRoot
         $cnf = Config::getInstance();
 
         $this->view->setVar('lang', $this->translator);
+        $this->view->setVar('langcode', str_replace('_', '-', $this->langcode));
+
         $rewrite_uri = explode("?", $_SERVER["REQUEST_URI"])[0];
         $this->view->menuSystem = $menu->getItems($rewrite_uri);
         /* XXX generating breadcrumbs requires getItems() call */

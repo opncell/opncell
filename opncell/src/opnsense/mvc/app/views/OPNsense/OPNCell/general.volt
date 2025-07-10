@@ -1,7 +1,8 @@
 {#
 
-This file is Copyright © 2024 by Digital Solutions
-Copyright (C) 2024 - 2026 Primrose Namirimu primrose@ds.co.ug>
+This file is Copyright © 2025 by Digital Solutions
+Copyright (C) 2024 - 2025 Primrose Namirimu primrose@ds.co.ug>
+Copyright (C) 2024 - 2025 Wireless Laboratories <rob.hamblet@wire-labs.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -75,6 +76,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     '</div>'
 
                 );
+
 
                 saveFormToEndpoint(url="/api/opncell/service/set/" + checkedNetwork, formid='frm_general_settings', callback_ok = function () {
 
@@ -178,6 +180,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     var label = document.getElementById(labelId);
                     label.classList.add("active");
                     break; // No need to continue checking once we've found the match
+
                 }
             }
         }
@@ -188,6 +191,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 const storedValue = getVar();
                 if (storedValue != null){
                     active(storedValue)
+
                 }
                 else {
                     ajaxCall(url = '/api/opncell/general/get' , sendData = {}, callback = function (data) {
@@ -206,6 +210,7 @@ POSSIBILITY OF SUCH DAMAGE.
             }
 
         }
+
         let noEdit = ['sgwcd','pcrfd','mongod','hssd'];
 
         let gridOtherConfigs = {
@@ -283,6 +288,7 @@ POSSIBILITY OF SUCH DAMAGE.
                             '</div>'
                         );
 
+
                         ajaxCall(url = '/api/opncell/service/start/' + serviceName, sendData = {}, callback = function (data, status) {
                             console.log(status)
                             console.log(data)
@@ -344,6 +350,7 @@ POSSIBILITY OF SUCH DAMAGE.
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
+
                         ajaxCall(url = '/api/opncell/service/stop/' + serviceName, sendData = {}, callback = function (data, status) {
                             console.log(status)
                             console.log(data)
@@ -519,7 +526,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
                 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
 
-            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2023 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
+            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2025 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
             <p>OPNcell includes various freely available software packages and ports.
                 The incorporated third party tools are listed <a href="/ui/core/firmware#packages">here</a>.</p>
             <p>The authors of OPNcell would like to thank all contributors for their efforts.</p>

@@ -29,7 +29,7 @@
 namespace OPNsense\Monit\Api;
 
 use OPNsense\Base\ApiControllerBase;
-use OPNsense\Monit\Opncore;
+use OPNsense\Monit\Monit;
 
 /**
  * Class StatusController
@@ -59,7 +59,7 @@ class StatusController extends ApiControllerBase
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
             // get credentials if configured
-            $mdlMonit = new Opncore(false);
+            $mdlMonit = new Monit(false);
             if (
                 (string)$mdlMonit->general->httpdUsername != null && trim((string)$mdlMonit->general->httpdUsername) !== "" &&
                 (string)$mdlMonit->general->httpdPassword != null && trim((string)$mdlMonit->general->httpdPassword) !== ""

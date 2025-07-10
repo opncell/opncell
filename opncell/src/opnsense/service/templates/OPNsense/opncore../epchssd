@@ -1,6 +1,0 @@
-{% if OPNsense.opncore.general.enablefour == "1" or OPNsense.opncore.general.enablefiveNSA == "1"  %}
-epchssd_enable="YES"
-epchssd_setup="/usr/local/opnsense/scripts/opncore/epchssd_setup.sh"
-{% else %}
-epchssd_enable="NO"
-{% endif %}

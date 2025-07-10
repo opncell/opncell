@@ -33,6 +33,7 @@ namespace OPNsense\Core\Api;
 use OPNsense\Base\ApiControllerBase;
 use OPNsense\Core\ACL;
 use OPNsense\Core\Backend;
+use OPNsense\Core\Config;
 
 /**
  * Class SystemController
@@ -150,7 +151,7 @@ class SystemController extends ApiControllerBase
                 }
             }
 
-            $response = json_encode($statuses);
+            $response = $statuses;
         }
 
         return $response;

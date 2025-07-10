@@ -49,7 +49,7 @@
                   } else {
                       dfObj.resolve();
                   }
-              });
+              }, true, function () { dfObj.reject(); });
               return dfObj;
           }
       });
@@ -60,8 +60,7 @@
 
 <div class="content-box" style="padding-bottom: 1.5em;">
     {{ partial("layout_partials/base_form",['fields':dnsblForm,'id':'frm_dnsbl_settings'])}}
-    <div class="col-md-12">
-        <hr />
+    <div class="col-md-12 __mt">
         <button class="btn btn-primary" id="saveAct"
                 data-endpoint='/api/unbound/service/dnsbl'
                 data-label="{{ lang._('Apply') }}"

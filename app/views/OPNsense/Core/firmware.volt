@@ -302,12 +302,9 @@
                     type:BootstrapDialog.TYPE_INFO,
                     title: "{{ lang._('Your device is rebooting') }}",
                     closable: false,
-                    onshow:function(dialogRef){
-                        dialogRef.setClosable(false);
-                        dialogRef.getModalBody().html(
-                            "{{ lang._('The upgrade has finished and your device is being rebooted at the moment, please wait...') }}" +
-                            ' <i class="fa fa-cog fa-spin"></i>'
-                        );
+                    message: "{{ lang._('The upgrade has finished and your device is being rebooted at the moment, please wait...') }}" +
+                        ' <i class="fa fa-cog fa-spin"></i>',
+                    onshow: function (dialogRef) {
                         setTimeout(rebootWait, 45000);
                     },
                 });
@@ -663,6 +660,7 @@
                     $("#firmware_mirror").find('option').remove();
                     $("#firmware_type").find('option').remove();
                     $("#firmware_flavour").find('option').remove();
+                    $("#firmware_reboot").prop('checked', firmwareconfig['reboot'] !== '');
 
                     $.each(firmwareoptions.mirrors, function(key, value) {
                         var selected = false;
@@ -713,7 +711,7 @@
                     }
                     $("#firmware_flavour").selectpicker('refresh');
                     $("#firmware_flavour").change();
-                    if (firmwareconfig['flavour'] !== '') {
+                    if (firmwareconfig['flavour'] !== '' || firmwareconfig['reboot'] !== '') {
                         $("i.fa-toggle-off#show_advanced_firmware").click();
                     }
 
@@ -759,6 +757,7 @@
             confopt.mirror = $("#firmware_mirror_value").val();
             confopt.flavour = $("#firmware_flavour_value").val();
             confopt.type = $("#firmware_type").val();
+            confopt.reboot = $("#firmware_reboot").is(":checked");
             confopt.subscription = $("#firmware_subscription").val();
             ajaxCall('/api/core/firmware/set', { 'firmware': confopt }, function (data, status) {
                 $("#settingstab_progress").removeClass("fa fa-spinner fa-pulse");
@@ -1021,6 +1020,14 @@
                                     <div class="hidden" data-for="help_for_subscription">
                                         {{ lang._('Provide subscription key.') }}
                                     </div>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr data-advanced="true">
+                                <td style="width: 150px;"><i class="fa fa-info-circle text-muted"></i> {{ lang._('Reboot') }}</td>
+                                <td>
+                                    <input type="checkbox" id="firmware_reboot">
+                                    {{ lang._('Always reboot after a successful update') }}
                                 </td>
                                 <td></td>
                             </tr>
