@@ -77,11 +77,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
                 );
 
-
                 saveFormToEndpoint(url="/api/opncell/service/set/" + checkedNetwork, formid='frm_general_settings', callback_ok = function () {
 
                     $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
-                    // if (status) {
                     ajaxCall(url = "/api/opncell/service/reconfigureAct/" + checkedNetwork,
                         sendData = {},
                         callback = function (data, status) {
@@ -91,10 +89,8 @@ POSSIBILITY OF SUCH DAMAGE.
                         dialogRef.close()
 
                     });
-                    // }
 
                 }, true);
-
 
             },
         });
@@ -283,7 +279,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding: 15px;">' +
-                            "{{ lang._(' The service is starting, please wait...') }}" +
+                            "{{ lang._(' The service is starting, please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
@@ -317,7 +313,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding: 15px;">' +
-                            "{{ lang._('The service is restarting , please wait...') }}" +
+                            "{{ lang._('The service is restarting , please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
@@ -346,14 +342,12 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding:15px;">' +
-                            "{{ lang._(' The service is stopping , please wait...') }}" +
+                            "{{ lang._(' The service is stopping , please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
 
                         ajaxCall(url = '/api/opncell/service/stop/' + serviceName, sendData = {}, callback = function (data, status) {
-                            console.log(status)
-                            console.log(data)
 
                             dialogRef.close()
 
@@ -447,7 +441,7 @@ POSSIBILITY OF SUCH DAMAGE.
         <div class="content-box" style="padding-bottom: 1.7em;">
             <div class="row __mt">
                 <div class="col-md-12 __ml ">
-                    <b class="__mb">{{ lang._('Select a Network') }}:</b>
+                    <b class="__mb">{{ lang._('Select a Network ') }}:</b>
                     <form onChange="confirmNetworkChange()">
                         <div class="btn-group btn-group-s __mb" data-toggle="buttons">
                             <label id="enablefour" class="btn btn-default">
@@ -470,8 +464,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 <input type="radio" id="upf" name="network" value="enableupf"
                                        data-label="enableupf"/>
                                 {{ lang._('UPF') }}
-                            </label>&nbsp;
-
+                            </label>&nbsp;&nbsp;
                         </div>
                     </form>
                     {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_general_settings'])}}
