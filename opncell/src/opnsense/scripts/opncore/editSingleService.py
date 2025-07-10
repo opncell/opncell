@@ -34,7 +34,7 @@ if len(sys.argv) > 1:
                 pid = value
     #print(pid,server,new_addr)
     def config(service_list, name, process_pid):
-        yaml_path = '/usr/ports/open5gs/install/etc/open5gs/'
+        yaml_path = '/usr/local/etc/open5gs/'
         process_name = name.strip('d')
         print(process_name)
         if process_name in service_list:

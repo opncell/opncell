@@ -1,0 +1,6 @@
+{% if OPNsense.opncell.general.enablefiveSA == '1' or OPNsense.opncell.general.enableupf == '1' %}
+epcpcfd_enable="YES"
+epcpcfd_setup="/usr/local/opnsense/scripts/opncore/epcpcfd_setup.sh"
+{% else %}
+epcpcfd_enable="NO"
+{% endif %}

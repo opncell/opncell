@@ -29,8 +29,9 @@ if len(sys.argv) > 1:
     # Define the target keys
     target_keys = ['metrics','dns','tai','network_name','nsi','s1ap','ngap']
     
-    fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf"]
-    fiveNSAGServices = ["hss", "mme","pcrf",  "sgwu",  "sgwc","smf",  "upf"]
+    fourGServices = ["hss", "mme", "pcrf",  "sgwu", "sgwc","smf", "upf","nrf","scp"]
+    upfServices = ["amf", "udm", "nssf",  "smf", "udr","pcf", "upf","ausf"]
+    fiveNSAGServices = ["hss", "mme","pcrf", "sgwu", "sgwc","smf", "upf"]
     fiveGSAServices = ["nrf", "scp", "amf", "smf", "upf", "ausf", "udm", "udr","pcf", "nssf","bsf"]
     
     
@@ -60,17 +61,17 @@ if len(sys.argv) > 1:
        # print(output_mongo)
         try:
             pid_mongo = output_mongo.strip().split("\n")
-            process_name_mongo = subprocess.check_output(f"ps -p {pid_mongo[0]} -o comm=", shell=True, text=True).strip()
+            process_name_mongo = subprocess.check_output(f"ps -p {pid_mongo[0]} -o comm=", shell=True, text=True).strip().rstrip("d")
             p = {"PID":pid_mongo[0], "Name":process_name_mongo, "config":{"mongod.bind": [{"address":"127.0.0.1"}]}}
         except:
             #pass
-            p = {"PID": "Stopped", "Name": "mongod", "config":{"mongod.bind": [{"address":"127.0.0.1"}]}}
+            p = {"PID": "Stopped", "Name": "mongo", "config":{"mongod.bind": [{"address":"127.0.0.1"}]}}
         # Iterate through the list of PIDs
         for pid in pid_list:
             try:
-                process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip()
+                process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip().rstrip("d")
                 name = process_name.replace("open5gs-", "").rstrip("d")
-                yaml_file_path = '/usr/ports/open5gs/install/etc/open5gs/' + name + '.yaml'
+                yaml_file_path = '/usr/local/etc/open5gs/' + name + '.yaml'
     
                 with open(yaml_file_path, 'r') as file:
                     yaml_data = yaml.safe_load(file)
@@ -92,8 +93,11 @@ if len(sys.argv) > 1:
             elif network == 'enablefiveSA':
                 difference_set = set(fiveGSAServices) - set(running_processes_names)
                 not_running_processes = list(difference_set)
+            elif network == 'enableupf':
+                difference_set = set(upfServices) - set(running_processes_names)
+                not_running_processes = list(difference_set)
             elif network == 'enablefiveNSA':
-                difference_set = set(fiveNSAGServices) - set(running_processes_names)
+                difference_set = set(fourGServices) - set(running_processes_names)
                 not_running_processes = list(difference_set)
     
             for process in not_running_processes:

@@ -10,6 +10,8 @@ name=epcnrfd
 service_name=nrfd
 desc="Network Routing Function Daemon"
 rcvar=${name}_enable
+config_file="/usr/local/etc/open5gs/nrf.yaml"
+log_file="/var/log/opncell/nrf.log"
 command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
 start_cmd="${name}_start"
 command_args="-D > /dev/null 2>&1"
@@ -23,7 +25,7 @@ epcnrfd_start(){
         mkdir  /var/run/epc
         pidfile="/var/run/epc/epcnrfd.pid"
 
-        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name}; then
+        if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name} ${config_file} ${log_file}; then
                 echo "Started"
         else
                 echo "Failed to start"

@@ -43,6 +43,8 @@ done
 
 DB_URI="${DB_URI:-mongodb://localhost/open5gs}"
 
+mongo --quiet --eval 'db.subscribers.createIndex({"imsi": 1}, {unique: true})' $DB_URI > /dev/null 2>&1
+
 if [ "$#" -lt 1 ]; then
     display_help
     exit 1
@@ -53,23 +55,77 @@ if [ "$1" = "help" ]; then
     exit 1
 fi
 
+# Function to create APN sessions
+create_apn_sessions() {
+    first=1
+
+    while [ "$#" -gt 0 ]; do
+        apn_name=$1
+        sst_value=$2
+        dl_value=$3
+        ul_value=$4
+        qos_index=$5
+        arp_priority=$6
+        arp_capability=$7
+        arp_vulnerability=$8
+        
+
+        if [ "$first" -eq 0 ]; then
+            echo ","
+        fi
+
+        echo "{\"name\": \"$apn_name\", \"type\": NumberInt(3), \"qos\": { \"index\": NumberInt($qos_index), \"arp\": { \"priority_level\": NumberInt($arp_priority), \"pre_emption_capability\": NumberInt($arp_capability), \"pre_emption_vulnerability\": NumberInt($arp_vulnerability) } }, \"ambr\": { \"downlink\": { \"value\": NumberInt($dl_value), \"unit\": NumberInt(2) }, \"uplink\": { \"value\": NumberInt($ul_value), \"unit\": NumberInt(2) } }, \"pcc_rule\": [], \"_id\": new ObjectId() }"
+
+        first=0
+        shift 8
+    done
+}
+
+create_apn_sessions_with_ip() {
+    first=1
+
+    while [ "$#" -gt 0 ]; do
+        apn_name=$1
+        sst_value=$2
+        dl_value=$3
+        ul_value=$4
+        qos_index=$5
+        arp_priority=$6
+        arp_capability=$7
+        arp_vulnerability=$8
+        ip=$9       
+
+        if [ "$first" -eq 0 ]; then
+            echo ","
+        fi
+
+        echo "{\"name\": \"$apn_name\", \"type\": NumberInt(3), \"qos\": { \"index\": NumberInt($qos_index), \"arp\": { \"priority_level\": NumberInt($arp_priority), \"pre_emption_capability\": NumberInt($arp_capability), \"pre_emption_vulnerability\": NumberInt($arp_vulnerability) } }, \"ambr\": { \"downlink\": { \"value\": NumberInt($dl_value), \"unit\": NumberInt(2) }, \"uplink\": { \"value\": NumberInt($ul_value), \"unit\": NumberInt(2) } },\"ue\":{\"addr\": \"$ip\"}, \"pcc_rule\": [], \"_id\": new ObjectId() }"
+
+        first=0
+        shift 9
+    done
+}
+
 if [ "$1" = "add" ]; then
-    if [ "$#" -eq 13 ]; then
+    if [ "$#" -ge 4 ]; then
         IMSI=$2
         KI=$3
         OPC=$4
-        SST=$5
-        APN=$6
-        DL=$7
-        UNIT=$8
-        UL=$9
-        QOS=${10}
-        PRIORITY_LEVEL=${11}
-        ARP_CAPA=${12}
-        ARP_VUL=${13}
 
-        mongo --eval "db.subscribers.insertOne(
-            {
+        shift 4
+
+        # Create a temporary file to hold the sessions array
+        temp_file=$(mktemp)
+        echo "[" > "$temp_file"
+        create_apn_sessions "$@" >> "$temp_file"
+        echo "]" >> "$temp_file"
+        sessions=$(cat "$temp_file")
+        rm "$temp_file"
+
+       output=$(mongo --quiet --eval "
+        var result;
+        try {
+             db.subscribers.insertOne({
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
                 \"imsi\": \"$IMSI\",
@@ -78,52 +134,21 @@ if [ "$1" = "add" ]; then
                 \"mme_host\": [],
                 \"mm_realm\": [],
                 \"purge_flag\": [],
-                \"slice\":[
-                {
-                    \"sst\": NumberInt($SST),
+                \"slice\": [{
+                    \"sst\": NumberInt($sst_value),
                     \"default_indicator\": true,
-                    \"session\": [
-                    {
-                        \"name\" : \"$APN\",
-                        \"type\" : NumberInt(3),
-                        \"qos\" :
-                        { \"index\": NumberInt($QOS),
-                            \"arp\":
-                            {
-                                \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-                                \"pre_emption_capability\": NumberInt($ARP_CAPA),
-                                \"pre_emption_vulnerability\": NumberInt($ARP_VUL)
-                            }
-                        },
-                        \"ambr\":
-                        {
-                            \"downlink\":
-                            {
-                                \"value\": NumberInt($DL),
-                                \"unit\": NumberInt($UNIT)
-                            },
-                            \"uplink\":
-                            {
-                                \"value\": NumberInt($UL),
-                                \"unit\": NumberInt($UNIT)
-                            }
-                        },
-                        \"pcc_rule\": [],
-                        \"_id\": new ObjectId(),
-                    }],
-                    \"_id\": new ObjectId(),
+                    \"session\": $sessions,
+                    \"_id\": new ObjectId()
                 }],
-                \"security\":
-                {
-                    \"k\" : \"$KI\",
-                    \"op\" : null,
-                    \"opc\" : \"$OPC\",
-                    \"amf\" : \"8000\",
+                \"security\": {
+                    \"k\": \"$KI\",
+                    \"op\": null,
+                    \"opc\": \"$OPC\",
+                    \"amf\": \"8000\"
                 },
-                \"ambr\" :
-                {
-                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\": NumberInt($UNIT)},
-                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\": NumberInt($UNIT)}
+                \"ambr\": {
+                    \"downlink\": { \"value\": NumberInt(1000000000), \"unit\": NumberInt(0) },
+                    \"uplink\": { \"value\": NumberInt(1000000000), \"unit\": NumberInt(0) }
                 },
                 \"access_restriction_data\": 32,
                 \"network_access_mode\": 0,
@@ -131,28 +156,42 @@ if [ "$1" = "add" ]; then
                 \"operator_determined_barring\": 0,
                 \"subscribed_rau_tau_timer\": 12,
                 \"__v\": 0
+            });
+            print('Success');
+        } catch (e) {
+            if (e.code === 11000) {
+                print('Duplicate');
+            } else {
+                print('Error: ' + e);
             }
-            );" $DB_URI
+            quit(1);
+        }" $DB_URI 2>&1)
+
+          echo "$output"
+
         exit $?
     fi
-
-    if [ "$#" -eq 14 ]; then
+fi
+if [ "$1" = "add_with_ip" ]; then
+    if [ "$#" -ge 4 ]; then
         IMSI=$2
         KI=$3
         OPC=$4
-        SST=$5
-        APN=$6
-        DL=$7
-        UNIT=$8
-        UL=$9
-        QOS=${10}
-        PRIORITY_LEVEL=${11}
-        ARP_CAPA=${12}
-        ARP_VUL=${13}
-        IP=${14}
 
-        mongo --eval "db.subscribers.insertOne(
-            {
+        shift 4
+
+        # Create a temporary file to hold the sessions array
+        temp_file=$(mktemp)
+        echo "[" > "$temp_file"
+        create_apn_sessions_with_ip "$@" >> "$temp_file"
+        echo "]" >> "$temp_file"
+        sessions=$(cat "$temp_file")
+        rm "$temp_file"
+
+       output=$(mongo --quiet --eval "
+        var result;
+        try {
+             db.subscribers.insertOne({
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
                 \"imsi\": \"$IMSI\",
@@ -161,56 +200,21 @@ if [ "$1" = "add" ]; then
                 \"mme_host\": [],
                 \"mm_realm\": [],
                 \"purge_flag\": [],
-                \"slice\":[
-                {
-                    \"sst\": NumberInt($SST),
+                \"slice\": [{
+                    \"sst\": NumberInt($sst_value),
                     \"default_indicator\": true,
-                    \"session\": [
-                    {
-                        \"name\" : \"$APN\",
-                        \"type\" : NumberInt(3),
-                        \"qos\" :
-                        { \"index\": NumberInt($QOS),
-                            \"arp\":
-                            {
-                                \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-                                \"pre_emption_capability\": NumberInt($ARP_CAPA),
-                                \"pre_emption_vulnerability\": NumberInt($ARP_VUL)
-                            }
-                        },
-                        \"ambr\":
-                        {
-                            \"downlink\":
-                            {
-                                \"value\": NumberInt($DL),
-                                \"unit\": NumberInt($UNIT)
-                            },
-                            \"uplink\":
-                            {
-                                \"value\": NumberInt($UL),
-                                \"unit\": NumberInt($UNIT)
-                            }
-                        },
-                         \"ue\":
-                        {
-                            \"addr\": \"$IP\"
-                        },
-                        \"pcc_rule\": [],
-                        \"_id\": new ObjectId(),
-                    }],
-                    \"_id\": new ObjectId(),
+                    \"session\": $sessions,
+                    \"_id\": new ObjectId()
                 }],
-                \"security\":
-                {
-                    \"k\" : \"$KI\",
-                    \"op\" : null,
-                    \"opc\" : \"$OPC\",
-                    \"amf\" : \"8000\",
+                \"security\": {
+                    \"k\": \"$KI\",
+                    \"op\": null,
+                    \"opc\": \"$OPC\",
+                    \"amf\": \"8000\"
                 },
-                \"ambr\" :
-                {
-                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\": NumberInt($UNIT)},
-                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\": NumberInt($UNIT)}
+                \"ambr\": {
+                    \"downlink\": { \"value\": NumberInt(1000000000), \"unit\": NumberInt(0) },
+                    \"uplink\": { \"value\": NumberInt(1000000000), \"unit\": NumberInt(0) }
                 },
                 \"access_restriction_data\": 32,
                 \"network_access_mode\": 0,
@@ -218,10 +222,22 @@ if [ "$1" = "add" ]; then
                 \"operator_determined_barring\": 0,
                 \"subscribed_rau_tau_timer\": 12,
                 \"__v\": 0
+            });
+            print('Success');
+        } catch (e) {
+            if (e.code === 11000) {
+                print('Duplicate');
+            } else {
+                print('Error: ' + e);
             }
-            );" $DB_URI
+            quit(1);
+        }" $DB_URI 2>&1)
+
+          echo "$output"
+
         exit $?
     fi
+
 
     if [ "$#" -eq 4 ]; then
         IMSI=$2
@@ -585,16 +601,10 @@ if [ "$1" = "remove" ]; then
     output=$(mongo --quiet --eval "db.subscribers.deleteOne({\"imsi\": \"$IMSI\"});" $DB_URI 2>/dev/null)
     json_output=$(echo "$output" | awk '/{/,/}/')
     deleted_count=$(echo "$json_output" | awk -F '[:,]' '{for(i=1;i<=NF;i++) if($i ~ /"deletedCount"/) print $(i+1)}')
-    #deleted_count=$(echo "$deleted_count" | tr -d '\n\r')
     deleted_count=$(echo "$deleted_count" | awk '{$1=$1};1')
     deleted_count=$(echo "$deleted_count" | cut -d' ' -f1)
 
     deleted_count=$(echo "$deleted_count" | sed 's/0}$//')
-    #if [ -n "$deleted_count" ] && [ "$deleted_count" -gt 0 ]; then
-     #   echo "Document with IMSI $IMSI has been deleted."
-    #else
-     #   echo "No document with IMSI $IMSI found or deleted."
-    #fi
     echo $deleted_count
     exit $?
 fi
@@ -943,75 +953,6 @@ if [ "$1" = "set_apn" ]; then
              }
            );" $DB_URI
 
-#        mongo --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},
-#            {\$set: {
-#                \"ambr\" : {
-#                    \"downlink\" : {
-#                        \"value\" : NumberInt($DL),
-#                        \"unit\"  : NumberInt($UNIT)
-#                    },
-#                    \"uplink\" :{
-#                        \"value\": NumberInt($UL),
-#                        \"unit\" : NumberInt($UNIT)
-#                    }
-#                },
-#                { \"slice.0.sst\": $SST
-#                },
-#                { \"slice.0.session.0.name\": $APN
-#                },
-#                \"slice.0.session.0.qos\": {
-#                      \"index\": $QOS,
-#                      \"arp\" : {
-#                          \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-#                          \"pre_emption_capability\"  : NumberInt($ARP_CAPA),
-#                          \"pre_emption_vulnerability\"  : NumberInt($ARP_VUL)
-#                      }
-#                  },
-#                \"slice.0.session.0.ambr\": {
-#                    \"downlink\" : {
-#                        \"value\" : NumberInt($DL),
-#                        \"unit\"  : NumberInt($UNIT)
-#                    },
-#                    \"uplink\" :{
-#                        \"value\": NumberInt($UL),
-#                        \"unit\" : NumberInt($UNIT)
-#                    }
-#                }
-#                     }
-#            });" $DB_URI
-
-#        mongo --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
-#            {\$set: { \"slice\":
-#
-#                            {
-#                            \"sst\" : NumberInt($SST),
-#                            \"default_indicator\" : false,
-#                            \"_id\" : new ObjectId(),
-#                            \"session\" :
-#                            [{
-#                                \"name\" : \"$APN\",
-#                                \"type\" : NumberInt(3),
-#                                \"_id\" : new ObjectId(),
-#                                \"pcc_rule\" : [],
-#                                \"ambr\" :
-#                                {
-#                                    \"uplink\" : { \"value\": NumberInt($UL), \"unit\" : NumberInt($UNIT) },
-#                                    \"downlink\" : { \"value\": NumberInt($DL), \"unit\" : NumberInt($UNIT) },
-#                                },
-#                                \"qos\" :
-#                                {
-#                                    \"index\" : NumberInt($QOS),
-#                                    \"arp\" :
-#                                    {
-#                                        \"priority_level\" : NumberInt($PRIORITY_LEVEL),
-#                                        \"pre_emption_capability\" : NumberInt($ARP_CAPA),
-#                                        \"pre_emption_vulnerability\" : NumberInt($ARP_VUL),
-#                                    },
-#                                },
-#                             }]
-#                            }
-#                    }
-#            });" $DB_URI
         exit $?
     fi
 
@@ -1035,7 +976,7 @@ if [ "$1" = "subscriber_status" ]; then
     exit 1
 fi
 if [ "$1" = "showall" ]; then
-   mongo --eval "db.subscribers.find()" $DB_URI
+   mongo --eval "db.subscribers.find().batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showone" ]; then
@@ -1046,11 +987,11 @@ if [ "$1" = "showone" ]; then
     fi
 fi
 if [ "$1" = "showpretty" ]; then
-   mongo --eval "db.subscribers.find().pretty()" $DB_URI
+   mongo --eval "db.subscribers.find().pretty().batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showfiltered" ]; then
-   mongo --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1})" $DB_URI
+   mongo --quiet --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1}).batchSize(1000).forEach(doc => printjsononeline(doc))" $DB_URI
         exit $?
 fi
 

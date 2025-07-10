@@ -1,0 +1,6 @@
+{% if OPNsense.opncell.general.enablefour == "1" or OPNsense.opncell.general.enablefiveNSA == "1"  or OPNsense.opncell.general.enableupf == '1' or OPNsense.opncell.general.enablefiveSA == '1' %}
+epcsmfd_enable="YES"
+epcsmfd_setup="/usr/local/opnsense/scripts/opncore/epcsmfd_setup.sh"
+{% else %}
+epcsmfd_enable="NO"
+{% endif %}

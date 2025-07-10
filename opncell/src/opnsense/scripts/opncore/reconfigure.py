@@ -13,6 +13,7 @@ if len(sys.argv) > 1:
     y = x.replace('[', "")
     t = y.replace(']', '')
     json_data = json.loads(t)
+
     #json_data = json.loads(json_data2)
    # print(type(json_data))
     # create a temporary directory with write permissions- to use for file editing
@@ -44,7 +45,6 @@ if len(sys.argv) > 1:
                 network_name = value
 
 
-
     def running_processes():
         command = "ps aux | grep open5gs | awk '$8 == \"Is\" || $8 == \"Ss\" || $8 == \"Rs\" {print $2}'"
         output = subprocess.check_output(command, shell=True, text=True)
@@ -71,7 +71,7 @@ if len(sys.argv) > 1:
 
 
     def config(service_list, process_name, pid, name):
-        yaml_path = '/usr/ports/open5gs/install/etc/open5gs/'
+        yaml_path = '/usr/local/etc/open5gs/'
         if process_name in service_list:
             yaml_file = yaml_path + process_name + '.yaml'
             # Copy the file to a directory where you have write permissions i.e /tmp/yaml .
@@ -143,43 +143,45 @@ if len(sys.argv) > 1:
             copy_file = f"cp {new} {yaml_path}"
             os.system(copy_file)
 
-            command = "/usr/ports/open5gs/install/bin/" + name + " -D "
+            command = "/usr/ports/open5gs/install/bin/" + name + " -D " + " -c " + "/usr/local/etc/open5gs/" + process_name + ".yaml" + "l" + "/var/log/opncell/" + process_name + ".log"
             subprocess.run(command, shell=True, text=True)
 
 
     def configureProcess(process_name, pid, name):
 
-        configurableServices = ['nrf', 'upf', 'amf']
-        configurableFourServices = ['mme', 'sgwu']
+        configurable_services = ['nrf', 'upf', 'amf']
+        configurable_four_services = ['mme', 'sgwu']
+        configurable_upf_services = ['upf', 'amf']
 
-        if network == 'enablefour':
-            config(configurableFourServices, process_name, pid, name)
+        if network == 'enablefour' or network == 'enablefiveNSA':
+            config(configurable_four_services, process_name, pid, name)
+        elif network == 'enableupf':
+            config(configurable_upf_services, process_name, pid, name)
         else:
-            config(configurableServices, process_name, pid, name)
+            config(configurable_services, process_name, pid, name)
 
 
     def reconfigure(process_list):
         # only edit what needs to be edited. mme + sgwu for 4g and 5g-nsa networks. amf + upf + nrf for 5gsa networks
-        runningProcesses = []
-        configurableServices = ['mme', 'sgwu', 'nrf', 'amf', 'upf']
+        currently_running_processes = []
+        all_configurable_services = ['mme', 'sgwu', 'nrf', 'amf', 'upf']
         for process in process_list:
             name = process.get("Name", "")
             pid = process.get("PID", "")
             process_name = name.replace("open5gs-", "").rstrip("d")
-            runningProcesses.append(process_name)
+            currently_running_processes.append(process_name)
             configureProcess(process_name, pid, name)
 
         # get the processes that should be reconfigured, but they weren't running initially.
 
-        difference_set = set(configurableServices) - set(runningProcesses)
+        difference_set = set(all_configurable_services) - set(currently_running_processes)
         not_running_processes = list(difference_set)
-        d = set(runningProcesses) - set(configurableServices)
+        d = set(currently_running_processes) - set(all_configurable_services)
         n_r = list(d)
         final_list = n_r + not_running_processes
         for process in final_list:
             name = "open5gs-" + process + "d"
             configureProcess(process, 0, name)
-
 
     reconfigure(pList)
 else:

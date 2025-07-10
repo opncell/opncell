@@ -3,6 +3,12 @@
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" packagePrefix="Phalcon\DevTools\" />
+      <sourceFolder url="file://$MODULE_DIR$/tests/_support/Module" isTestSource="true" packagePrefix="Phalcon\DevTools\Tests\Support\Module\" />
+      <sourceFolder url="file://$MODULE_DIR$/tests/acceptance" isTestSource="true" packagePrefix="Phalcon\DevTools\Tests\Acceptance\" />
+      <sourceFolder url="file://$MODULE_DIR$/tests/console" isTestSource="true" packagePrefix="Phalcon\DevTools\Tests\Console\" />
+      <sourceFolder url="file://$MODULE_DIR$/tests/functional" isTestSource="true" packagePrefix="Phalcon\DevTools\Tests\Functional\" />
+      <sourceFolder url="file://$MODULE_DIR$/tests/unit" isTestSource="true" packagePrefix="Phalcon\DevTools\Tests\Unit\" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/phalcon/ide-stubs" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/guzzlehttp/promises" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/ralouphie/getallheaders" />
