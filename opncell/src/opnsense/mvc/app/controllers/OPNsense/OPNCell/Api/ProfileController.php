@@ -55,12 +55,20 @@ class ProfileController extends ApiMutableModelControllerBase
         return $this->addBase('profile', 'profiles.profile');
     }
 
+
+
     /**
      * @throws ReflectionException
      */
     public function searchProfileAction(): array
     {
         $profile_array = $this->searchBase('profiles.profile', array("apn"));
+        $profile_array =  $this->searchBase(
+            'profiles.profile',
+            null,
+            "description",
+            array("apn")
+        );
         $user = new UserController();
         $profile_user = $user->profileAndUsersListAction();
 

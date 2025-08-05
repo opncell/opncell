@@ -149,16 +149,16 @@ if len(sys.argv) > 1:
 
     def configureProcess(process_name, pid, name):
 
-        configurable_services = ['nrf', 'upf', 'amf']
+        configurable_fivesa_services = ['amf']
         configurable_four_services = ['mme', 'sgwu']
-        configurable_upf_services = ['upf', 'amf']
+        configurable_upf_services = ['upf', 'amf']   # TODO: Check out what services are in upf
 
         if network == 'enablefour' or network == 'enablefiveNSA':
             config(configurable_four_services, process_name, pid, name)
         elif network == 'enableupf':
             config(configurable_upf_services, process_name, pid, name)
         else:
-            config(configurable_services, process_name, pid, name)
+            config(configurable_fivesa_services, process_name, pid, name)
 
 
     def reconfigure(process_list):
