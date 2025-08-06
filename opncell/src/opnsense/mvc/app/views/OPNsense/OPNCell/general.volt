@@ -374,6 +374,7 @@ POSSIBILITY OF SUCH DAMAGE.
         }
 
         gridOtherConfigs.on("loaded.rs.jquery.bootgrid", function (e) {
+            $(this).find(".command-editConfig").off('click');
             //start service
             gridOtherConfigs.find(".command-start").on("click", function (e) {
                 var serviceName = $(this).data("row-service");
@@ -480,33 +481,32 @@ POSSIBILITY OF SUCH DAMAGE.
 
             gridOtherConfigs.find(".command-editConfig").on("click", function (e) {
                 // edit dialog id to use
-                console.log(editDlg)
+
                 const gridId = $(this).attr('id');
 
-                if (editDlg !== undefined ) {
+                // if (editDlg !== undefined ) {
                     let pid = $(this).data("row-pid");
                     let server = $(this).data("row-service");
                     console.log(server,pid)
                     let y = [server]
                     y.push(pid)
 
-                    $('#' + editDlg).modal({backdrop: 'static', keyboard: false});
+                    $('#' + 'DialogServiceConfig').modal({backdrop: 'static', keyboard: false});
                     let inputElement = document.getElementById("addr")
                     // define save action
-                    $("#btn_" + editDlg + "_save").unbind('click').click(function () {
+                    $("#btn_" + 'DialogServiceConfig' + "_save").unbind('click').click(function () {
                         console.log("clicked")
                         let v = inputElement.value
                         y.push(v)
                         ajaxCall(url = "/api/opncell/general/editServerConfig/" + y , sendData = {}, callback = function (data, status) {
-                            $("#" + editDlg).modal('hide');
-                            std_bootgrid_reload(gridId);
-                            $('#grid-other-configs').bootgrid('reload')
+                            $("#" + 'DialogServiceConfig').modal('hide');
+                            gridOtherConfigs.bootgrid('reload')
                         });
 
                     });
-                } else {
-                    console.log("[grid] action get or data-editDialog missing")
-                }
+                // } else {
+                //     console.log("[grid] action get or data-editDialog missing")
+                // }
             });
 
         });
