@@ -358,11 +358,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
                         }
                     },
+                },
+            };
 
-                }
-            }
-        });
-        function serviceWait() {
+            function serviceWait() {
             $.ajax({
                 url: '/ui/opncell/general#other-configs',
                 timeout: 2500
@@ -386,7 +385,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding: 15px;">' +
-                            "{{ lang._(' The service is starting, please wait ...') }}" +
+                            "{{ lang._('The service is starting, please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
@@ -485,25 +484,25 @@ POSSIBILITY OF SUCH DAMAGE.
                 const gridId = $(this).attr('id');
 
                 // if (editDlg !== undefined ) {
-                    let pid = $(this).data("row-pid");
-                    let server = $(this).data("row-service");
-                    console.log(server,pid)
-                    let y = [server]
-                    y.push(pid)
+                let pid = $(this).data("row-pid");
+                let server = $(this).data("row-service");
+                console.log(server,pid)
+                let y = [server]
+                y.push(pid)
 
-                    $('#' + 'DialogServiceConfig').modal({backdrop: 'static', keyboard: false});
-                    let inputElement = document.getElementById("addr")
-                    // define save action
-                    $("#btn_" + 'DialogServiceConfig' + "_save").unbind('click').click(function () {
-                        console.log("clicked")
-                        let v = inputElement.value
-                        y.push(v)
-                        ajaxCall(url = "/api/opncell/general/editServerConfig/" + y , sendData = {}, callback = function (data, status) {
-                            $("#" + 'DialogServiceConfig').modal('hide');
-                            gridOtherConfigs.bootgrid('reload')
-                        });
-
+                $('#' + 'DialogServiceConfig').modal({backdrop: 'static', keyboard: false});
+                let inputElement = document.getElementById("addr")
+                // define save action
+                $("#btn_" + 'DialogServiceConfig' + "_save").unbind('click').click(function () {
+                    console.log("clicked")
+                    let v = inputElement.value
+                    y.push(v)
+                    ajaxCall(url = "/api/opncell/general/editServerConfig/" + y , sendData = {}, callback = function (data, status) {
+                        $("#" + 'DialogServiceConfig').modal('hide');
+                        gridOtherConfigs.bootgrid('reload')
                     });
+
+                });
                 // } else {
                 //     console.log("[grid] action get or data-editDialog missing")
                 // }
