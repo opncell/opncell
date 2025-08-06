@@ -53,7 +53,7 @@ Run the below command in the console of the machine running the OPNsense firewal
 `fetch -o /usr/local/etc/pkg/repos/OPNcell.conf http://repo.opncell.io/cellular.conf && pkg update` <br><br>
 This establishes the repository holding the cellular package installer, including other necessary pieces of the service.
 
-## Getting into it
+## Getting into it!
 
 Once you have the repo set up on your host instance, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
 

@@ -1,7 +1,7 @@
 {#
 
-Copyright (C) 2025 Digital Solutions
-Copyright (C) 2025 Wireless Laboratories <rob.hamblet@wire-labs.com>
+Copyright (C) 2023 Digital Solutions
+Copyright (C) 2023 Wire lab
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -111,7 +111,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 {{ lang._('Subscriber not deleted.') }}
             </div>
             <div id="successfulDelete" class="alert alert-dismissible alert-info" style="display: none" role="alert">
-            {{ lang._('Subscriber deleted successfully') }}
+                {{ lang._('Subscriber deleted successfully') }}
             </div>
         </div>
         <div class="col-md-3 __mt">
@@ -119,9 +119,9 @@ POSSIBILITY OF SUCH DAMAGE.
                 {{ lang._('Deleting.......') }}
             </div>
         </div>
-<!--        <button class="btn btn-danger" style="display: none;  float: left; margin-right: 78px;text-align: center" id="deleting" type="button">-->
-<!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
-<!--        </button>-->
+        <!--        <button class="btn btn-danger" style="display: none;  float: left; margin-right: 78px;text-align: center" id="deleting" type="button">-->
+        <!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
+        <!--        </button>-->
 
         <table id="grid-user-list" class="table table-condensed table-hover table-striped table-responsive"
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
@@ -141,10 +141,10 @@ POSSIBILITY OF SUCH DAMAGE.
             </tbody>
             <tfoot>
             <tr>
-                <td>
-                    <button data-action="deleteSelected" type="button" class="btn btn-xs btn-default"><span
-                            class="fa fa-trash-o"></span></button>
-                </td>
+<!--                <td>-->
+<!--                    <button data-action="deleteSelected" type="button" class="btn btn-xs btn-default"><span-->
+<!--                            class="fa fa-trash-o"></span></button>-->
+<!--                </td>-->
                 <td>
                     <button data-action="add" type="button" class="btn btn-xs btn-default"><span
                             class="fa fa-plus"></span></button>
@@ -252,39 +252,39 @@ POSSIBILITY OF SUCH DAMAGE.
             const file = fileInput.files[0];
             formData.append('file', file);
 
-                $.ajax({
-                    type: 'POST',
-                    url: '/api/opncell/user/upload',
-                    data: formData,
-                    processData: false, // Don't process the data
-                    contentType: false, // Don't set content type (let jQuery decide)
-                    success: function (response) {
-                        console.log('Response from server:', response);
-                        if(response.result === 'failed'){
+            $.ajax({
+                type: 'POST',
+                url: '/api/opncell/user/upload',
+                data: formData,
+                processData: false, // Don't process the data
+                contentType: false, // Don't set content type (let jQuery decide)
+                success: function (response) {
+                    console.log('Response from server:', response);
+                    if(response.result === 'failed'){
 
-                            $("#no_file").attr("style", "display:block");
-                            fadeOut("#no_file")
-                            $("#format_not_supported").attr("style", "display:none");
-                            $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
-                        } else if(response['result'] === 'Unsupported Format') {
-                            $("#format_not_supported").attr("style", "display:block");
-                            fadeOut("#format_not_supported")
-                            $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
-                        }
-                        else {
-                            globalFileContent = response;
-                            $("#no_file").attr("style", "display:none");
-                            $("#format_not_supported").attr("style", "display:none");
-                            $("#file_uploaded").attr("style", "display:block");
-                            fadeOut("#file_uploaded")
-                            $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
-                        }
-
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error:', error);
+                        $("#no_file").attr("style", "display:block");
+                        fadeOut("#no_file")
+                        $("#format_not_supported").attr("style", "display:none");
+                        $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
+                    } else if(response['result'] === 'Unsupported Format') {
+                        $("#format_not_supported").attr("style", "display:block");
+                        fadeOut("#format_not_supported")
+                        $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
                     }
-                });
+                    else {
+                        globalFileContent = response;
+                        $("#no_file").attr("style", "display:none");
+                        $("#format_not_supported").attr("style", "display:none");
+                        $("#file_uploaded").attr("style", "display:block");
+                        fadeOut("#file_uploaded")
+                        $("#saveAct_upload_progress").removeClass("fa fa-spinner fa-pulse");
+                    }
+
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error:', error);
+                }
+            });
 
         });
     }
@@ -341,67 +341,65 @@ POSSIBILITY OF SUCH DAMAGE.
         // Manually doing the tables --For customization --User Edition
         let gridParams = {
             search: '/api/opncell/user/searchSub',
-            get: '/api/opncell/user/editSub/',
+            // get: '/api/opncell/user/editSub/',
+            get: '/api/opncell/user/getSub/',
             set: '/api/opncell/user/setSub/',
-            add: '/api/opncell/user/getSub/',
+            add: '/api/opncell/user/addSub/',
             del: '/api/opncell/user/deleteSub/',
         };
 
-        let gridOptions = {
+        let gridOptions = $("#grid-user-list").UIBootgrid({
             ajax: true,
             selection: true,
             multiSelect: true,
             rowCount: [10, 25, 50, 100, 500, 1000],
-            url: '/api/opncell/user/searchSub',
-            formatters: {
-                "commands": function (column, row) {
-                    return "<button type=\"button\" title=\"{{ lang._('Edit Profile') }}\" class=\"btn btn-xs btn-default command-edit bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-imsi=\"" + row.imsi + "\"><span class=\"fa fa-pencil\"></span></button> " +
-                        "<button type=\"button\" title=\"{{ lang._('Delete user') }}\" class=\"btn btn-xs btn-default command-delete bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-imsi=\"" + row.imsi + "\"><span class=\"fa fa-trash-o\"></span></button>";
-                },
-            },
-        };
+            search: '/api/opncell/user/searchSub',
+            get: '/api/opncell/user/getSub/',
+            set: '/api/opncell/user/setSub/',
+            add: '/api/opncell/user/addSub/',
+            del: '/api/opncell/user/deleteSub/',
+            options: {
+                formatters: {
+                    "commands": function (column, row) {
+                        return "<button type=\"button\" title=\"{{ lang._('Edit Profile') }}\" class=\"btn btn-xs btn-default command-edit bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-imsi=\"" + row.imsi + "\"><span class=\"fa fa-pencil\"></span></button> " +
+                            "<button type=\"button\" title=\"{{ lang._('Delete user') }}\" class=\"btn btn-xs btn-default command-delete bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-imsi=\"" + row.imsi + "\"><span class=\"fa fa-trash-o\"></span></button>";
+                    },
+                }
+            }
+
+        });
 
         /**
          * copy actions for selected items from opnsense_bootgrid_plugin.js
          */
-        $("#grid-user-list").bootgrid(gridOptions).on("loaded.rs.jquery.bootgrid", function (e) {
-            // edit dialog id to use
-            let addForm = $(this).attr('data-addDialog');
-            // toggle all rendered tooltips (once for all)
-            $('.bootgrid-tooltip').tooltip();
+        gridOptions.on("loaded.rs.jquery.bootgrid", function (e) {
 
-            // scale footer on resize
-            $(this).find("tfoot td:first-child").attr('colspan', $(this).find("th").length - 1);
-            $(this).find('tr[data-row-id]').each(function () {
-                if ($(this).find('[class*="command-toggle"]').first().data("value") === "0") {
-                    $(this).addClass("text-muted");
-                }
-            });
-
-            let editUserDlg = $(this).attr('data-addDialog');
-            let gridUserId = $(this).attr('id');
+            $(this).find("*[data-action=add]").off('click');
+            $(this).find(".command-edit").off('click');
+            $(this).find(".command-delete").off('click');
+            $(this).find("*[data-action=deleteSelected]").off('click')
 
             // add a new user
-            $(this).find("*[data-action=add]").click(function () {
+            $(this).find("*[data-action=add]").on('click' ,function () {
                 if (gridParams['add'] !== undefined) {
                     var urlMap = {};
-                    urlMap['frm_' + editUserDlg] = gridParams['add'];
+                    urlMap['frm_' + 'DialogAddUsers'] = gridParams['get'];
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
                         formatTokenizersUI();
                         $('.selectpicker').selectpicker('refresh');
                         // clear validation errors (if any)
-                        clearFormValidation('frm_' + editUserDlg);
+                        clearFormValidation('frm_' + 'DialogAddUsers');
                     });
 
-                    $('#' + editUserDlg).modal({backdrop: 'static', keyboard: false});
+                    $('#' + 'DialogAddUsers').modal({backdrop: 'static', keyboard: false});
                     //
-                    $("#btn_" + editUserDlg + "_save").unbind('click').click(function () {
+                    $("#btn_" + 'DialogAddUsers' + "_save").unbind('click').click(function () {
                         saveFormToEndpoint(url = "/api/opncell/user/addSub",
-                            formid = 'frm_' + editUserDlg, callback_ok = function (data) {
+                            formid = 'frm_' + 'DialogAddUsers', callback_ok = function (data) {
                                 console.log(data.result)
-                                $("#" + editUserDlg).modal('hide');
-                                $("#" + gridUserId).bootgrid("reload");
+                                $("#" + 'DialogAddUsers').modal('hide');
+                               gridOptions.bootgrid("reload");
                                 if (data.result === "failed") {
                                     $("#failedSave").attr("style", "display:block");
                                     fadeOut("#failedSave")
@@ -437,12 +435,12 @@ POSSIBILITY OF SUCH DAMAGE.
 
                             } else {
                                 $("#deleting").attr("style", "display:none");
-                                 $("#successfulDelete").attr("style", "display:block");
-                                 fadeOut("#successfulDelete")
+                                $("#successfulDelete").attr("style", "display:block");
+                                fadeOut("#successfulDelete")
                             }
                             console.log(data.result)
                             updateServiceControlUI('opncell');
-                            $("#grid-user-list").bootgrid('reload');
+                           gridOptions.bootgrid('reload');
                             $("#successfulDelete").attr("style", "display:none");
                             $("#failedDelete").attr("style", "display:none");
                         });
@@ -453,37 +451,33 @@ POSSIBILITY OF SUCH DAMAGE.
                 }
             });
 
-            //Attach/replace/change a profile to existing user
-            const editDlg = $(this).attr('data-editDialog');
-            const gridId = $(this).attr('id');
+           //Attach/replace/change a profile to existing user
             $(this).find(".command-edit").on("click", function (e) {
                 // edit dialog id to use
-                if (editDlg !== undefined && gridParams['get'] !== undefined) {
+                if (gridOptions['get'] !== undefined) {
                     let imsi = $(this).data("row-imsi");
-                    let uuid = $(this).data("row-id");
                     let urlMap = {};
 
-                    urlMap['frm_' + editDlg] = '/api/opncell/profile/getSingleSub/' + imsi;   //pass the imsi of the row of interest
-                    // urlMap['frm_' + editDlg] = gridParams['get'] + uuid;
+                    urlMap['frm_' + 'DialogUsers'] = '/api/opncell/profile/getSingleSub/' + imsi;   //pass the imsi of the row of interest
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
                         formatTokenizersUI();
                         $('.selectpicker').selectpicker('refresh');
                         // clear validation errors (if any)
-                        clearFormValidation('frm_' + editDlg);
+                        clearFormValidation('frm_' + 'DialogUsers');
                     });
                     updateServiceControlUI('opncell')
                     // show dialog for pipe edit
-                    $('#' + editDlg).modal({backdrop: 'static', keyboard: false});
+                    $('#' + 'DialogUsers').modal({backdrop: 'static', keyboard: false});
                     // define save action
-                    $("#btn_" + editDlg + "_save").unbind('click').click(function () {
-                        $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').addClass("fa fa-spinner")
+                    $("#btn_" + 'DialogUsers' + "_save").unbind('click').click(function () {
+                        $("#btn_" + 'DialogUsers' + "_save").append('<i id="saveBulkAct_users_progress"></i>').addClass("fa fa-spinner")
                         if (gridParams['set'] !== undefined) {
-                            saveFormToEndpoint(url = "/api/opncell/user/setSub/" + imsi, formid = 'frm_' + editDlg, callback_ok = function (data) {
-                                $("#" + editDlg).modal('hide');
-                                std_bootgrid_reload(gridId);
+                            saveFormToEndpoint(url = "/api/opncell/user/setSub/" + imsi, formid = 'frm_' + 'DialogUsers', callback_ok = function (data) {
+                                $("#" + 'DialogUsers').modal('hide');
+                                gridOptions.bootgrid("reload");
                                 console.log(data)
-                                $("#btn_" + editDlg + "_save").append('<i id="saveBulkAct_users_progress"></i>').removeClass("fa fa-spinner")
+                                $("#btn_" + 'DialogUsers' + "_save").append('<i id="saveBulkAct_users_progress"></i>').removeClass("fa fa-spinner")
                                 // $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
                                 ajaxCall(url = "/api/opncell/service/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
                                     updateServiceControlUI('opncell');
@@ -501,34 +495,12 @@ POSSIBILITY OF SUCH DAMAGE.
                 }
             });
 
-        });
-
-        /**
-         * copy actions for selected items from opnsense_bootgrid_plugin.js
-         */
-        $("#grid-user-list").bootgrid(gridOptions).on("loaded.rs.jquery.bootgrid", function (e) {
-            // toggle all rendered tooltips (once for all)
-            $('.bootgrid-tooltip').tooltip();
-
-            // scale footer on resize
-            $(this).find("tfoot td:first-child").attr('colspan', $(this).find("th").length - 1);
-            $(this).find('tr[data-row-id]').each(function () {
-                if ($(this).find('[class*="command-toggle"]').first().data("value") === "0") {
-                    $(this).addClass("text-muted");
-                }
-            });
-
-            // edit dialog id to use
-            let gridId = $(this).attr('id');
-            console.log(gridId)
-
-            // delete  multiple users at once
-            $(this).find("*[data-action=deleteSelected]").click(function () {
+            $(this).find("*[data-action=deleteSelected]").on('click', function () {
 
                 console.log("clicked");
                 if (gridParams['del'] !== undefined) {
                     stdDialogConfirm('{{ lang._("Confirm User removal") }}', '{{ lang._("Do you want to remove the selected users ? ") }}', '{{ lang._("Yes") }}', '{{ lang._("Cancel") }}', function () {
-                            var rows = $("#" + gridId).bootgrid('getSelectedRows');
+                            var rows = gridOptions.bootgrid('getSelectedRows');
                             console.log(rows);
                             if (rows !== undefined) {
                                 let imsi = $(this).data("row-imsi");
@@ -539,7 +511,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 });
                                 // refresh after load
                                 $.when.apply(null, deferreds).done(function () {
-                                    std_bootgrid_reload(gridId);
+                                    std_bootgrid_reload(gridOptions);
                                     // updateServiceControlUI('opncore');
                                     // grid_users.bootgrid('reload');
                                 });
@@ -553,73 +525,121 @@ POSSIBILITY OF SUCH DAMAGE.
                     console.log("[grid] action del missing")
                 }
             });
+
         });
+
+        /**
+         * copy actions for selected items from opnsense_bootgrid_plugin.js
+         */
+        // gridOptions.on("loaded.rs.jquery.bootgrid", function (e) {
+        //     // toggle all rendered tooltips (once for all)
+        //     $('.bootgrid-tooltip').tooltip();
+        //
+        //     // scale footer on resize
+        //     $(this).find("tfoot td:first-child").attr('colspan', $(this).find("th").length - 1);
+        //     $(this).find('tr[data-row-id]').each(function () {
+        //         if ($(this).find('[class*="command-toggle"]').first().data("value") === "0") {
+        //             $(this).addClass("text-muted");
+        //         }
+        //     });
+        //
+        //     // edit dialog id to use
+        //     let gridId = $(this).attr('id');
+        //     console.log(gridId)
+        //
+        //     // delete  multiple users at once
+        //     $(this).find("*[data-action=deleteSelected]").click(function () {
+        //
+        //         console.log("clicked");
+        //         if (gridParams['del'] !== undefined) {
+        //             stdDialogConfirm('{{ lang._("Confirm User removal") }}', '{{ lang._("Do you want to remove the selected users ? ") }}', '{{ lang._("Yes") }}', '{{ lang._("Cancel") }}', function () {
+        //                     var rows = $("#" + gridId).bootgrid('getSelectedRows');
+        //                     console.log(rows);
+        //                     if (rows !== undefined) {
+        //                         let imsi = $(this).data("row-imsi");
+        //                         let uuid = $(this).data("row-uuid");
+        //                         var deferreds = [];
+        //                         $.each(rows, function (key, uuid) {
+        //                             deferreds.push(ajaxCall(url = '/api/opncell/user/deleteSub/' + uuid, sendData = {}, null));
+        //                         });
+        //                         // refresh after load
+        //                         $.when.apply(null, deferreds).done(function () {
+        //                             std_bootgrid_reload(gridId);
+        //                             // updateServiceControlUI('opncore');
+        //                             // grid_users.bootgrid('reload');
+        //                         });
+        //                     } else {
+        //                         console.log("undefined")
+        //                     }
+        //                 }
+        //             )
+        //
+        //         } else {
+        //             console.log("[grid] action del missing")
+        //         }
+        //     });
+        // });
 
         // Manually doing the table for subscribers--For customization ---Profile Edition
         let gridProfileParams = {
+                search: '/api/opncell/profile/searchProfile',
+                get: '/api/opncell/profile/editProfile/',
+                set: '/api/opncell/profile/setProfile/',
+                add: '/api/opncell/profile/addProfile/',
+                del: '/api/opncell/profile/deleteProfile/',
+            };
+
+        let gridProfileOptions = $("#grid-profile-list").UIBootgrid({
             search: '/api/opncell/profile/searchProfile',
             get: '/api/opncell/profile/editProfile/',
             set: '/api/opncell/profile/setProfile/',
             add: '/api/opncell/profile/addProfile/',
             del: '/api/opncell/profile/deleteProfile/',
-        };
+            options: {
+                formatters: {
+                    "commands": function (column, row) {
+                        return "<button type=\"button\" title=\"{{ lang._('Edit profile') }}\" class=\"btn btn-xs btn-default command-edit bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-count=\"" + row.count + "\" data-row-imsi=\"" + row.imsi + "\"><span class=\"fa fa-pencil\"></span></button> " +
+                            "<button type=\"button\" title=\"{{ lang._('Delete Profile') }}\" class=\"btn btn-xs btn-default command-delete bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-count=\"" + row.count + "\" data-row-name=\"" + row.apn + "\"><span class=\"fa fa-trash-o\"></span></button>";
+                    }
+                }
+            }
+        });
 
-        let gridProfileOptions = {
-            ajax: true,
-            selection: true,
-            multiSelect: true,
-            rowCount: [10, 25, 50, 100, 500, 1000],
-            url: '/api/opncell/profile/searchProfile',
-            formatters: {
-                "commands": function (column, row) {
-                    return "<button type=\"button\" title=\"{{ lang._('Edit profile') }}\" class=\"btn btn-xs btn-default command-edit bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-count=\"" + row.count + "\" data-row-imsi=\"" + row.imsi + "\"><span class=\"fa fa-pencil\"></span></button> " +
-                        "<button type=\"button\" title=\"{{ lang._('Delete Profile') }}\" class=\"btn btn-xs btn-default command-delete bootgrid-tooltip\" data-row-id=\"" + row.uuid + "\" data-row-count=\"" + row.count + "\" data-row-name=\"" + row.apn + "\"><span class=\"fa fa-trash-o\"></span></button>";
-                },
-            },
-        };
 
         /**
          * copy actions for selected items from opnsense_bootgrid_plugin.js
          */
         // edit profile dialog
-        $("#grid-profile-list").bootgrid(gridProfileOptions).on("loaded.rs.jquery.bootgrid", function (e) {
+        gridProfileOptions.on("loaded.rs.jquery.bootgrid", function (e) {
 
             // toggle all rendered tooltips (once for all)
             $('.bootgrid-tooltip').tooltip();
 
-            // scale footer on resize
-            $(this).find("tfoot td:first-child").attr('colspan', $(this).find("th").length - 1);
-            $(this).find('tr[data-row-id]').each(function () {
-                if ($(this).find('[class*="command-toggle"]').first().data("value") === "0") {
-                    $(this).addClass("text-muted");
-                }
-            });
-
-
-            // edit profile dialog id to use
-            var editProfileDlg = $(this).attr('data-editDialog');
-            var gridId = $(this).attr('id');
+            $(this).find("*[data-action=add]").off('click');
+            $(this).find(".command-edit").off('click');
+            $(this).find(".command-delete").off('click');
+            $(this).find("*[data-action=deleteSelected]").off('click')
 
             // link Add new to child button with data-action = add
             $(this).find("*[data-action=add]").click(function () {
                 if (gridProfileParams['get'] !== undefined && gridProfileParams['add'] !== undefined) {
                     var urlMap = {};
-                    urlMap['frm_' + editProfileDlg] = gridProfileParams['get'];
+                    urlMap['frm_' + 'DialogProfile'] = gridProfileParams['get'];
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
                         formatTokenizersUI();
                         $('.selectpicker').selectpicker('refresh');
                         // clear validation errors (if any)
-                        clearFormValidation('frm_' + editProfileDlg);
+                        clearFormValidation('frm_' + 'DialogProfile');
                     });
 
-                    $('#' + editProfileDlg).modal({backdrop: 'static', keyboard: false});
+                    $('#' + 'DialogProfile').modal({backdrop: 'static', keyboard: false});
                     //
-                    $("#btn_" + editProfileDlg + "_save").unbind('click').click(function () {
+                    $("#btn_" + 'DialogProfile' + "_save").unbind('click').click(function () {
                         saveFormToEndpoint(url = gridProfileParams['add'],
-                            formid = 'frm_' + editProfileDlg, callback_ok = function () {
-                                $("#" + editProfileDlg).modal('hide');
-                                $("#" + gridId).bootgrid("reload");
+                            formid = 'frm_' + 'DialogProfile', callback_ok = function () {
+                                $("#" + 'DialogProfile').modal('hide');
+                                gridProfileOptions.bootgrid("reload");
                             }, true);
                     });
                 } else {
@@ -654,7 +674,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     ') }}', function () {
                         ajaxCall(url = '/api/opncell/profile/deleteProfile/' + uuid, sendData = {}, callback = function (data, status) {
                             updateServiceControlUI('opncell');
-                            $("#grid-profile-list").bootgrid('reload');
+                            gridProfileOptions.bootgrid('reload');
                         });
                     }
                 )
@@ -677,26 +697,27 @@ POSSIBILITY OF SUCH DAMAGE.
                     let uuid = $(this).data("row-id");
                     var count = $(this).data("row-count");
                     let urlMap = {};
-                    urlMap['frm_' + editDlg] = gridProfileParams['get'] + uuid;   //pass the uuid of the row of interest
+                    urlMap['frm_' + 'DialogProfile'] = gridProfileParams['get'] + uuid;   //pass the uuid of the row of interest
                     mapDataToFormUI(urlMap).done(function () {
                         // update selectors
                         formatTokenizersUI();
                         $('.selectpicker').selectpicker('refresh');
                         // clear validation errors (if any)
-                        clearFormValidation('frm_' + editDlg);
+                        clearFormValidation('frm_' + 'DialogProfile');
                     });
                     updateServiceControlUI('opncell')
                     // show dialog for pipe edit
-                    $('#' + editDlg).modal({backdrop: 'static', keyboard: false});
+                    $('#' + 'DialogProfile').modal({backdrop: 'static', keyboard: false});
                     // define save action
-                    $("#btn_" + editDlg + "_save").unbind('click').click(function () {
+                    $("#btn_" + 'DialogProfile' + "_save").unbind('click').click(function () {
                         console.log("clicked")
                         if (gridProfileParams['set'] !== undefined) {
                             saveFormToEndpoint(url = gridProfileParams['set'] + uuid,
-                                formid = 'frm_' + editDlg, callback_ok = function (data,status) {
-                                console.log(data)
-                                    $("#" + editDlg).modal('hide');
-                                    std_bootgrid_reload(gridId);
+                                formid = 'frm_' + 'DialogProfile', callback_ok = function (data,status) {
+                                    console.log(data)
+                                    $("#" + 'DialogProfile').modal('hide');
+                                    gridProfileOptions.bootgrid('reload');
+                                    // std_bootgrid_reload(gridId);
                                 }, true);
                         } else {
                             console.log("[grid] action set missing")
@@ -708,27 +729,6 @@ POSSIBILITY OF SUCH DAMAGE.
             });
 
         });
-
-        /**
-         * Delete multiple Profiles at once
-         */
-        $("#grid-profile-list").bootgrid(gridProfileOptions).on("loaded.rs.jquery.bootgrid", function (e) {
-            // toggle all rendered tooltips (once for all)
-            $('.bootgrid-tooltip').tooltip();
-
-            // scale footer on resize
-            $(this).find("tfoot td:first-child").attr('colspan', $(this).find("th").length - 1);
-            $(this).find('tr[data-row-id]').each(function () {
-                if ($(this).find('[class*="command-toggle"]').first().data("value") === "0") {
-                    $(this).addClass("text-muted");
-                }
-            });
-
-            // edit dialog id to use
-            let gridId = $(this).attr('id');
-
-        });
-
 
     });
 

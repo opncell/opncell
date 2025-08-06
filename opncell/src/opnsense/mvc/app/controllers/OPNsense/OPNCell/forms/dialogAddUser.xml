@@ -4,10 +4,10 @@
     <type>header</type>
 </field>
 <field>
-    <id>user.imsi</id>
-    <label>IMSI</label>
-    <type>text</type>
-    <allownew>true</allownew>
+        <id>user.imsi</id>
+        <label>IMSI</label>
+        <type>text</type>
+        <allownew>true</allownew>
 </field>
 
 <field>

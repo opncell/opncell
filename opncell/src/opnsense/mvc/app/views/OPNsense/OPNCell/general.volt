@@ -28,6 +28,110 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #}
 
+
+
+<!-- Navigation bar -->
+<ul class="nav nav-tabs" data-tabs="tabs" id="maintabs">
+    <li class="active"><a data-toggle="tab" href="#networks">{{ lang._('Network') }}</a></li>
+    <li id="configTab"><a data-toggle="tab" href="#other-configs">{{ lang._('Configurations') }}</a></li>
+    <li id="licenseTab"><a data-toggle="tab" href="#license">{{ lang._('License') }}</a></li>
+</ul>
+
+<div class="tab-content content-box tab-content">
+    <div id="networks" class="tab-pane fade in active">
+        <div class="content-box" style="padding-bottom: 1.7em;">
+            <div class="row __mt">
+                <div class="col-md-12 __ml ">
+                    <b class="__mb">{{ lang._('Select a Network ') }}:</b>
+                    <form onChange="confirmNetworkChange()">
+                        <div class="btn-group btn-group-s __mb" data-toggle="buttons">
+                            <label id="enablefour" class="btn btn-default">
+                                <input type="radio" id="fourg" name="network" value="enablefour"
+                                       data-label="enablefour"/>
+                                {{ lang._('4G') }}
+                            </label>&nbsp;&nbsp;
+
+                            <label id="enablefiveSA" class="btn btn-default">
+                                <input type="radio" id="fivegsa" name="network" value="enablefiveSA"
+                                       data-label="enablefiveSA"/> {{ lang._('5G')
+                                }}
+                            </label>
+                            <label id="enablefiveNSA" class="btn btn-default">
+                                <input type="radio" id="fivegnsa" name="network" value="enablefiveNSA"
+                                       data-label="enablefiveNSA"/> {{
+                                lang._('5G NSA') }}
+                            </label>
+                            <label id="enableupf" class="btn btn-default">
+                                <input type="radio" id="upf" name="network" value="enableupf"
+                                       data-label="enableupf"/>
+                                {{ lang._('UPF') }}
+                            </label>&nbsp;&nbsp;
+                        </div>
+                    </form>
+                    {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_general_settings'])}}
+                </div>
+            </div>
+
+            <div class="col-md-12 __mt">
+                <button class="btn btn-primary" style="display: none" id="saveAct_networks" type="button"><b>{{
+                    lang._('Services') }}</b> <i id="saveAct_networks_progress"></i></button>
+            </div>
+            <div class="col-md-12 __mt">
+                <button class="btn btn-primary" style="display: none" id="saveAct_configs" type="button"
+                        onClick="saveConfigurations()"><b>{{ lang._('Save') }}</b> <i id="saveAct_configs_progress"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="other-configs" class="tab-pane fade in">
+
+        <table id="grid-other-configs" class="table table-condensed table-hover table-striped table-responsive"
+               data-editDialog="DialogServiceConfig">
+            <thead>
+            <tr>
+
+                <th data-column-id="name" data-type="string" data-width="20em" data-sortable="false" data-visible="true">{{ lang._('Service') }}</th>
+                <th data-column-id="PID" data-type="string" data-sortable="false" data-visible="true">{{ lang._('PID') }}</th>
+                <th data-column-id="mme_add" data-type="string" data-sortable="false" data-visible="true">{{ lang._('bind') }}</th>
+                <th data-column-id="commands" data-formatter="commands" data-width="10em" data-sortable="false">{{ lang._('Status') }} </th>
+
+            </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+
+    <div id="license" class="tab-pane fade in">
+        <section class="col-xs-11 __mt">
+            <p>OPNcell is Copyright &copy; 2023-2025<br>All rights reserved.</p>
+            <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
+            <ol><li>Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</li>
+                <li>Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</li></ol>
+            <p>THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+                INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+                AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+                THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+                EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+                PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+                OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+                WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+                OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+                ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+
+            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2025 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
+            <p>OPNcell includes various freely available software packages and ports.
+                The incorporated third party tools are listed <a href="/ui/core/firmware#packages">here</a>.</p>
+            <p>The authors of OPNcell would like to thank all contributors for their efforts.</p>
+        </section>
+        <br/>
+    </div>
+
+
+</div>
+<hr>
 <script>
     var network = " ";
     function getVar() {
@@ -52,7 +156,7 @@ POSSIBILITY OF SUCH DAMAGE.
             btnCancelLabel: 'No',
             callback: function(result) {
                 if (result) {
-                    saveConfigurations(checkedNetwork);
+                    saveConfigurations();
                 } else {
                     // User cancelled, revert selection
                     $('input[name="network"][value="' + checkedNetwork + '"]').prop('checked', true);
@@ -61,7 +165,8 @@ POSSIBILITY OF SUCH DAMAGE.
         });
     }
 
-    function saveConfigurations(checkedNetwork) {
+    function saveConfigurations() {
+        let checkedNetwork = getVar()
         console.log(checkedNetwork)
         BootstrapDialog.show({
             type:BootstrapDialog.TYPE_INFO,
@@ -77,24 +182,20 @@ POSSIBILITY OF SUCH DAMAGE.
 
                 );
 
-
                 saveFormToEndpoint(url="/api/opncell/service/set/" + checkedNetwork, formid='frm_general_settings', callback_ok = function () {
 
                     $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
-                    // if (status) {
                     ajaxCall(url = "/api/opncell/service/reconfigureAct/" + checkedNetwork,
                         sendData = {},
                         callback = function (data, status) {
-                        updateServiceControlUI('opncell');
+                            updateServiceControlUI('opncell');
 
-                        $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
-                        dialogRef.close()
+                            $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
+                            dialogRef.close()
 
-                    });
-                    // }
+                        });
 
                 }, true);
-
 
             },
         });
@@ -213,50 +314,53 @@ POSSIBILITY OF SUCH DAMAGE.
 
         let noEdit = ['sgwcd','pcrfd','mongod','hssd'];
 
-        let gridOtherConfigs = {
+        let gridOtherConfigs = $("#grid-other-configs").UIBootgrid({
             ajax: true,
             selection: true,
             multiSelect: true,
             rowCount: [10, 25, 50, 100, 500, 1000],
-            url: '/api/opncell/general/startedServices/' + getVar(),
-            formatters: {
-                "commands": function (column, row) {
-                    if(row.status === "running"){
-                        if(!(noEdit.includes(row.serviceName))){
+            search: '/api/opncell/general/startedServices/' + getVar(),
+            options: {
+                formatters: {
+                    "commands": function (column, row) {
+                        if (row.status === "running") {
+                            if (!(noEdit.includes(row.serviceName))) {
+                                return "<button type=\"button\" title=\"{{ lang._('start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                    "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
+                            } else {
+                                return "<button type=\"button\" title=\"{{ lang._('start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                    "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>";
+                            }
+
+                        } else if (row.status === "stopped" || row.status === "disabled" || row.PID === "Stopped") {
+                            if (!(noEdit.includes(row.serviceName))) {
+                                return "<button type=\"button\" title=\"{{ lang._('Running') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                    "<button type=\"button\" title=\"{{ lang._('Stop') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
+
+                            } else {
+                                return "<button type=\"button\" title=\"{{ lang._('Running') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                    "<button type=\"button\" title=\"{{ lang._('Stop') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
+                                    "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>";
+                            }
+
+                        } else if (row.status === "unknown") {
                             return "<button type=\"button\" title=\"{{ lang._('start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
-                                "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
-                                "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
-                                "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
-                                "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
-                        } else {
-                            return "<button type=\"button\" title=\"{{ lang._('start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
-                                "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
-                                "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
-                                "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" ;
+                                "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>" +
+                                "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>";
+                            // "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
+
                         }
-
-                    }else if(row.status === "stopped" || row.status === "disabled" || row.PID === "Stopped" ){
-                        if(!(noEdit.includes(row.serviceName))){
-                            return "<button type=\"button\" title=\"{{ lang._('Running') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
-                                "<button type=\"button\" title=\"{{ lang._('Stop') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
-                                "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
-                                "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
-
-                        } else {
-                            return "<button type=\"button\" title=\"{{ lang._('Running') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
-                                "<button type=\"button\" title=\"{{ lang._('Stop') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
-                                "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>";
-                        }
-
-                    }else if(row.status === "unknown" ){
-                        return "<button type=\"button\" title=\"{{ lang._('start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
-                            "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
-                            "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" ;
-                    }
+                    },
                 },
+            };
 
-            },
-        };
         function serviceWait() {
             $.ajax({
                 url: '/ui/opncell/general#other-configs',
@@ -268,10 +372,10 @@ POSSIBILITY OF SUCH DAMAGE.
             });
         }
 
-        var tbl =  $("#grid-other-configs");
-        tbl.bootgrid(gridOtherConfigs).on("loaded.rs.jquery.bootgrid", function (e) {
+        gridOtherConfigs.on("loaded.rs.jquery.bootgrid", function (e) {
+            $(this).find(".command-editConfig").off('click');
             //start service
-            $(this).find(".command-start").on("click", function (e) {
+            gridOtherConfigs.find(".command-start").on("click", function (e) {
                 var serviceName = $(this).data("row-service");
                 console.log(serviceName)
                 BootstrapDialog.show({
@@ -303,7 +407,7 @@ POSSIBILITY OF SUCH DAMAGE.
             });
 
             // restart service
-            $(this).find(".command-restart").on("click", function (e) {
+            gridOtherConfigs.find(".command-restart").on("click", function (e) {
 
                 var serviceName = $(this).data("row-service");
                 console.log(serviceName)
@@ -315,7 +419,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding: 15px;">' +
-                            "{{ lang._('The service is restarting , please wait...') }}" +
+                            "{{ lang._('The service is restarting , please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
@@ -334,7 +438,7 @@ POSSIBILITY OF SUCH DAMAGE.
             });
 
             //  stop service
-            $(this).find(".command-stop").on("click", function (e) {
+            gridOtherConfigs.find(".command-stop").on("click", function (e) {
                 var serviceName = $(this).data("row-service");
                 console.log(serviceName)
                 BootstrapDialog.show({
@@ -344,14 +448,12 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding:15px;">' +
-                            "{{ lang._(' The service is stopping , please wait...') }}" +
+                            "{{ lang._(' The service is stopping , please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
 
                         ajaxCall(url = '/api/opncell/service/stop/' + serviceName, sendData = {}, callback = function (data, status) {
-                            console.log(status)
-                            console.log(data)
 
                             dialogRef.close()
 
@@ -364,7 +466,7 @@ POSSIBILITY OF SUCH DAMAGE.
             });
 
             //  fetch log file
-            $(this).find(".command-logfile").on("click", function (e) {
+            gridOtherConfigs.find(".command-logfile").on("click", function (e) {
                 var serviceName = $(this).data("row-service");
                 console.log(serviceName)
                 let strippedServiceName = serviceName.slice(0,-1)    //remove the trailing 'd' mmed -> mme
@@ -376,35 +478,34 @@ POSSIBILITY OF SUCH DAMAGE.
             // edit service config
             const editDlg = $(this).attr('data-editDialog');
 
-            $(this).find(".command-editConfig").on("click", function (e) {
+            gridOtherConfigs.find(".command-editConfig").on("click", function (e) {
                 // edit dialog id to use
-                console.log(editDlg)
+
                 const gridId = $(this).attr('id');
 
-                if (editDlg !== undefined ) {
+                // if (editDlg !== undefined ) {
                     let pid = $(this).data("row-pid");
                     let server = $(this).data("row-service");
                     console.log(server,pid)
                     let y = [server]
                     y.push(pid)
 
-                    $('#' + editDlg).modal({backdrop: 'static', keyboard: false});
+                    $('#' + 'DialogServiceConfig').modal({backdrop: 'static', keyboard: false});
                     let inputElement = document.getElementById("addr")
                     // define save action
-                    $("#btn_" + editDlg + "_save").unbind('click').click(function () {
+                    $("#btn_" + 'DialogServiceConfig' + "_save").unbind('click').click(function () {
                         console.log("clicked")
                         let v = inputElement.value
                         y.push(v)
                         ajaxCall(url = "/api/opncell/general/editServerConfig/" + y , sendData = {}, callback = function (data, status) {
-                            $("#" + editDlg).modal('hide');
-                            std_bootgrid_reload(gridId);
-                            $('#grid-other-configs').bootgrid('reload')
+                            $("#" + 'DialogServiceConfig').modal('hide');
+                            gridOtherConfigs.bootgrid('reload')
                         });
 
                     });
-                } else {
-                    console.log("[grid] action get or data-editDialog missing")
-                }
+                // } else {
+                //     console.log("[grid] action get or data-editDialog missing")
+                // }
             });
 
         });
@@ -432,106 +533,4 @@ POSSIBILITY OF SUCH DAMAGE.
 
 
 </script>
-
-<!-- Navigation bar -->
-<ul class="nav nav-tabs" data-tabs="tabs" id="maintabs">
-    <li class="active"><a data-toggle="tab" href="#networks">{{ lang._('Network') }}</a></li>
-    <li id="configTab"><a data-toggle="tab" href="#other-configs">{{ lang._('Configurations') }}</a></li>
-    <li id="licenseTab"><a data-toggle="tab" href="#license">{{ lang._('License') }}</a></li>
-</ul>
-
-<div class="tab-content content-box tab-content">
-    <div id="networks" class="tab-pane fade in active">
-        <div class="content-box" style="padding-bottom: 1.7em;">
-            <div class="row __mt">
-                <div class="col-md-12 __ml ">
-                    <b class="__mb">{{ lang._('Select a Network') }}:</b>
-                    <form onChange="confirmNetworkChange()">
-                        <div class="btn-group btn-group-s __mb" data-toggle="buttons">
-                            <label id="enablefour" class="btn btn-default">
-                                <input type="radio" id="fourg" name="network" value="enablefour"
-                                       data-label="enablefour"/>
-                                {{ lang._('4G') }}
-                            </label>&nbsp;&nbsp;
-
-                            <label id="enablefiveSA" class="btn btn-default">
-                                <input type="radio" id="fivegsa" name="network" value="enablefiveSA"
-                                       data-label="enablefiveSA"/> {{ lang._('5G')
-                                }}
-                            </label>
-                            <label id="enablefiveNSA" class="btn btn-default">
-                                <input type="radio" id="fivegnsa" name="network" value="enablefiveNSA"
-                                       data-label="enablefiveNSA"/> {{
-                                lang._('5G NSA') }}
-                            </label>
-                            <label id="enableupf" class="btn btn-default">
-                                <input type="radio" id="upf" name="network" value="enableupf"
-                                       data-label="enableupf"/>
-                                {{ lang._('UPF') }}
-                            </label>&nbsp;
-
-                        </div>
-                    </form>
-                    {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_general_settings'])}}
-                </div>
-            </div>
-
-            <div class="col-md-12 __mt">
-                <button class="btn btn-primary" style="display: none" id="saveAct_networks" type="button"><b>{{
-                    lang._('Services') }}</b> <i id="saveAct_networks_progress"></i></button>
-            </div>
-            <div class="col-md-12 __mt">
-                <button class="btn btn-primary" style="display: none" id="saveAct_configs" type="button"
-                        onClick="saveConfigurations()"><b>{{ lang._('Save') }}</b> <i id="saveAct_configs_progress"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="other-configs" class="tab-pane fade in">
-        {{ partial("layout_partials/base_dialog",['fields':formDialogConfigs,'id':'DialogOtherconfigs','label':lang._('Configurations:'),'hasSaveBtn':'true'])}}
-        <table id="grid-other-configs" class="table table-condensed table-hover table-striped table-responsive"
-               data-editDialog="DialogServiceConfig">
-            <thead>
-            <tr>
-
-                <th data-column-id="name" data-type="string" data-width="20em" data-sortable="false" data-visible="true">{{ lang._('Service') }}</th>
-                <th data-column-id="PID" data-type="string" data-sortable="false" data-visible="true">{{ lang._('PID') }}</th>
-                <th data-column-id="mme_add" data-type="string" data-sortable="false" data-visible="true">{{ lang._('bind') }}</th>
-                <th data-column-id="commands" data-formatter="commands" data-sortable="false">{{ lang._('Status') }} </th>
-
-            </tr>
-            </thead>
-            <tbody>
-
-            </tbody>
-        </table>
-    </div>
-    <div id="license" class="tab-pane fade in">
-        <section class="col-xs-11 __mt">
-            <p>OPNcell is Copyright &copy; 2023-2025<br>All rights reserved.</p>
-            <p>Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:</p>
-            <ol><li>Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</li>
-                <li>Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</li></ol>
-            <p>THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-                INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
-                AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-                THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-                EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-                PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-                OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-                WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-                OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-                ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
-
-            <p>OPNcell uses <a href="https://github.com/open5gs/open5gs" target="_blank">Open5gs&reg;</a> <small>(Copyright &copy; 2019-2025 by Sukchan Lee, acetcom@gmail.com. All rights reserved.)</small></p>
-            <p>OPNcell includes various freely available software packages and ports.
-                The incorporated third party tools are listed <a href="/ui/core/firmware#packages">here</a>.</p>
-            <p>The authors of OPNcell would like to thank all contributors for their efforts.</p>
-        </section>
-        <br/>
-    </div>
-
-</div>
-<hr>
 {{ partial("layout_partials/base_dialog",['fields':formDialogEditServiceConfig,'id':'DialogServiceConfig','label':lang._('Change Server Config:'),'hasSaveBtn':'true'])}}

@@ -247,7 +247,7 @@ class GeneralController extends ApiMutableModelControllerBase
 
         $filteredResult = $this->filterResults($result, $searchPhrase);
         $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
-
+//        return $filteredResult;
         return [
             'total' => count($filteredResult),
             'rowCount' => $itemsPerPage,
