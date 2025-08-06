@@ -358,10 +358,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
                         }
                     },
+                },
+            };
 
-                }
-            }
-        });
         function serviceWait() {
             $.ajax({
                 url: '/ui/opncell/general#other-configs',
@@ -386,7 +385,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding: 15px;">' +
-                            "{{ lang._(' The service is starting, please wait ...') }}" +
+                            "{{ lang._('The service is starting, please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
