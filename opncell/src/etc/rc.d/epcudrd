@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # PROVIDE: epcudrd
+# REQUIRE: mongod
 # KEYWORD: shutdown
 
 . /etc/rc.subr
