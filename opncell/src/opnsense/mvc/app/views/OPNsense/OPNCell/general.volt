@@ -252,8 +252,6 @@ POSSIBILITY OF SUCH DAMAGE.
                         return "<button type=\"button\" title=\"{{ lang._('start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-success command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
                             "<button type=\"button\" title=\"{{ lang._('Restart service') }}\" class=\"btn btn-xs btn-default command-restart\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-repeat fa-fw\"></span></button>"+
                             "<button type=\"button\" title=\"{{ lang._('Stop service') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" ;
-                        // "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
-
                     }
                 },
 
@@ -283,7 +281,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     onshow: function(dialogRef){
                         dialogRef.getModalBody().html(
                             '<div style="padding: 15px;">' +
-                            "{{ lang._(' The service is starting, please wait...') }}" +
+                            "{{ lang._('The service is starting, please wait ...') }}" +
                             ' <i class="fa fa-cog fa-spin"></i>' +
                             '</div>'
                         );
