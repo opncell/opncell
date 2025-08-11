@@ -163,6 +163,7 @@ class GeneralController extends ApiMutableModelControllerBase
         'bsf' => 'Binding Support Function',
         'mongo' => 'Mongo DB',
         'udr' => 'Unified Data Repository',
+        'SEPP' => 'Security Edge Protection Proxy'
     ];
 
     private array $bindAddress = [

@@ -149,7 +149,7 @@ if len(sys.argv) > 1:
 
     def configureProcess(process_name, pid, name):
 
-        configurable_fivesa_services = ['amf']
+        configurable_fivesa_services = ['amf','upf','nrf']
         configurable_four_services = ['mme', 'sgwu']
         configurable_upf_services = ['upf', 'amf']   # TODO: Check out what services are in upf
 
