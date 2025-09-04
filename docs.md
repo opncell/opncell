@@ -256,4 +256,4 @@ All log files in OPNcell for the different services can be found under the **Dia
 
 ## Uninstalling OPNcell
 
-To uninstall the package, run pkg install os-cellular-devel in the console.
+To uninstall the package, run pkg remove os-cellular-devel in the console.
