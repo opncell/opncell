@@ -108,11 +108,7 @@ class ServiceController extends ApiControllerBase
             "enableudmd" => "udmd", "enableudrd" => "udrd", "enablepcfd" => "pcfd",
             "enablenssfd" => "nssfd", "enablebsfd" => "bsfd","enablesepp" =>"sepp"
         ],
-        'enableupf' => [
-            "enableamfd" => "amfd", "enablesmfd" => "smfd", "enableupfd" => "upfd", "enableausfd" => "ausfd",
-            "enableudmd" => "udmd", "enableudrd" => "udrd", "enablepcfd" => "pcfd",
-            "enablenssfd" => "nssfd"
-        ]
+        'enableupf' => ["enableupfd" => "upfd"]
     ];
 
     private function manageNetworkServices($network): array
