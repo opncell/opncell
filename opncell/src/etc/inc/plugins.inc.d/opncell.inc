@@ -35,13 +35,13 @@ function fourG_enabled(): bool
     return $model->enablefour->__toString() == "1";
 }
 
-function fiveGSA_enabled(): bool
+function fiveG_enabled(): bool
 {
     $model = new General();
     return $model->enablefiveSA->__toString() == "1";
 }
 
-function fiveGNSA_enabled(): bool
+function NSA_enabled(): bool
 {
     $model = new General();
     return $model->enablefiveNSA->__toString() == "1";
@@ -89,12 +89,12 @@ function opncell_services():array
 
     if (fourG_enabled()) {
         $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf','scp','nrf','mongo');
-    } elseif (fiveGSA_enabled()) {
+    } elseif (fiveG_enabled()) {
         $serviceTypes = array('nrf','scp','amf','smf','upf','ausf', 'udm', 'udr', 'pcf',  'nssf', 'bsf','mongo');
-    } elseif (fiveGNSA_enabled()) {
+    } elseif (NSA_enabled()) {
         $serviceTypes = array('mme', 'hss', 'pcrf', 'sgwu','sgwc','smf','upf','scp','nrf','mongo');
     } elseif (upf_enabled()) {
-        $serviceTypes = array('amf', 'smf', 'upf', 'udm','nssf','udr','pcf', 'ausf','mongo');
+        $serviceTypes = array('upf','mongo');
     } else {
         return $services;
     }
