@@ -139,7 +139,7 @@ Log files are located in /var/log/opncell and can be easily tailed "tail -fn 200
 
 ## Uninstalling OPNcell.
 
-To uninstall the package, run "pkg remove os-cellular-devel" in the console.
+To uninstall the package, run "pkg remove os-cellular" in the console.
 
 ## Sponsors
 
