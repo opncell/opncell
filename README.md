@@ -34,7 +34,6 @@ The Open5GS 5G SA Core contains the following functions: <br>
 
 With the exception of the SMF and UPF, all configuration files for the 5G SA core functions only contain the function’s IP bind addresses/ local Interface names and the IP address/ DNS name of the NRF.
 > [!TIP]
-> TL;DR.
 > A more in depth run through of roles of each function within a core can be found [here](docs.md)
 
 ## What is OPNsense
