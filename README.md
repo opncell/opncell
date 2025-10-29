@@ -55,7 +55,7 @@ This establishes the repository holding the cellular package installer, includin
 
 ## Getting into it!
 
-Once you have the repo set up on your host instance, you can proceed to install the package by simply running<br><br> `pkg install os-cellular-devel` <br>
+Once you have the repo set up on your host instance, you can proceed to install the package by simply running<br><br> `pkg install os-cellular` <br>
 
 All Open5GS services are set to communicate with each other using the local loopback address space (127.0.0.X). This allows a user to have all services necessary to set up any given network core on a single computer without the need to have multiple computers to accommodate all the different components.The default addresses for each of the bind interfaces for these components and functions are as follows:
 
