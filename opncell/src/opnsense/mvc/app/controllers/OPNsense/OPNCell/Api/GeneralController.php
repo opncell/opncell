@@ -238,7 +238,7 @@ class GeneralController extends ApiMutableModelControllerBase
 
     public function startedServicesAction($network): array
     {
-        $this->sessionClose();
+//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
         $result = $this->getProcessNamesAction($network);
         $this->request = new Request();
         $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
