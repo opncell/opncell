@@ -75,7 +75,7 @@ class BulkController extends ApiMutableModelControllerBase
 
     public function getAction($uuid = null): array
     {
-        $this->sessionClose();
+//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
 
         return $this->getBase('bulk', 'bulks.bulk', $uuid);
     }
