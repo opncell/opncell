@@ -143,7 +143,7 @@ class ServiceController extends ApiControllerBase
     public function reconfigureActAction($network)
     {
         if ($this->request->isPost()) {
-            $this->sessionClose();
+//            $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
             (new GeneralController)->setNetwork($network);
             $backend = new Backend();
             $backend->configdRun('mongod start');
