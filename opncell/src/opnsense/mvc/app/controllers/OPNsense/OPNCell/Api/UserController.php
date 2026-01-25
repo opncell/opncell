@@ -202,7 +202,7 @@ class UserController extends ApiMutableModelControllerBase
 
     public function getSubAction($uuid = null): array
     {
-        $this->sessionClose();
+//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
 
         return $this->getBase('user', 'users.user', $uuid);
     }
@@ -212,7 +212,7 @@ class UserController extends ApiMutableModelControllerBase
      */
     public function editSubAction($uuid): array
     {
-        $this->sessionClose();
+//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
         $profile_uuid = null;
         $user_array = $this->getBase('user', 'users.user', $uuid);
         foreach ($user_array as $user_record) {
