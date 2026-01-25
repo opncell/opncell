@@ -155,7 +155,7 @@ class ProfileController extends ApiMutableModelControllerBase
      */
     public function getProfileAction($uuid = null): array
     {
-        $this->sessionClose();
+//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
         return $this->getBase('profile', 'profiles.profile', $uuid);
     }
 
@@ -164,7 +164,7 @@ class ProfileController extends ApiMutableModelControllerBase
      */
     public function editProfileAction($uuid = null): array
     {
-        $this->sessionClose();
+//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
         return $this->getBase('profile', 'profiles.profile', $uuid);
     }
 
