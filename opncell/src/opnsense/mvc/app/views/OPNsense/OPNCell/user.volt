@@ -1,7 +1,7 @@
 {#
 
-Copyright (C) 2023 Digital Solutions
-Copyright (C) 2023 Wire lab
+Copyright (C) 2026 Digital Solutions
+Copyright (C) 2026 Wireless Laboratories, Inc
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
