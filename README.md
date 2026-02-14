@@ -1,15 +1,15 @@
 ## What is OPNcell
   OPNcell is a native plugin for [OPNsense](https://opnsense.org/) that adds standalone 4G LTE or 5G NR core signalling network capabilities.
-  The plugin offers 4G or 5G SA (Stand Alone) interoperability, NSA (Non Stand Alone supporting both 4G gNB and 5G gNB radios) as well as UPF (PGW) deployment (where strategicaly necessary) services to OPNsense using open5gs's 3GPP Release 17 open source [Open5Gs](https://open5gs.org/open5gs/docs/) core software. By
-  combining advanced deep packet filtering &amp; management with 4G/5G capability, OPNcell offers a complete FOSS solution for Enterprise, Government, Community and Private Cellular network deployments.  The entire code base is feeely available for audit with a certified compliant distribution as an available option.
+  The plugin offers 4G or 5G SA (Stand Alone) interoperability, NSA (Non Stand Alone supporting both 4G eNB and 5G gNB radios) as well as UPF (PGW) deployment (where strategicaly necessary) services into OPNsense using open5gs's 3GPP Release 17+ open source [Open5Gs](https://open5gs.org/open5gs/docs/) core software. By
+  combining advanced deep packet filtering &amp; management with 4G/5G capability, OPNcell offers a complete FOSS solution for Enterprise, Government, Military, Community and Private Cellular network deployments.  The entire code base is feeely available for audit with a certified compliant distribution as an available option.
 
 ## What is Open5Gs
  
-[Open5Gs](href="https://open5gs.org/open5gs/docs) is a C-language Open Source implementation of 5GC and EPC, i.e. the core network of NR/LTE network. Open5GS natively supports 4G/5G Standalone mode as well as non-standalone (supporting both 4G and 5G).
+[Open5Gs](href="https://open5gs.org/open5gs/docs) is a C-language Open Source implementation of 5GC and EPC, i.e. the core network of NR/LTE network. Open5GS natively supports 4G/5G Standalone mode as well as non-standalone (supporting both 4G and 5G radios).
 ## 4G/5G NSA
 The Open5GS 4G/ 5G NSA Core contains the following components:<br>
-* MME - Mobility Management Entity
-* HSS - Home Subscriber Server
+* MME  - Mobility Management Entity
+* HSS  - Home Subscriber Server
 * PCRF - Policy and Charging Rules Function
 * SGWC - Serving Gateway Control Plane<br>
 * SGWU - Serving Gateway User Plane<br>
@@ -19,18 +19,18 @@ The Open5GS 4G/ 5G NSA Core contains the following components:<br>
 All of these Open5GS components have configuration files. Each file contains the component’s IP bind addresses/ local Interface names and the IP addresses/ DNS names of the other components it needs to connect to.
 ## 5G SA Core
 The Open5GS 5G SA Core contains the following functions: <br>
-* NRF - NF Repository Function 
-* SCP - Service Communication Proxy
+* NRF  - NF Repository Function 
+* SCP  - Service Communication Proxy
 * SEPP - Security Edge Protection Proxy
-* AMF - Access and Mobility Management Function
-* SMF - Session Management Function
-* UPF - User Plane Function
+* AMF  - Access and Mobility Management Function
+* SMF  - Session Management Function
+* UPF  - User Plane Function
 * AUSF - Authentication Server Function
-* UDM - Unified Data Management
-* UDR - Unified Data Repository
-* PCF - Policy and Charging Function
+* UDM  - Unified Data Management
+* UDR  - Unified Data Repository
+* PCF  - Policy and Charging Function
 * NSSF - Network Slice Selection Function
-* BSF - Binding Support Function <br>
+* BSF  - Binding Support Function <br>
 
 With the exception of the SMF and UPF, all configuration files for the 5G SA core functions only contain the function’s IP bind addresses/ local Interface names and the IP address/ DNS name of the NRF.
 > [!TIP]
@@ -38,7 +38,7 @@ With the exception of the SMF and UPF, all configuration files for the 5G SA cor
 
 ## What is OPNsense
 
-[OPNsense](https://opnsense.org/) is a mature popular open source, FreeBSD-based firewall, intrusion-detection, routing & packet filtering system.<br>
+[OPNsense](https://opnsense.org/) is a mature and popular open source, FreeBSD-based firewall, intrusion-detection, routing & packet filtering system.<br>
 OPNsense offers a variety of pros which compelled the decision to build OPNcell behind the firewall. These include;<br>
 * It is free to use with no licensing fees, reducing overall cost for network set up.
 * Intuitive and easy-to-use web-based interface which simplifies management and configuration.
