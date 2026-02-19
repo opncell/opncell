@@ -15,17 +15,18 @@
     </field>
 
     <field>
-        <id>profile.sst</id>
-        <label>Slice/Service Type</label>
-        <type>text</type>
-    </field>
-    <field>
         <id>profile.apn</id>
         <label>APN</label>
         <type>text</type>
         <allownew>true</allownew>
         <help>Set the name of the apn associated with the UE</help>
         <hint>The default value is internet.</hint>
+    </field>
+    <field>
+        <id>profile.sst</id>
+        <label>Slice/Service Type</label>
+        <type>text</type>
+        <help>Set the Slice Service Type (SST)</help>
     </field>
     <field>
         <label>AMBR-Speed Specifications</label>
@@ -37,7 +38,7 @@
         <type>text</type>
         <allownew>true</allownew>
         <hint>In megabytes.</hint>
-        <help>Download speed.</help>
+        <help>Maximum Download speed.</help>
     </field>
     <field>
         <id>profile.ul</id>
@@ -45,7 +46,7 @@
         <type>text</type>
         <allownew>true</allownew>
         <hint>In megabytes</hint>
-        <help>Upload speed.</help>
+        <help>Maximum Upload speed.</help>
     </field>
 <!--    <field>-->
 <!--        <id>profile.dl</id>-->
