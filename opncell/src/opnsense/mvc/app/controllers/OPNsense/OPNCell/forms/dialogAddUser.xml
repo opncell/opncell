@@ -8,30 +8,33 @@
         <label>IMSI</label>
         <type>text</type>
         <allownew>true</allownew>
+        <help>Enter the International Subscriber Identity (IMSI).</help>
 </field>
 
 <field>
     <id>user.ki</id>
     <label>Subscriber Key</label>
     <type>text</type>
-    <help>Subscriber Key for how the UE connects to a network.</help>
+    <help>Enter the Ki Key associated with the IMSI.</help>
 </field>
 <field>
     <id>user.opc</id>
     <label>OPc</label>
     <type>text</type>
+    <help>Enter the OPc Key associated with the IMSI.</help>
 </field>
     <field>
         <id>user.ip</id>
         <label>IP</label>
         <type>text</type>
+        <help>Optionally enter a persistent IP from the UE pool.</help>
     </field>
 <field>
     <id>user.profile</id>
     <label>Profile</label>
     <style>tokenize</style>
     <type>select_multiple</type>
-    <help>Define the profile to be associated with the user.</help>
+    <help>Define the profile (APN) to be associated with the IMSI.</help>
 </field>
 
 </form>
