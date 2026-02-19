@@ -8,18 +8,20 @@
         <label>IMSI</label>
         <type>text</type>
         <allownew>true</allownew>
+        <help>International Mobile Subscriber Identity (IMSI).</help>
     </field>
 
     <field>
         <id>user.ki</id>
         <label>Subscriber Key</label>
         <type>text</type>
-        <help>Subscriber Key for how the UE connects to a network.</help>
+        <help>Subscriber Ki Key for how the UE connects to a network.</help>
     </field>
     <field>
         <id>user.opc</id>
         <label>OPc</label>
         <type>text</type>
+        <help>Subscriber OPc Key for how the UE connects to a network.</help>
     </field>
     <field>
         <id>user.profile</id>
