@@ -4,64 +4,73 @@
             <label>MCC</label>
             <type>text</type>
             <allownew>true</allownew>
+            <help>Define the Mobile Country Code (MCC) for the network.</help>
         </field>
         <field>
             <id>general.mnc</id>
             <label>MNC</label>
             <type>text</type>
             <allownew>true</allownew>
+            <help>Define the Mobile Network Code (MNC) for the network.</help>
         </field>
         <field>
             <id>general.tac</id>
             <label>TAC</label>
             <type>text</type>
+            <help>Define the Tracking Area Code (TAC) for the network.</help>    
         </field>
         <field>
             <id>general.network_name</id>
             <label>Network Name</label>
             <type>text</type>
+            <help>Define the Service Provider Name (SPN) for the network.</help>
         </field>
         <field>
             <id>general.sst</id>
             <label>Slice/Service Type</label>
             <type>text</type>
+            <help>Define the Slice/Service Type (SST) for the network.</help>    
         </field>
         <field>
             <id>general.s1ap</id>
             <label>s1ap</label>
             <type>text</type>
+            Define the S1AP or N3 IP address to bind to the MME or AMF service.</help>
         </field>
     <field>
         <id>general.ue</id>
         <label>ue</label>
         <type>text</type>
+        <help>Define the max number of UEs (User Equipment) supported by the network.</help>
     </field>
     <field>
         <id>general.peer</id>
         <label>Peer</label>
         <type>text</type>
+        <help>Define the max number of eNB or gNB hosted radios.</help>
     </field>
     <field>
         <id>general.enablefour</id>
         <label>4G</label>
         <type>checkbox</type>
+        <help>Enable 4G SA provisioning for the network.</help>
     </field>
     <field>
         <id>general.enablefiveSA</id>
         <label>5G</label>
         <type>checkbox</type>
+        <help>Enable 5G SA provisioning for the network.</help>
     </field>
     <field>
         <id>general.enablefiveNSA</id>
         <label>5G NSA</label>
         <type>checkbox</type>
+        <help>Enable 5G NSA provisioning for the network.</help>
     </field>
     <field>
         <id>general.enableupf</id>
         <label>UPF</label>
         <type>checkbox</type>
+        <help>Enable just UPF provisioning for the network.</help>
     </field>
-
-
-
 </form>
