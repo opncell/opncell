@@ -100,7 +100,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 {{ lang._('Subscriber not added') }}<br>
             </div>
             <div id="Error" class="alert alert-dismissible alert-info" style="display: none" role="alert">
-                {{ lang._('An Error occurred. Check if the db is up and running, then try again.') }}<br>
+                {{ lang._('A db Error occured. Check if the db is up and running, then try again.') }}<br>
             </div>
             <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
                 {{ lang._('Subscriber added.') }}<br>
@@ -146,7 +146,7 @@ POSSIBILITY OF SUCH DAMAGE.
 <!--                            class="fa fa-trash-o"></span></button>-->
 <!--                </td>-->
                 <td>
-                    <button data-action="add" type="button" class="btn btn-xs btn-default"><span
+                    <button type="button" class="btn btn-xs btn-default command-add"><span
                             class="fa fa-plus"></span></button>
                 </td>
 
@@ -175,7 +175,7 @@ POSSIBILITY OF SUCH DAMAGE.
             <tr>
                 <td></td>
                 <td>
-                    <button data-action="add" type="button" class="btn btn-xs btn-default"><span
+                    <button type="button" class="btn btn-xs btn-default command-add"><span
                             class="fa fa-plus"></span></button>
                 </td>
             </tr>
@@ -234,7 +234,7 @@ POSSIBILITY OF SUCH DAMAGE.
     function fadeOut(strings) {
         setTimeout(function() {
             $(strings).fadeOut("slow");
-        }, 3000);
+        }, 5000);
 
     }
 
@@ -346,18 +346,21 @@ POSSIBILITY OF SUCH DAMAGE.
             set: '/api/opncell/user/setSub/',
             add: '/api/opncell/user/addSub/',
             del: '/api/opncell/user/deleteSub/',
+           toggle:'',
         };
 
         let gridOptions = $("#grid-user-list").UIBootgrid({
             ajax: true,
-            selection: true,
-            multiSelect: true,
+            selection: false,
+            multiSelect: false,
             rowCount: [10, 25, 50, 100, 500, 1000],
             search: '/api/opncell/user/searchSub',
             get: '/api/opncell/user/getSub/',
             set: '/api/opncell/user/setSub/',
             add: '/api/opncell/user/addSub/',
             del: '/api/opncell/user/deleteSub/',
+            toggle:'',
+
             options: {
                 formatters: {
                     "commands": function (column, row) {
@@ -370,17 +373,20 @@ POSSIBILITY OF SUCH DAMAGE.
         });
 
         /**
-         * copy actions for selected items from opnsense_bootgrid_plugin.js
+         * copy actions for selected items from opnsense_bootgrid_plugin.js User Edition
          */
         gridOptions.on("loaded.rs.jquery.bootgrid", function (e) {
 
-            $(this).find("*[data-action=add]").off('click');
+            $(this).find(".command-add").off('click');
             $(this).find(".command-edit").off('click');
             $(this).find(".command-delete").off('click');
             $(this).find("*[data-action=deleteSelected]").off('click')
+            $(this).find(".command-enable-selected").remove()
+            $(this).find(".command-disable-selected").remove()
 
             // add a new user
-            $(this).find("*[data-action=add]").on('click' ,function () {
+            $(this).find(".command-add").on('click' ,function () {
+            console.log("clicked add button")
                 if (gridParams['add'] !== undefined) {
                     var urlMap = {};
                     urlMap['frm_' + 'DialogAddUsers'] = gridParams['get'];
@@ -407,12 +413,14 @@ POSSIBILITY OF SUCH DAMAGE.
                                     $("#successfulSave").attr("style", "display:block");
                                     fadeOut("#successfulSave")
                                 } else {
-                                    $("#Error").attr("style", "display:block");
+                                    $("#Error").text("The following DB error occured: " + data.result)
+                                        .attr("style", "display:block");
                                     fadeOut("#Error")
                                 }
                             }, true);
                     });
-                } else {
+                }
+                else {
                     console.log("[grid] action add missing")
                 }
             });
@@ -587,14 +595,20 @@ POSSIBILITY OF SUCH DAMAGE.
                 set: '/api/opncell/profile/setProfile/',
                 add: '/api/opncell/profile/addProfile/',
                 del: '/api/opncell/profile/deleteProfile/',
+                toggle:'',
             };
 
         let gridProfileOptions = $("#grid-profile-list").UIBootgrid({
+            ajax: true,
+            selection: true,
+            multiSelect: false,
+            rowCount: [10, 25, 50, 100, 500, 1000],
             search: '/api/opncell/profile/searchProfile',
             get: '/api/opncell/profile/editProfile/',
             set: '/api/opncell/profile/setProfile/',
             add: '/api/opncell/profile/addProfile/',
             del: '/api/opncell/profile/deleteProfile/',
+            toggle:'',
             options: {
                 formatters: {
                     "commands": function (column, row) {
@@ -619,9 +633,13 @@ POSSIBILITY OF SUCH DAMAGE.
             $(this).find(".command-edit").off('click');
             $(this).find(".command-delete").off('click');
             $(this).find("*[data-action=deleteSelected]").off('click')
+            $(this).find(".command-enable-selected").remove()
+            $(this).find(".command-disable-selected").remove()
+
 
             // link Add new to child button with data-action = add
-            $(this).find("*[data-action=add]").click(function () {
+            $(this).find(".command-add").click(function () {
+                console.log("clicked profile add")
                 if (gridProfileParams['get'] !== undefined && gridProfileParams['add'] !== undefined) {
                     var urlMap = {};
                     urlMap['frm_' + 'DialogProfile'] = gridProfileParams['get'];
@@ -687,13 +705,13 @@ POSSIBILITY OF SUCH DAMAGE.
             });
 
             // edit Profile
-            const editDlg = $(this).attr('data-editDialog');
+
             $(this).find(".command-edit").on("click", function (e) {
                 // edit dialog id to use
-                console.log(editDlg)
+
                 const gridId = $(this).attr('id');
 
-                if (editDlg !== undefined && gridProfileParams['get'] !== undefined) {
+                if (gridProfileParams['get'] !== undefined) {
                     let uuid = $(this).data("row-id");
                     var count = $(this).data("row-count");
                     let urlMap = {};

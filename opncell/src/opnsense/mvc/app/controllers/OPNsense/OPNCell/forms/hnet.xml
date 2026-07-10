@@ -1,0 +1,17 @@
+<form>
+    <field>
+        <id>hnet.scheme</id>
+        <label>Protection scheme identifier </label>
+        <type>dropdown</type>
+        <help>Profile A is Protection Scheme 1 and uses (Curve25519). Profile B is Protection Scheme 2 and it uses (secp256r1)</help>
+    </field>
+
+    <field>
+        <id>hnet.filepath</id>
+        <label>File path for the public key</label>
+        <type>text</type>
+        <allownew>true</allownew>
+        <help>A desired path to store the public key if default is not used</help>
+    </field>
+
+</form>

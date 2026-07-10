@@ -246,7 +246,7 @@ class UserController extends ApiMutableModelControllerBase
                 $result['result'] = 'not found';
             }
         }
-//        }
+
         return $result;
     }
 
@@ -291,7 +291,7 @@ class UserController extends ApiMutableModelControllerBase
         if ($db_result == "deleted") {
             return $this->delAction($target_uuid);
         } else {
-            return array("result" => "failed");
+            return array("result" => $db_result);
         }
     }
 

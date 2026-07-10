@@ -39,13 +39,44 @@ mv /usr/local/etc/rc.d/mongod /usr/local/etc/rc.d/mongod.back
 
 mv /usr/local/etc/rc.d/mongod_custom  /usr/local/etc/rc.d/mongod
 
+mv /usr/local/etc/mongodb.conf /usr/local/etc/mongodb.conf.back
+
 cp /usr/local/etc/rc.d/mongod  /usr/local/etc/rc.d/mongod_custom
+
+cp /usr/local/etc/rc.d/mongodb_custom.conf  /usr/local/etc/mongodb.conf
 
 chmod +x /usr/local/etc/rc.d/mongod
 
 cd -
 
 rm -rf /var/log/opncell
+
+# ============================================
+# Schedule open5gs library update
+# ============================================
+echo "=====> Scheduling open5gs lib update..."
+
+(
+    # Wait for current installation to complete
+    sleep 10
+
+    # Wait for pkg lock to be released
+    while [ -f /var/run/pkg.lock ] || pgrep -x pkg >/dev/null; do
+        sleep 5
+    done
+
+    # Perform reinstallation
+    echo "Updating open5gs libraries... This might take some time."
+    if pkg install -fyq open5gs >/dev/null 2>&1; then
+        echo "Update completed successfully"
+        exit 0
+    else
+        echo "Failed to reinstall open5gs"
+        exit 1
+    fi
+) &
+
+
 
 pgrep open5gs | xargs kill -9
 
@@ -108,8 +139,10 @@ for val in $values; do
     fi
 done
 
-mkdir -p /root/data/db
+#mkdir -p /root/data/db
 echo "=====> Starting MongoDB and HSS service"
 checkMongo
+service configd restart
+service configd restart
 
 exit 0

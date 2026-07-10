@@ -44,24 +44,23 @@ class ComposerStaticInit744ba0c98ed4023608151fba86c0a5aa
         '801c31d8ed748cfa537fa45402288c95' => __DIR__ . '/..' . '/psy/psysh/src/functions.php',
         'dc51568953534d6c54b08731e61104e2' => __DIR__ . '/..' . '/vimeo/psalm/src/functions.php',
         '8e4171839e12546525126d38dac3dafa' => __DIR__ . '/..' . '/vimeo/psalm/src/spl_object_id.php',
-        '10ab04b0aba184c2d0e5794ec08c3206' => __DIR__ . '/../..' . '/tests/_support/helpers.php',
     );
 
     public static $prefixLengthsPsr4 = array (
-        'p' => 
+        'p' =>
         array (
             'phpDocumentor\\Reflection\\' => 25,
         ),
-        'X' => 
+        'X' =>
         array (
             'XdgBaseDir\\' => 11,
         ),
-        'W' => 
+        'W' =>
         array (
             'Webmozart\\PathUtil\\' => 19,
             'Webmozart\\Assert\\' => 17,
         ),
-        'S' => 
+        'S' =>
         array (
             'Symfony\\Polyfill\\Php80\\' => 23,
             'Symfony\\Polyfill\\Php73\\' => 23,
@@ -81,7 +80,7 @@ class ComposerStaticInit744ba0c98ed4023608151fba86c0a5aa
             'Symfony\\Component\\BrowserKit\\' => 29,
             'Seld\\JsonLint\\' => 14,
         ),
-        'P' => 
+        'P' =>
         array (
             'Psy\\' => 4,
             'Psr\\Log\\' => 8,
@@ -90,41 +89,36 @@ class ComposerStaticInit744ba0c98ed4023608151fba86c0a5aa
             'Psr\\Container\\' => 14,
             'Psalm\\' => 6,
             'Prophecy\\' => 9,
+            'Primrose\\Opncell\\' => 17,
             'PhpParser\\' => 10,
             'PhpOption\\' => 10,
             'Phalcon\\Migrations\\' => 19,
-            'Phalcon\\DevTools\\Tests\\Unit\\' => 28,
-            'Phalcon\\DevTools\\Tests\\Support\\Module\\' => 38,
-            'Phalcon\\DevTools\\Tests\\Functional\\' => 34,
-            'Phalcon\\DevTools\\Tests\\Console\\' => 31,
-            'Phalcon\\DevTools\\Tests\\Acceptance\\' => 34,
-            'Phalcon\\DevTools\\' => 17,
             'Phalcon\\Cop\\' => 12,
             'ParagonIE\\Pharaoh\\' => 18,
             'ParagonIE\\ConstantTime\\' => 23,
             'PackageVersions\\' => 16,
         ),
-        'O' => 
+        'O' =>
         array (
             'Opis\\Closure\\' => 13,
         ),
-        'L' => 
+        'L' =>
         array (
             'LanguageServerProtocol\\' => 23,
         ),
-        'K' => 
+        'K' =>
         array (
             'KevinGH\\Box\\' => 12,
         ),
-        'J' => 
+        'J' =>
         array (
             'JsonSchema\\' => 11,
         ),
-        'H' => 
+        'H' =>
         array (
             'Humbug\\PhpScoper\\' => 17,
         ),
-        'G' => 
+        'G' =>
         array (
             'GuzzleHttp\\Psr7\\' => 16,
             'GuzzleHttp\\Promise\\' => 19,
@@ -132,13 +126,13 @@ class ComposerStaticInit744ba0c98ed4023608151fba86c0a5aa
             'GrahamCampbell\\ResultType\\' => 26,
             'GetOpt\\' => 7,
         ),
-        'D' => 
+        'D' =>
         array (
             'Dotenv\\' => 7,
             'Doctrine\\Instantiator\\' => 22,
             'DeepCopy\\' => 9,
         ),
-        'C' => 
+        'C' =>
         array (
             'Composer\\XdebugHandler\\' => 23,
             'Composer\\Semver\\' => 16,
@@ -146,7 +140,7 @@ class ComposerStaticInit744ba0c98ed4023608151fba86c0a5aa
             'Codeception\\Extension\\' => 22,
             'Codeception\\' => 12,
         ),
-        'A' => 
+        'A' =>
         array (
             'Amp\\Sync\\' => 9,
             'Amp\\Serialization\\' => 18,
@@ -161,309 +155,289 @@ class ComposerStaticInit744ba0c98ed4023608151fba86c0a5aa
     );
 
     public static $prefixDirsPsr4 = array (
-        'phpDocumentor\\Reflection\\' => 
+        'phpDocumentor\\Reflection\\' =>
         array (
-            0 => __DIR__ . '/..' . '/phpdocumentor/reflection-common/src',
-            1 => __DIR__ . '/..' . '/phpdocumentor/reflection-docblock/src',
-            2 => __DIR__ . '/..' . '/phpdocumentor/type-resolver/src',
+            0 => __DIR__ . '/..' . '/phpdocumentor/reflection-docblock/src',
+            1 => __DIR__ . '/..' . '/phpdocumentor/type-resolver/src',
+            2 => __DIR__ . '/..' . '/phpdocumentor/reflection-common/src',
         ),
-        'XdgBaseDir\\' => 
+        'XdgBaseDir\\' =>
         array (
             0 => __DIR__ . '/..' . '/dnoegel/php-xdg-base-dir/src',
         ),
-        'Webmozart\\PathUtil\\' => 
+        'Webmozart\\PathUtil\\' =>
         array (
             0 => __DIR__ . '/..' . '/webmozart/path-util/src',
         ),
-        'Webmozart\\Assert\\' => 
+        'Webmozart\\Assert\\' =>
         array (
             0 => __DIR__ . '/..' . '/webmozart/assert/src',
         ),
-        'Symfony\\Polyfill\\Php80\\' => 
+        'Symfony\\Polyfill\\Php80\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-php80',
         ),
-        'Symfony\\Polyfill\\Php73\\' => 
+        'Symfony\\Polyfill\\Php73\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-php73',
         ),
-        'Symfony\\Polyfill\\Mbstring\\' => 
+        'Symfony\\Polyfill\\Mbstring\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
         ),
-        'Symfony\\Polyfill\\Ctype\\' => 
+        'Symfony\\Polyfill\\Ctype\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
         ),
-        'Symfony\\Contracts\\Service\\' => 
+        'Symfony\\Contracts\\Service\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/service-contracts',
         ),
-        'Symfony\\Contracts\\EventDispatcher\\' => 
+        'Symfony\\Contracts\\EventDispatcher\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/event-dispatcher-contracts',
         ),
-        'Symfony\\Component\\Yaml\\' => 
+        'Symfony\\Component\\Yaml\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/yaml',
         ),
-        'Symfony\\Component\\VarDumper\\' => 
+        'Symfony\\Component\\VarDumper\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/var-dumper',
         ),
-        'Symfony\\Component\\Process\\' => 
+        'Symfony\\Component\\Process\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/process',
         ),
-        'Symfony\\Component\\Finder\\' => 
+        'Symfony\\Component\\Finder\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/finder',
         ),
-        'Symfony\\Component\\Filesystem\\' => 
+        'Symfony\\Component\\Filesystem\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/filesystem',
         ),
-        'Symfony\\Component\\EventDispatcher\\' => 
+        'Symfony\\Component\\EventDispatcher\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
         ),
-        'Symfony\\Component\\DomCrawler\\' => 
+        'Symfony\\Component\\DomCrawler\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/dom-crawler',
         ),
-        'Symfony\\Component\\CssSelector\\' => 
+        'Symfony\\Component\\CssSelector\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/css-selector',
         ),
-        'Symfony\\Component\\Console\\' => 
+        'Symfony\\Component\\Console\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/console',
         ),
-        'Symfony\\Component\\BrowserKit\\' => 
+        'Symfony\\Component\\BrowserKit\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/browser-kit',
         ),
-        'Seld\\JsonLint\\' => 
+        'Seld\\JsonLint\\' =>
         array (
             0 => __DIR__ . '/..' . '/seld/jsonlint/src/Seld/JsonLint',
         ),
-        'Psy\\' => 
+        'Psy\\' =>
         array (
             0 => __DIR__ . '/..' . '/psy/psysh/src',
         ),
-        'Psr\\Log\\' => 
+        'Psr\\Log\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
         ),
-        'Psr\\Http\\Message\\' => 
+        'Psr\\Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
-        'Psr\\Http\\Client\\' => 
+        'Psr\\Http\\Client\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-client/src',
         ),
-        'Psr\\Container\\' => 
+        'Psr\\Container\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/container/src',
         ),
-        'Psalm\\' => 
+        'Psalm\\' =>
         array (
             0 => __DIR__ . '/..' . '/vimeo/psalm/src/Psalm',
         ),
-        'Prophecy\\' => 
+        'Prophecy\\' =>
         array (
             0 => __DIR__ . '/..' . '/phpspec/prophecy/src/Prophecy',
         ),
-        'PhpParser\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
-        ),
-        'PhpOption\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
-        ),
-        'Phalcon\\Migrations\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/phalcon/migrations/src',
-        ),
-        'Phalcon\\DevTools\\Tests\\Unit\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/tests/unit',
-        ),
-        'Phalcon\\DevTools\\Tests\\Support\\Module\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/tests/_support/Module',
-        ),
-        'Phalcon\\DevTools\\Tests\\Functional\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/tests/functional',
-        ),
-        'Phalcon\\DevTools\\Tests\\Console\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/tests/console',
-        ),
-        'Phalcon\\DevTools\\Tests\\Acceptance\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/tests/acceptance',
-        ),
-        'Phalcon\\DevTools\\' => 
+        'Primrose\\Opncell\\' =>
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
-        'Phalcon\\Cop\\' => 
+        'PhpParser\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
+        ),
+        'PhpOption\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
+        ),
+        'Phalcon\\Migrations\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/phalcon/migrations/src',
+        ),
+        'Phalcon\\Cop\\' =>
         array (
             0 => __DIR__ . '/..' . '/phalcon/cli-options-parser/src',
         ),
-        'ParagonIE\\Pharaoh\\' => 
+        'ParagonIE\\Pharaoh\\' =>
         array (
             0 => __DIR__ . '/..' . '/paragonie/pharaoh/src/Pharaoh',
         ),
-        'ParagonIE\\ConstantTime\\' => 
+        'ParagonIE\\ConstantTime\\' =>
         array (
             0 => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src',
         ),
-        'PackageVersions\\' => 
+        'PackageVersions\\' =>
         array (
             0 => __DIR__ . '/..' . '/composer/package-versions-deprecated/src/PackageVersions',
         ),
-        'Opis\\Closure\\' => 
+        'Opis\\Closure\\' =>
         array (
             0 => __DIR__ . '/..' . '/opis/closure/src',
         ),
-        'LanguageServerProtocol\\' => 
+        'LanguageServerProtocol\\' =>
         array (
             0 => __DIR__ . '/..' . '/felixfbecker/language-server-protocol/src',
         ),
-        'KevinGH\\Box\\' => 
+        'KevinGH\\Box\\' =>
         array (
             0 => __DIR__ . '/..' . '/humbug/box/src',
         ),
-        'JsonSchema\\' => 
+        'JsonSchema\\' =>
         array (
             0 => __DIR__ . '/..' . '/justinrainbow/json-schema/src/JsonSchema',
         ),
-        'Humbug\\PhpScoper\\' => 
+        'Humbug\\PhpScoper\\' =>
         array (
             0 => __DIR__ . '/..' . '/humbug/php-scoper/src',
         ),
-        'GuzzleHttp\\Psr7\\' => 
+        'GuzzleHttp\\Psr7\\' =>
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/psr7/src',
         ),
-        'GuzzleHttp\\Promise\\' => 
+        'GuzzleHttp\\Promise\\' =>
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/promises/src',
         ),
-        'GuzzleHttp\\' => 
+        'GuzzleHttp\\' =>
         array (
             0 => __DIR__ . '/..' . '/guzzlehttp/guzzle/src',
         ),
-        'GrahamCampbell\\ResultType\\' => 
+        'GrahamCampbell\\ResultType\\' =>
         array (
             0 => __DIR__ . '/..' . '/graham-campbell/result-type/src',
         ),
-        'GetOpt\\' => 
+        'GetOpt\\' =>
         array (
             0 => __DIR__ . '/..' . '/ulrichsg/getopt-php/src',
         ),
-        'Dotenv\\' => 
+        'Dotenv\\' =>
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
         ),
-        'Doctrine\\Instantiator\\' => 
+        'Doctrine\\Instantiator\\' =>
         array (
             0 => __DIR__ . '/..' . '/doctrine/instantiator/src/Doctrine/Instantiator',
         ),
-        'DeepCopy\\' => 
+        'DeepCopy\\' =>
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
         ),
-        'Composer\\XdebugHandler\\' => 
+        'Composer\\XdebugHandler\\' =>
         array (
             0 => __DIR__ . '/..' . '/composer/xdebug-handler/src',
         ),
-        'Composer\\Semver\\' => 
+        'Composer\\Semver\\' =>
         array (
             0 => __DIR__ . '/..' . '/composer/semver/src',
         ),
-        'Codeception\\PHPUnit\\' => 
+        'Codeception\\PHPUnit\\' =>
         array (
             0 => __DIR__ . '/..' . '/codeception/phpunit-wrapper/src',
         ),
-        'Codeception\\Extension\\' => 
+        'Codeception\\Extension\\' =>
         array (
             0 => __DIR__ . '/..' . '/codeception/codeception/ext',
         ),
-        'Codeception\\' => 
+        'Codeception\\' =>
         array (
-            0 => __DIR__ . '/..' . '/codeception/codeception/src/Codeception',
-            1 => __DIR__ . '/..' . '/codeception/stub/src',
-            2 => __DIR__ . '/..' . '/codeception/verify/src/Codeception',
+            0 => __DIR__ . '/..' . '/codeception/verify/src/Codeception',
+            1 => __DIR__ . '/..' . '/codeception/codeception/src/Codeception',
+            2 => __DIR__ . '/..' . '/codeception/stub/src',
         ),
-        'Amp\\Sync\\' => 
+        'Amp\\Sync\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/sync/src',
         ),
-        'Amp\\Serialization\\' => 
+        'Amp\\Serialization\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/serialization/src',
         ),
-        'Amp\\Process\\' => 
+        'Amp\\Process\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/process/lib',
         ),
-        'Amp\\Parser\\' => 
+        'Amp\\Parser\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/parser/lib',
         ),
-        'Amp\\Parallel\\' => 
+        'Amp\\Parallel\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/parallel/lib',
         ),
-        'Amp\\ParallelFunctions\\' => 
+        'Amp\\ParallelFunctions\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/parallel-functions/src',
         ),
-        'Amp\\ByteStream\\' => 
+        'Amp\\ByteStream\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/byte-stream/lib',
         ),
-        'Amp\\' => 
+        'Amp\\' =>
         array (
             0 => __DIR__ . '/..' . '/amphp/amp/lib',
         ),
-        'AdvancedJsonRpc\\' => 
+        'AdvancedJsonRpc\\' =>
         array (
             0 => __DIR__ . '/..' . '/felixfbecker/advanced-json-rpc/lib',
         ),
     );
 
     public static $prefixesPsr0 = array (
-        'L' => 
+        'L' =>
         array (
-            'LSS' => 
+            'LSS' =>
             array (
                 0 => __DIR__ . '/..' . '/openlss/lib-array2xml',
             ),
         ),
-        'J' => 
+        'J' =>
         array (
-            'JsonMapper' => 
+            'JsonMapper' =>
             array (
                 0 => __DIR__ . '/..' . '/netresearch/jsonmapper/src',
             ),
         ),
-        'C' => 
+        'C' =>
         array (
-            'Codeception\\' => 
+            'Codeception\\' =>
             array (
                 0 => __DIR__ . '/..' . '/codeception/specify/src',
             ),
         ),
-        'B' => 
+        'B' =>
         array (
-            'Behat\\Gherkin' => 
+            'Behat\\Gherkin' =>
             array (
                 0 => __DIR__ . '/..' . '/behat/gherkin/src',
             ),

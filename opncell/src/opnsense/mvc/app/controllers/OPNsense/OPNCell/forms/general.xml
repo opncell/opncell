@@ -1,5 +1,5 @@
 <form>
-        <field>
+    <field>
             <id>general.mcc</id>
             <label>MCC</label>
             <type>text</type>
@@ -35,7 +35,7 @@
             <id>general.s1ap</id>
             <label>s1ap</label>
             <type>text</type>
-            Define the S1AP or N3 IP address to bind to the MME or AMF service.</help>
+            <help>Define the S1AP or N3 IP address to bind to the MME or AMF service.</help>
         </field>
     <field>
         <id>general.ue</id>

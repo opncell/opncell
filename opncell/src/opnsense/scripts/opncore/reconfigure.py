@@ -6,16 +6,18 @@ import ujson
 import sys
 import json
 import os
+import base64
 
 if len(sys.argv) > 1:
 
-    x = sys.argv[1]
-    y = x.replace('[', "")
-    t = y.replace(']', '')
-    json_data = json.loads(t)
+    try:
+        decoded = base64.b64decode(sys.argv[1]).decode()
+        #print(decoded)
+        json_data = json.loads(decoded)
+    except Exception as e:
+        print(f"Error decoding input: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    #json_data = json.loads(json_data2)
-   # print(type(json_data))
     # create a temporary directory with write permissions- to use for file editing
     new_dir = '/tmp/yaml'
     os.makedirs(new_dir, exist_ok=True)
@@ -142,10 +144,6 @@ if len(sys.argv) > 1:
 
             copy_file = f"cp {new} {yaml_path}"
             os.system(copy_file)
-
-            command = "/usr/ports/open5gs/install/bin/" + name + " -D " + " -c " + "/usr/local/etc/open5gs/" + process_name + ".yaml" + "l" + "/var/log/opncell/" + process_name + ".log"
-            subprocess.run(command, shell=True, text=True)
-
 
     def configureProcess(process_name, pid, name):
 

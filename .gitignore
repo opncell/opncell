@@ -1,2 +1,6 @@
 opncell/prepForPackage.sh
 opncell/moveToRepo.sh
+/vendor/
+/opncell/src/opnsense/mvc/app/controllers/OPNsense/deploy.sh
+/opncell/.idea
+update_remote.sh

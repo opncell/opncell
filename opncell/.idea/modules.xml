@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/opncore.iml" filepath="$PROJECT_DIR$/.idea/opncore.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/opncell.iml" filepath="$PROJECT_DIR$/.idea/opncell.iml" />
     </modules>
   </component>
 </project>

@@ -71,12 +71,9 @@ if len(sys.argv) > 1:
                 output = subprocess.check_output(args, text=True, stderr=subprocess.STDOUT)
 
             output_list = output.strip().split('\n')
-         #   print(output_list)
-            if len(output_list) > 1 and output_list[-2] == "Success":
+            if "Success" in output_list:
                 result = "Success"
-            elif output_list[0] == "Success":
-                result = "Success"
-            elif "Duplicate" in output_list[0]:
+            elif "Duplicate" in output_list:
                 result = "Duplicate"
             else:
                 result = "Failed"

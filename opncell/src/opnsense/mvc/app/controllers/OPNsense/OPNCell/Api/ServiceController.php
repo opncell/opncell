@@ -50,7 +50,7 @@ class ServiceController extends ApiControllerBase
             $backend = new Backend();
             $command = ($process == "mongodd" ? "mongod" : $process) . ' ' . $action;
             $response = $backend->configdRun($command);
-            return array('response' => $response);
+            return array('response' => $command);
         } catch (Exception $e) {
             return array('response' => 'error', 'message' => $e->getMessage());
         }
@@ -70,6 +70,7 @@ class ServiceController extends ApiControllerBase
         }
         return array('response' => array());
     }
+
     public function restartAction($process): array
     {
         $this->request = new Request();
@@ -79,6 +80,7 @@ class ServiceController extends ApiControllerBase
         }
         return array('response' => array());
     }
+
     public function stopAction($process): array
     {
         $this->request = new Request();
@@ -193,14 +195,15 @@ class ServiceController extends ApiControllerBase
 
             $result['general'] = $mdlGeneral->getNodes();
             $result['general']['network'] = $network;
-            $values = json_encode($result);
+//             $values = json_encode($result);
+            $values = base64_encode(json_encode($result));
 
             if ($valMsgs->count() == 0) {
                 $mdlGeneral->serializeToConfig();
                 Config::getInstance()->save();
                 $backend = new Backend();
-                $backend->configdpRun("opncore loadConfiguration", array($values));
-                $result["result"] = "saved";
+               $here =  $backend->configdpRun("opncore loadConfiguration", $values);
+                $result["result"] = $values;
             }
         }
         return $result;

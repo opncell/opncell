@@ -29,15 +29,11 @@
 
 namespace OPNsense\OPNCell;
 
-class GeneralController extends \OPNsense\Base\IndexController
+class HnetController extends \OPNsense\Base\IndexController
 {
     public function indexAction()
     {
-        $this->view->generalForm = $this->getForm("general");
-        $this->view->formDialogEditServiceConfig = $this->getForm("dialogEditServiceConfig");
-        $this->view->opncoreForm = $this->getForm("opncore");
-        $this->view->userForm = $this->getForm("user");
         $this->view->hnetForm = $this->getForm("hnet");
-        $this->view->pick('OPNsense/OPNCell/general');
+        $this->view->pick('OPNsense/OPNCell/hnet');
     }
 }

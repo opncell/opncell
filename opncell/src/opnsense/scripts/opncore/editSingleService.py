@@ -85,18 +85,12 @@ if len(sys.argv) > 1:
             elif process_name == 'scp':
                 yaml_data['scp']['sbi']['server'][0]['address'] = new_addr.strip("'")
 
-            if process_pid != 0:
-                kill_command = "kill -9 " + process_pid
-                output = subprocess.run(kill_command, shell=True, text=True)
-
             with open(new, 'w') as file:
                 yaml.safe_dump(yaml_data, file, sort_keys=False, default_flow_style=False)
 
             copy_file = f"cp {new} {yaml_path}"
             os.system(copy_file)
 
-            command = "/usr/ports/open5gs/install/bin/" + 'open5gs-' + name + " -D "
-            subprocess.run(command, shell=True, text=True)
 
     config(configurableServices, server, pid)
 else:

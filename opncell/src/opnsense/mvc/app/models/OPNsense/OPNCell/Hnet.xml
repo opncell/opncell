@@ -1,0 +1,23 @@
+<model>
+    <mount>//OPNsense/opncell/hnet</mount>
+    <description>Home Network (Hnet) configuration for SUCI</description>
+    <version>1.0.3</version>
+    <items>
+                <scheme type="OptionField">
+                    <Required>Y</Required>
+                    <Multiple>N</Multiple>
+                    <default>profileB</default>
+                    <OptionValues>
+                        <profileA>ECIES scheme profile A</profileA>
+                        <profileB>ECIES scheme profile B</profileB>
+                    </OptionValues>
+                </scheme>
+
+                <filepath type="TextField">
+                    <Required>Y</Required>
+                    <default>/tmp/pub_hnet/</default>
+                    <mask>/^\/[a-zA-Z0-9\/._-]+$/</mask>
+                    <ValidationMessage>Enter a valid absolute file path</ValidationMessage>
+                </filepath>
+    </items>
+</model>

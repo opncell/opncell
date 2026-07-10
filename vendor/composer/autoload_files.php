@@ -43,5 +43,4 @@ return array(
     '801c31d8ed748cfa537fa45402288c95' => $vendorDir . '/psy/psysh/src/functions.php',
     'dc51568953534d6c54b08731e61104e2' => $vendorDir . '/vimeo/psalm/src/functions.php',
     '8e4171839e12546525126d38dac3dafa' => $vendorDir . '/vimeo/psalm/src/spl_object_id.php',
-    '10ab04b0aba184c2d0e5794ec08c3206' => $baseDir . '/tests/_support/helpers.php',
 );
