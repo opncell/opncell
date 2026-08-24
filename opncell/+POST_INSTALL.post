@@ -84,6 +84,7 @@ checkMongo(){
     if pgrep mongod; then
          pid_mongod=$(pgrep mongod)
          kill -9 ${pid_mongod}
+         rm -r /usr/local/bin/data/db  # Sometimes a new installation corrupts the db
          configctl mongod start
          sleep 5
 
@@ -142,7 +143,10 @@ done
 #mkdir -p /root/data/db
 echo "=====> Starting MongoDB and HSS service"
 checkMongo
-service configd restart
-service configd restart
+
+if ! service configd status >/dev/null 2>&1; then
+  service configd restart
+fi
+
 
 exit 0

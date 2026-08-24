@@ -29,6 +29,7 @@ if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name} ${conf
  echo "Started"
 else
     echo "Failed to start"
+     return 1
 fi
 } 
 

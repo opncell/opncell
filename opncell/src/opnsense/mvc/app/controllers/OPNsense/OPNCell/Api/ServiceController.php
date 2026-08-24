@@ -50,7 +50,8 @@ class ServiceController extends ApiControllerBase
             $backend = new Backend();
             $command = ($process == "mongodd" ? "mongod" : $process) . ' ' . $action;
             $response = $backend->configdRun($command);
-            return array('response' => $command);
+
+            return array('response' => $response);
         } catch (Exception $e) {
             return array('response' => 'error', 'message' => $e->getMessage());
         }

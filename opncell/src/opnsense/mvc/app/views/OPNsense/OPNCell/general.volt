@@ -325,7 +325,16 @@
                     ajaxCall(url = `/api/opncell/service/${action}/${serviceName}`, sendData = {}, callback = function (data, status) {
                         // console.log(status)
                         console.log(data)
-                        dialog.close();
+
+                        if (data.response  !== 'OK') {
+                            console.log(data.response);
+                            dialog.getModalBody().html(`<div style="padding:15px;">Failed to ${action}... <i class="fa fa-exclamation-circle"></i></div>`);
+                            
+                            setTimeout(function () {
+                                dialog.close();
+                            }, 4000);
+                        }
+
                         $("#grid-other-configs").bootgrid('reload');
                         updateServiceControlUI('opncell');
                         // setTimeout(serviceWait, 45000);

@@ -1,6 +1,6 @@
 {#
-# Copyright (c) 2022 Robbert Rijkse
-# Copyright (c) 2019 Deciso B.V.
+# Copyright (c) 2026 Robert Hamblet
+# Copyright (c) 22026 Digital Solutions
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -27,7 +27,7 @@
 
 <script>
     $( document ).ready(function() {
-        // get entries from named/named.log
+        // get entries
         let grid_mmelog = $("#grid-mmelog").UIBootgrid({
             options:{
                 sorting:false,
@@ -36,28 +36,6 @@
                 rowCount:[20,50,100,200,500,1000,-1],
             },
             search:'/api/diagnostics/log/opncore/mme'
-        });
-
-        // get entries from named/query.log
-        let grid_querylog = $("#grid-querylog").UIBootgrid({
-            options:{
-                sorting:false,
-                rowSelect: false,
-                selection: false,
-                rowCount:[20,50,100,200,500,1000,-1],
-            },
-            search:'/api/diagnostics/log/named/named'
-        });
-
-        // get entries from named/rpz.log
-        let grid_blockedlog = $("#grid-blockedlog").UIBootgrid({
-            options:{
-                sorting:false,
-                rowSelect: false,
-                selection: false,
-                rowCount:[20,50,100,200,500,1000,-1],
-            },
-            search:'/api/diagnostics/log/named/rpz'
         });
 
         let grid_smflog = $("#grid-smflog").UIBootgrid({

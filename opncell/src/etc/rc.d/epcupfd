@@ -34,6 +34,7 @@ epcupfd_start(){
                 sleep 10   #Wait for daemon to initialize before renaming tun0 
         else
                 echo "Failed to start"
+                 return 1
         fi
         if ifconfig | grep -q tun0; then
            ifconfig tun0 name epc0 > /dev/null 2>&1

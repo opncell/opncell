@@ -26,10 +26,14 @@ epcamfd_start(){
         pidfile="/var/run/epc/epcamfd.pid"
 
         if /usr/local/etc/rc.d/startmmed.sh ${command} ${pidfile} ${service_name} ${config_file} ${log_file};then
+
                 echo "Started"
         else
+
                 echo "Failed to start"
+                return 1
         fi
+
 }
 
 run_rc_command "$1"

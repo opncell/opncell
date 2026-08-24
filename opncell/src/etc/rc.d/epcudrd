@@ -28,6 +28,7 @@ epcudrd_start(){
                 echo "Started"
         else
                 echo "Failed to start"
+                 return 1
         fi
 }
 
