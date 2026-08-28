@@ -27,7 +27,7 @@ all: check
 
 .include "defaults.mk"
 
-PLUGINSDIR=		${.CURDIR}/../..
+PLUGINSDIR=		${.CURDIR}/..
 TEMPLATESDIR=		${PLUGINSDIR}/Templates
 SCRIPTSDIR=		${PLUGINSDIR}/Scripts
 
