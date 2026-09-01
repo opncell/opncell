@@ -37,7 +37,7 @@ use OPNsense\Core\Config;
 
 
 use OPNsense\Mvc\Request;
-use OPNsense\OPNCell\Opncore;
+use OPNsense\OPNCell\Opncell;
 use OPNsense\OPNCell\User;
 use OPNsense\OPNCell\General;
 use OPNsense\Base\UIModelGrid;
@@ -50,8 +50,8 @@ header("Access-Control-Allow-Origin: *");
 class GeneralController extends ApiMutableModelControllerBase
 {
 
-    protected static $internalModelName = 'opncore';
-    protected static $internalModelClass = '\OPNsense\OPNCell\Opncore';
+    protected static $internalModelName = 'opncell';
+    protected static $internalModelClass = '\OPNsense\OPNCell\Opncell';
     public Request $request;
 //
     /**
@@ -108,7 +108,7 @@ class GeneralController extends ApiMutableModelControllerBase
     public function statusAction($serviceName)
     {
         $backend = new Backend();
-        $model = new Opncore();
+        $model = new Opncell();
         try {
             $response = $backend->configdRun($serviceName ." " . "status");
             $mynode = "enable".$serviceName;
@@ -139,7 +139,7 @@ class GeneralController extends ApiMutableModelControllerBase
         $net['pid'] = $parts[1];
         $net['ip'] = $parts[2];
         $val = json_encode($net);
-        $backend->configdpRun("opncore editServerConf", array($val));
+        $backend->configdpRun("opncell editServerConf", array($val));
         //Restart that service
         $backend->configdRun($net['server'] . ' '. 'stop');
         $backend->configdRun($net['server'] . ' '. 'start');
@@ -182,7 +182,7 @@ class GeneralController extends ApiMutableModelControllerBase
         $backend = new Backend();
         $net['network'] = $network;
         $values = json_encode($net);
-        $response = $backend->configdpRun("opncore processNames", array($values));
+        $response = $backend->configdpRun("opncell processNames", array($values));
         $data = json_decode((string)$response, true);
 
         if ($data != null) {

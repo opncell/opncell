@@ -5,21 +5,20 @@ import sys
 import json
 import os
 import ujson
+import base64
 
-os.environ['PATH'] = '/usr/local/opnsense/scripts/opncore/opncore_db.sh:' + os.environ.get('PATH', '')
+os.environ['PATH'] = '/usr/local/opnsense/scripts/opncell/opncell_db.sh:' + os.environ.get('PATH', '')
 os.environ['PATH'] = '/bin/bash:' + os.environ.get('PATH', '')
 os.environ['PATH'] = '/root/mongo/build/install/bin/:' + os.environ.get('PATH', '')
 os.environ['PATH'] = '/root/mongo/build/install/bin/mongod:' + os.environ.get('PATH', '')
-os.environ['PWD'] = '/usr/local/opnsense/scripts/opncore:' + os.environ.get('PWD', '')
+os.environ['PWD'] = '/usr/local/opnsense/scripts/opncell:' + os.environ.get('PWD', '')
 
 if len(sys.argv) > 1:
-    script_path = '/usr/local/opnsense/scripts/opncore/opncore_db.sh'
-    x = sys.argv[1]
-    y = x.replace('[', "")
-    t = y.replace(']', '')
+    script_path = '/usr/local/opnsense/scripts/opncell/opncell_db.sh'
     ip = ""
-
-    json_data = json.loads(t)
+    decoded = base64.b64decode(sys.argv[1]).decode()
+    json_data = json.loads(decoded)
+    # json_data = json.loads(t)
     #json_data = json.loads(json_data2)
 
     if isinstance(json_data, dict):
@@ -76,7 +75,7 @@ if len(sys.argv) > 1:
             elif "Duplicate" in output_list:
                 result = "Duplicate"
             else:
-                result = "Failed"
+                result = output_list
         except Exception as e:
             result = f"Error: {str(e)}"
     else:

@@ -6,14 +6,14 @@ import json
 import os
 import ast
 
-os.environ['PATH'] = '/usr/local/opnsense/scripts/opncore/opncore_db.sh:' + os.environ.get('PATH', '')
+os.environ['PATH'] = '/usr/local/opnsense/scripts/opncell/opncell_db.sh:' + os.environ.get('PATH', '')
 os.environ['PATH'] = '/bin/bash:' + os.environ.get('PATH', '')
 os.environ['PATH'] = '/root/mongo/build/install/bin/:' + os.environ.get('PATH', '')
 os.environ['PATH'] = '/root/mongo/build/install/bin/mongod:' + os.environ.get('PATH', '')
-os.environ['PWD'] = '/usr/local/opnsense/scripts/opncore:' + os.environ.get('PWD', '')
+os.environ['PWD'] = '/usr/local/opnsense/scripts/opncell:' + os.environ.get('PWD', '')
 
 if len(sys.argv) > 0:
-    script_path = '/usr/local/opnsense/scripts/opncore/opncore_db.sh'
+    script_path = '/usr/local/opnsense/scripts/opncell/opncell_db.sh'
     x = sys.argv[1]
     y = x.replace('[', "")
     t = y.replace(']', '')

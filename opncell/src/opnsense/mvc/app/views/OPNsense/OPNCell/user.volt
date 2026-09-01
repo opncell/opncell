@@ -404,6 +404,7 @@ POSSIBILITY OF SUCH DAMAGE.
                         saveFormToEndpoint(url = "/api/opncell/user/addSub",
                             formid = 'frm_' + 'DialogAddUsers', callback_ok = function (data) {
                                 console.log(data.result)
+                                console.log(data)
                                 $("#" + 'DialogAddUsers').modal('hide');
                                gridOptions.bootgrid("reload");
                                 if (data.result === "failed") {
@@ -520,8 +521,7 @@ POSSIBILITY OF SUCH DAMAGE.
                                 // refresh after load
                                 $.when.apply(null, deferreds).done(function () {
                                     std_bootgrid_reload(gridOptions);
-                                    // updateServiceControlUI('opncore');
-                                    // grid_users.bootgrid('reload');
+
                                 });
                             } else {
                                 console.log("undefined")
@@ -539,54 +539,6 @@ POSSIBILITY OF SUCH DAMAGE.
         /**
          * copy actions for selected items from opnsense_bootgrid_plugin.js
          */
-        // gridOptions.on("loaded.rs.jquery.bootgrid", function (e) {
-        //     // toggle all rendered tooltips (once for all)
-        //     $('.bootgrid-tooltip').tooltip();
-        //
-        //     // scale footer on resize
-        //     $(this).find("tfoot td:first-child").attr('colspan', $(this).find("th").length - 1);
-        //     $(this).find('tr[data-row-id]').each(function () {
-        //         if ($(this).find('[class*="command-toggle"]').first().data("value") === "0") {
-        //             $(this).addClass("text-muted");
-        //         }
-        //     });
-        //
-        //     // edit dialog id to use
-        //     let gridId = $(this).attr('id');
-        //     console.log(gridId)
-        //
-        //     // delete  multiple users at once
-        //     $(this).find("*[data-action=deleteSelected]").click(function () {
-        //
-        //         console.log("clicked");
-        //         if (gridParams['del'] !== undefined) {
-        //             stdDialogConfirm('{{ lang._("Confirm User removal") }}', '{{ lang._("Do you want to remove the selected users ? ") }}', '{{ lang._("Yes") }}', '{{ lang._("Cancel") }}', function () {
-        //                     var rows = $("#" + gridId).bootgrid('getSelectedRows');
-        //                     console.log(rows);
-        //                     if (rows !== undefined) {
-        //                         let imsi = $(this).data("row-imsi");
-        //                         let uuid = $(this).data("row-uuid");
-        //                         var deferreds = [];
-        //                         $.each(rows, function (key, uuid) {
-        //                             deferreds.push(ajaxCall(url = '/api/opncell/user/deleteSub/' + uuid, sendData = {}, null));
-        //                         });
-        //                         // refresh after load
-        //                         $.when.apply(null, deferreds).done(function () {
-        //                             std_bootgrid_reload(gridId);
-        //                             // updateServiceControlUI('opncore');
-        //                             // grid_users.bootgrid('reload');
-        //                         });
-        //                     } else {
-        //                         console.log("undefined")
-        //                     }
-        //                 }
-        //             )
-        //
-        //         } else {
-        //             console.log("[grid] action del missing")
-        //         }
-        //     });
-        // });
 
         // Manually doing the table for subscribers--For customization ---Profile Edition
         let gridProfileParams = {

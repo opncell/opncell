@@ -211,7 +211,7 @@ class ProfileController extends ApiMutableModelControllerBase
         foreach ($imsiArray as $imsi) {
             $newProfile['imsi'] = $imsi;
             $values = json_encode($newProfile);
-            $backend->configdpRun("opncore updateUser", array($values));
+            $backend->configdpRun("opncell updateUser", array($values));
         }
         return $this->setBase('profile', 'profiles.profile', $uuid);
     }

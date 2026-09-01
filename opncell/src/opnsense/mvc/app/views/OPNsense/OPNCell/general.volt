@@ -94,14 +94,17 @@
             $('.selectpicker').selectpicker('refresh');
 
             currentNetwork = localStorage.getItem('networkName') || "";
+            console.log(`The current network is: ${currentNetwork}`);
             initNetworkSelection();
             updateUI();
         });
 
         // Network selection logic
         function initNetworkSelection() {
-            $('input[name="network"]').on('change', function () {
-                const selectedNetwork = $(this).val();
+
+            $('#networkForm label.btn').on('click', function () {
+                const selectedNetwork = $(this).find('input[name="network"]').val();
+                console.log(`The selected network is: ${selectedNetwork}`);
                 confirmNetworkChange(selectedNetwork);
             });
         }
@@ -113,12 +116,10 @@
                 window.location.href = "/ui/opncell/hnet";
                 return;
             }
-
             // Normal network change (not 5G SA or switching away from it)
             proceedWithNetworkChange(newNetwork, previousNetwork);
         }
 
-//       Helper function
         function proceedWithNetworkChange(newNetwork, previousNetwork) {
             const isSameNetwork = previousNetwork === newNetwork;
             console.log(isSameNetwork);
@@ -139,10 +140,16 @@
                         saveConfigurations(newNetwork);
                     } else {
                         // Revert selection
-                        $('input[name="network"][value="' + previousNetwork + '"]').prop('checked', true);
+                        selectNetworkRadio(previousNetwork);
                     }
                 }
             });
+        }
+
+        function selectNetworkRadio(network) {
+            $('input[name="network"]').closest('label').removeClass('active');
+            $('input[name="network"][value="' + network + '"]').prop('checked', true)
+                .closest('label').addClass('active');
         }
 
         function saveConfigurations(network = null) {
@@ -182,9 +189,8 @@
             const allRows = [
                 'general.configs', 'general.plmnid_mcc', 'general.plmnid_mnc', 'general.tac',
                 'general.networkname', 'general.sst', 'general.ue', 'general.peer',
-                'general.dns', 'general.ca', 'general.enablefour', 'general.enableupf',
-                'general.enablefiveSA', 'general.enablefiveNSA', 'general.enablemetrics',
-                'general.metricsaddress', 'general.metricsport'
+                'general.dns', 'general.ca', 'general.enablemetrics',
+                'general.metricsaddress', 'general.metricsport','general.enablefour','general.enableupf','general.enablefiveNSA','general.enablefiveSA'
             ];
 
             // Hide all by default
@@ -214,8 +220,7 @@
         function updateUI() {
             const storedNetwork = localStorage.getItem('networkName');
             if (storedNetwork) {
-                $('input[name="network"][value="' + storedNetwork + '"]').prop('checked', true)
-                    .closest('label').addClass('active');
+                selectNetworkRadio(storedNetwork);
                 ShowHideConfigFields(storedNetwork);
             } else if (currentNetwork) {
                 ShowHideConfigFields(currentNetwork);
@@ -231,7 +236,7 @@
             rowCount: [10, 25, 50, 100, 500, 1000],
             toggle:false,
             footer:false,
-            search: '/api/opncell/general/startedServices/' +  (localStorage.getItem('networkName') || currentNetwork),
+            search: '/api/opncell/general/startedServices/' +  (localStorage.getItem('networkName') || currentNetwork || "undefined"),
             options: {
                 formatters: {
                     "commands": function (column, row) {

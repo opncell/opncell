@@ -175,12 +175,26 @@
 
                                 console.log(data.data);
                                 let payload = data.data;
+
                                 if (typeof payload === "string") {
                                     payload = JSON.parse(payload);
                                 }
+                                if (data.data === null) {
+                                    const msg = 'Try checking if `configd` is running. If not run `service configd start`';
+                                    BootstrapDialog.show({
+                                        message:"{{ lang._ ('Key generation failed! ') }}" + msg,
+                                        type: BootstrapDialog.TYPE_ERR,
+                                        title: "{{ lang._('Error! Something went wrong.') }}",
+                                        closable: true,
+                                        onshow: function (dialogRef) {
+
+                                        }
+                                    });
+                                    return;
+                                }
 
                                 // fill result modal
-                                if (payload.result === "ok") {
+                                if (payload.result === "ok" ) {
                                     $("#hnetResultModal").modal("show");
 
                                     $("#hnet_result_path").text(payload.public_key_path);

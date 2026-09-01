@@ -20,6 +20,93 @@ done
 
 kldload sctp.ko
 
+# ============================================
+# Raise kern.ipc.maxsockbuf for open5gs SCTP sockets
+# ============================================
+# open5gs' S1AP (mmed) and NGAP (amfd) interfaces open SCTP sockets. The
+# FreeBSD SCTP stack computes its default send/recv buffer size at boot from
+# the kernel's compiled-in SB_MAX constant, independent of the *live*
+# kern.ipc.maxsockbuf ceiling - on stock FreeBSD 14/15 those two numbers can
+# disagree, and when the default maxsockbuf ceiling ends up smaller than what
+# SCTP requests, socket() fails with ENOBUFS ("No buffer space available")
+# and the daemon aborts before it can bind its S1AP/NGAP listener. This is a
+# known FreeBSD/OPNsense base-tuning gap, not an open5gs bug - see e.g.
+# opnsense/plugins#5422, where FRR hit the identical symptom.
+#
+# kern.ipc.maxsockbuf has no loader-tunable hook (it can't be set via
+# /boot/loader.conf), so it has to go through OPNsense's own Tunables model
+# (System > Settings > Tunables / config.xml <sysctl>) rather than a raw
+# /etc/sysctl.conf edit, which OPNsense's config sync would otherwise
+# overwrite on the next boot or config apply.
+echo "=====> "
+echo "Raising kern.ipc.maxsockbuf for open5gs SCTP (S1AP/NGAP) sockets ..."
+
+sockbuf_target=33554432 # 32 MiB - matches the value OPNsense's FRR plugin settled on for the same issue
+
+cat > /tmp/opncell_set_maxsockbuf.php <<'PHP_EOF'
+<?php
+require_once('config.inc');
+
+use OPNsense\Core\Config;
+use OPNsense\Core\Tunables;
+
+$tunable = 'kern.ipc.maxsockbuf';
+$target = 33554432; // keep in sync with sockbuf_target above
+$descr = 'Required by OPNcell/open5gs SCTP sockets (S1AP/NGAP) - default maxsockbuf is smaller than what the kernel SCTP stack requests, causing ENOBUFS on socket creation.';
+
+$mdl = new Tunables();
+$node = null;
+
+foreach ($mdl->item->iterateItems() as $item) {
+    if ((string)$item->tunable === $tunable) {
+        $node = $item;
+        break;
+    }
+}
+
+$current = $node !== null ? (string)$node->value : '';
+
+if ($current !== '' && (int)$current >= $target) {
+    // Already set high enough (by an admin, or a previous run) - leave it alone
+    echo "ok: already {$current}\n";
+    exit(0);
+}
+
+if ($node === null) {
+    // No placeholder item for this tunable in config.xml - create one
+    $node = $mdl->item->Add();
+    $node->tunable = $tunable;
+}
+
+$node->descr = $descr;
+$node->value = (string)$target;
+
+$validations = $mdl->performValidation();
+if ($validations->count() > 0) {
+    foreach ($validations as $msg) {
+        fwrite(STDERR, "validation error: " . $msg->getMessage() . "\n");
+    }
+    exit(1);
+}
+
+$mdl->serializeToConfig();
+Config::getInstance()->save();
+echo "set: {$target}\n";
+PHP_EOF
+
+if php -f /tmp/opncell_set_maxsockbuf.php; then
+    # Regenerate /etc/sysctl.conf from config.xml and apply it now, the same
+    # way OPNsense's own boot hook does (rc.syshook.d/start/90-sysctl)
+    pluginctl -s sysctl restart >/dev/null 2>&1
+else
+    echo "WARNING: could not persist kern.ipc.maxsockbuf via config.xml - applying live only, this will not survive a reboot"
+fi
+rm -f /tmp/opncell_set_maxsockbuf.php
+
+# Belt-and-suspenders: apply live right now regardless of the above, so this
+# install doesn't need a reboot before open5gs can bind its SCTP sockets.
+sysctl kern.ipc.maxsockbuf="$sockbuf_target"
+
 if ! grep -q "DEVELOPER=yes" /etc/make.conf; then
     echo "DEVELOPER=yes" >> /etc/make.conf
 fi
@@ -96,7 +183,37 @@ checkMongo(){
 
    fi
 
+  echo "=====> Getting mongosh client"
+  if ! command -v mongosh >/dev/null 2>&1; then
+      if pkg install -yq npm; then
+          if npm install -g mongosh; then
+              echo "mongosh installed"
+          else
+              echo "WARNING: mongosh install failed" >&2
+          fi
+      else
+          echo "WARNING: could not install npm/mongosh" >&2
+      fi
+  fi
+
+  # Disable mongosh telemetry globally. mongosh's per-user telemetry setup
+  # writes to ~/.mongodb/mongosh/config on first run, which fails (e.g.
+  # "Telemetry setup is missing userId or anonymousId") whenever $HOME isn't
+  # a writable, existing directory - exactly the case here, since
+  # opncell_db.sh invokes `npx mongosh` non-interactively as root via
+  # configd/cron, not from an interactive login shell. The global config
+  # file sidesteps that entirely: it's a one-time write, doesn't depend on
+  # $HOME, and forceDisableTelemetry can't be flipped back on later (by a
+  # script or an admin), unlike calling disableTelemetry() per-invocation.
+  echo "=====> Disabling mongosh telemetry"
+  cat > /etc/mongosh.conf <<'EOF'
+mongosh:
+  enableTelemetry: false
+  forceDisableTelemetry: true
+EOF
+
 }
+
 
   echo "=====> Installation complete."
   echo "=====> The below Virtual IPs should be enabled on the loopback address via the GUI. These are required for the smooth running of open5gs services."

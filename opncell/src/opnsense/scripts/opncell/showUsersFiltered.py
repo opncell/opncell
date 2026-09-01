@@ -40,13 +40,13 @@ import os
 
 
 def fetch_users():
-    os.environ['PATH'] = '/usr/local/opnsense/scripts/opncore/opncore_db.sh:' + os.environ.get('PATH', '')
+    os.environ['PATH'] = '/usr/local/opnsense/scripts/opncell/opncell_db.sh:' + os.environ.get('PATH', '')
     os.environ['PATH'] = '/bin/bash:' + os.environ.get('PATH', '')
     os.environ['PATH'] = '/root/mongo/build/install/bin/:' + os.environ.get('PATH', '')
     os.environ['PATH'] = '/root/mongo/build/install/bin/mongod:' + os.environ.get('PATH', '')
-    os.environ['PWD'] = '/usr/local/opnsense/scripts/opncore:' + os.environ.get('PWD', '')
+    os.environ['PWD'] = '/usr/local/opnsense/scripts/opncell:' + os.environ.get('PWD', '')
 
-    script_path = '/usr/local/opnsense/scripts/opncore/opncore_db.sh'
+    script_path = '/usr/local/opnsense/scripts/opncell/opncell_db.sh'
     bash_script = f'{script_path} showfiltered'
     script_arguments = ['showfiltered']
     i = ['3147000348934279']
@@ -84,13 +84,13 @@ def fetch_users():
                 user_details.append(dets)
 
             except json.JSONDecodeError as e:
-                # print(f"Error parsing JSON: {e}")
+                print(f"Error parsing JSON: {e}")
                 pass
 #        print(ujson.dumps(user_details))
 
     except subprocess.CalledProcessError as e:
         #print(f"Error running the Bash script: {e}")
-        #print(f"Command output: {e.output}")
+        print(f"Command output: {e.output}")
         pass
 
     return user_details

@@ -14,31 +14,33 @@ class UserRepository
     }
     public function getUsers()
     {
-        $response = $this->backend->configdpRun("opncore showUsers");
+        $response = $this->backend->configdpRun("opncell showUsers");
         return json_decode((string)$response, true);
     }
 //    public function getUsers()
 //    {
-//        $response = $this->backend->configdpRun("opncore showUsers", [$searchPhrase, $itemsPerPage,
+//        $response = $this->backend->configdpRun("opncell showUsers", [$searchPhrase, $itemsPerPage,
 //                ($currentPage - 1) * $itemsPerPage, $ruleId, $sortBy]);
 //        return json_decode((string)$response, true);
 //    }
 
     public function getUser($imsi)
     {
-        $response = $this->backend->configdpRun("opncore getUser", [json_encode(['imsi' => $imsi])]);
+        $response = $this->backend->configdpRun("opncell getUser", [json_encode(['imsi' => $imsi])]);
         return json_decode((string)$response, true);
     }
 
     public function saveUser($userDetails)
     {
-        $response = $this->backend->configdpRun("opncore saveUsers", [json_encode($userDetails)]);
+        $val_encoded = base64_encode(json_encode($userDetails));
+        $response = $this->backend->configdpRun("opncell saveUsers", $val_encoded);
         return json_decode((string)$response, true);
+
     }
 
     public function deleteUser($imsi)
     {
-        $response = $this->backend->configdpRun("opncore deleteUser", [json_encode(['imsi' => $imsi])]);
+        $response = $this->backend->configdpRun("opncell deleteUser", [json_encode(['imsi' => $imsi])]);
         return json_decode((string)$response, true);
     }
 }

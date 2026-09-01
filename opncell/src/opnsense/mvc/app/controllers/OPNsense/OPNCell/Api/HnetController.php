@@ -97,12 +97,12 @@ class HnetController extends ApiMutableModelControllerBase
 
 
               $val_encoded = base64_encode(json_encode($val));
-              $raw =  $backend->configdpRun("opncore showHnet", $val_encoded);
+              $raw =  $backend->configdpRun("opncell showHnet", $val_encoded);
               $decoded = json_decode((string)$raw, true);
 
              return [
                  "result" => "ok",
-                 "data" => $raw
+                 "data" => $decoded
              ];
 
      }

@@ -9,16 +9,15 @@ import os
 
 
 def fetch_users():
-    os.environ['PATH'] = '/usr/local/opnsense/scripts/opncore/opncore_db.sh:' + os.environ.get('PATH', '')
+    os.environ['PATH'] = '/usr/local/opnsense/scripts/opncell/opncell_db.sh:' + os.environ.get('PATH', '')
     os.environ['PATH'] = '/bin/bash:' + os.environ.get('PATH', '')
     os.environ['PATH'] = '/root/mongo/build/install/bin/:' + os.environ.get('PATH', '')
     os.environ['PATH'] = '/root/mongo/build/install/bin/mongod:' + os.environ.get('PATH', '')
-    os.environ['PWD'] = '/usr/local/opnsense/scripts/opncore:' + os.environ.get('PWD', '')
+    os.environ['PWD'] = '/usr/local/opnsense/scripts/opncell:' + os.environ.get('PWD', '')
 
-    script_path = '/usr/local/opnsense/scripts/opncore/opncore_db.sh'
+    script_path = '/usr/local/opnsense/scripts/opncell/opncell_db.sh'
     bash_script = f'{script_path} showfiltered'
     script_arguments = ['showfiltered']
-    i = ['3147000348934279']
     # Use subprocess to run the Bash script
     user_details = []
     dets = {}

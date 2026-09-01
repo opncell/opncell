@@ -203,7 +203,7 @@ class ServiceController extends ApiControllerBase
                 $mdlGeneral->serializeToConfig();
                 Config::getInstance()->save();
                 $backend = new Backend();
-               $here =  $backend->configdpRun("opncore loadConfiguration", $values);
+               $here =  $backend->configdpRun("opncell loadConfiguration", $values);
                 $result["result"] = $values;
             }
         }

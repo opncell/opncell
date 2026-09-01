@@ -5,5 +5,7 @@
             "Primrose\\Opncell\\": "src/"
         }
     },
-    "require": {}
+    "require": {
+      "ext-json": "*"
+    }
 }
