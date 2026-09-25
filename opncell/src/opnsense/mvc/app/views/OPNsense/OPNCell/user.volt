@@ -31,7 +31,9 @@ POSSIBILITY OF SUCH DAMAGE.
     <li id="ProfileList" class="active"><a data-toggle="tab" href="#profile-list"><b>{{ lang._('Profile List')
         }}</b></a></li>
     <li id="userList"><a data-toggle="tab" href="#user-list"><b>{{ lang._('Subscriber List') }}</b></a></li>
+    <li id="hnetTab"><a data-toggle="tab" href="#hnet"><b>{{ lang._('Hnet') }}</b></a></li>
     <li id="bulk"><a data-toggle="tab" href="#bulkinsert"><b>{{ lang._('Bulk Insertion') }}</b></a></li>
+
 </ul>
 <div class="tab-content content-box">
     <div class="col-md-8 __mt">
@@ -182,6 +184,134 @@ POSSIBILITY OF SUCH DAMAGE.
             </tfoot>
         </table>
 
+    </div>
+
+    <!-- Hnet Tab -->
+    <div id="hnet" class="tab-pane fade in">
+        <div class="content-box" style="padding-bottom: 1.7em;">
+            <div class="row __mt">
+                <div class="col-md-12 __ml">
+                    <b class="__mb">5G SA requires Home Network (Hnet) configuration in the UDM yml, for SUCI concealment.</b>
+                    <p>Once the key-pair is generated, the private key is stored in <code>/usr/ports/open5gs/install/etc/open5gs/hnet/</code>.<br>
+                        Use the public key when creating the SIM profile.<br>
+                        These values will be ignored if the UE uses the null (0) protection scheme.</p>
+                    <p> Both the HEX and PEM versions of the public key will be availed in the filepath you provide. </p>
+                </div>
+            </div>
+            {{ partial("layout_partials/base_form", ['fields': hnetForm, 'id': 'frm_hnet_settings']) }}
+            <div class="row __mt">
+                <div class="col-md-12 __ml">
+                    <button class="btn btn-primary __ml" id="generateAct_hnet" type="button">
+                        <b>{{ lang._('Generate New Key') }}</b>
+                        <i id="generateAct_hnet_progress"></i>
+                    </button>
+                    <button class="btn btn-primary __ml" id="existing_keys" type="button">
+                        <b>{{ lang._('Use existing keys') }}</b>
+                        <i id="activate_progress"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HNET Key Generation Result Modal -->
+<div id="hnetResultModal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa fa-key fa-fw"></i>
+                    HNET Key Generation Result
+                </h5>
+            </div>
+
+            <div class="modal-body">
+                <div class="content-box">
+                    <hr>
+                    <div class="form-group">
+                        &nbsp;&nbsp;<label>Hnet ID</label>
+                        &nbsp;&nbsp;<div class="well well-sm" id="hnet_id"></div>
+                    </div>
+
+                    <!-- Private Key Path -->
+                    <div class="form-group">
+                        &nbsp;&nbsp;<label>Private Key Path</label>
+                        &nbsp;&nbsp;<div class="well well-sm" id="hnet_result_priv_path"></div>
+                    </div>
+
+                    <!-- Public Key Path -->
+                    <div class="form-group">
+                        &nbsp;&nbsp;<label>Public Key Path (PEM)</label>
+                        &nbsp;&nbsp;<div class="well well-sm" id="hnet_result_path"></div>
+                    </div>
+
+                    <div class="row __mt">
+                        <div class="col-md-12 __ml">
+                            &nbsp;&nbsp;<div class="well well-sm" style="word-break: break-all; display: none" id="hnet_result_hex"></div>
+                            &nbsp;&nbsp;<button class="btn btn-primary" id="copy_hex_btn">
+                                <i class="fa fa-copy"></i> Copy HEX
+                            </button>
+                            &nbsp;&nbsp;<div class="well well-sm" style="word-break: break-all; display: none" id="hnet_result_pem"></div>
+                            &nbsp;&nbsp;<button class="btn btn-primary" id="copy_pem_btn">
+                                <i class="fa fa-copy"></i> Copy PEM
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- HNET Existing Keys Modal -->
+<div id="hnetListModal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa fa-list fa-fw"></i>
+                    {{ lang._('Existing Hnet Keys') }}
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>{{ lang._(' Reuse an existing Hnet ID\'s public key when provisioning new USIMs, or reactivate 5G SA using the keys already configured.') }}</p>
+                <table class="table table-condensed table-striped">
+                    <thead>
+                        <tr>
+                            <th>{{ lang._('ID') }}</th>
+                            <th>{{ lang._('Scheme') }}</th>
+                            <th>{{ lang._('Private Key Path') }}</th>
+                            <th>{{ lang._('Public Key') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hnet_list_body"></tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning" id="activate_existing_hnet">
+                    {{ lang._('Activate 5G SA With Existing Keys') }}
+                </button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal">
+                    {{ lang._('Close') }}
+                </button>
+            </div>
+
+        </div>
     </div>
 </div>
 <script>
@@ -700,6 +830,216 @@ POSSIBILITY OF SUCH DAMAGE.
 
         });
 
+    });
+
+    /**
+     *  Hnet stuff
+     * **/
+    $(document).ready(function () {
+        const networkLabels = {
+            enablefour: "4G",
+            enablefiveSA: "5G SA",
+            enablefiveNSA: "5G NSA",
+            enableupf: "UPF"
+        };
+
+        mapDataToFormUI({'frm_hnet_settings': "/api/opncell/hnet/get"}).done(function (data) {
+            formatTokenizersUI();
+            $('.selectpicker').selectpicker('refresh');
+        });
+
+        function activateNetwork(network) {
+            BootstrapDialog.show({
+                type: BootstrapDialog.TYPE_INFO,
+                title: "{{ lang._('Activating 5G SA') }}",
+                closable: true,
+                onshow: function (dialogRef) {
+                    dialogRef.getModalBody().html(`
+                    <div style="padding: 15px;">
+                        {{ lang._('Network set-up in progress, please wait ...') }}
+                        <i class="fa fa-cog fa-spin"></i>
+                    </div>
+                `);
+                    ajaxCall("/api/opncell/service/reconfigureAct/" + network, {}, function () {
+                        updateServiceControlUI("opncell");
+                        dialogRef.close();
+                    });
+                }
+            });
+        }
+
+        $("#hnetResultModal").on("hidden.bs.modal", function () {
+            const network = localStorage.getItem("networkName");
+
+            if (network !== "enablefiveSA") {
+                BootstrapDialog.confirm({
+                    title: 'Confirm Network Change',
+                    message: 'Keys successfully generated! Do you want to activate 5G SA network?',
+                    type: BootstrapDialog.TYPE_WARNING,
+                    btnOKLabel: 'Proceed',
+                    btnCancelLabel: 'No',
+                    callback: function (result) {
+                        if (result) {
+                            localStorage.setItem('networkName', 'enablefiveSA');
+                            activateNetwork('enablefiveSA');
+                        }
+                    }
+                });
+            }
+        });
+
+        $("#generateAct_hnet").off('click').on('click', function () {
+            BootstrapDialog.confirm({
+                title: 'Generate a new key for SUCI concealment!',
+                message: 'This mints a brand new key pair and adds it as a new Hnet ID. Existing keys already provisioned to USIMs will keep working. Proceed?',
+                type: BootstrapDialog.TYPE_WARNING,
+                btnOKLabel: 'Proceed',
+                btnCancelLabel: 'No',
+                callback: function (result) {
+                    if (!result) {
+                        return;
+                    }
+
+                    $("#generateAct_hnet_progress").addClass("fa fa-spinner fa-pulse");
+                    $("#generateAct_hnet").prop("disabled", true);
+
+                    ajaxCall('/api/opncell/hnet/generate', {}, function (data, status) {
+                        $("#generateAct_hnet_progress").removeClass("fa fa-spinner fa-pulse");
+                        $("#generateAct_hnet").prop("disabled", false);
+
+                        if (data.data === null) {
+                            const msg = 'Try checking if `configd` is running. If not run `service configd start`';
+                            BootstrapDialog.show({
+                                message: "{{ lang._('Key generation failed! ') }}" + msg,
+                                type: BootstrapDialog.TYPE_DANGER,
+                                title: "{{ lang._('Error! Something went wrong.') }}",
+                                closable: true
+                            });
+                            return;
+                        }
+
+                        let payload = data.data;
+                        if (typeof payload === "string") {
+                            payload = JSON.parse(payload);
+                        }
+
+                        // fill result modal
+                        if (payload.result === "ok") {
+                            $("#hnet_result_path").text(payload.public_key_path);
+                            $("#hnet_result_priv_path").text(payload.private_key_path);
+                            $("#hnet_result_hex").text(payload.public_key_hex);
+                            $("#hnet_result_pem").text(payload.public_key_pem);
+                            $("#hnet_id").text(payload.id);
+                            $("#hnetResultModal").modal("show");
+                        } else {
+                            BootstrapDialog.show({
+                                message: "{{ lang._('Key generation failed with error  ') }}" + payload.error,
+                                type: BootstrapDialog.TYPE_DANGER,
+                                title: "{{ lang._('Error! Something went wrong.') }}",
+                                closable: true
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        $("#existing_keys").off('click').on("click", function () {
+            $("#activate_progress").addClass("fa fa-spinner fa-pulse");
+
+            ajaxCall('/api/opncell/hnet/list', {}, function (data, status) {
+                $("#activate_progress").removeClass("fa fa-spinner fa-pulse");
+
+                let payload = data.data;
+                if (typeof payload === "string") {
+                    payload = JSON.parse(payload);
+                }
+
+                const entries = (payload && payload.entries) || [];
+                const $body = $("#hnet_list_body");
+                $body.empty();
+
+                if (entries.length === 0) {
+                    $body.append('<tr><td colspan="4">{{ lang._("No Hnet keys have been generated yet.") }}</td></tr>');
+                }
+
+                entries.forEach(function (entry) {
+                    const schemeLabel = entry.scheme === 1 ? 'Profile A (curve25519)' : 'Profile B (secp256r1)';
+                    const $row = $('<tr></tr>');
+                    $row.append($('<td></td>').text(entry.id));
+                    $row.append($('<td></td>').text(schemeLabel));
+                    $row.append($('<td style="word-break: break-all;"></td>').text(entry.private_key_path || ''));
+
+                    const $pubCell = $('<td></td>');
+                    if (entry.error) {
+                        $pubCell.text(entry.error);
+                    } else {
+                        const $hexBtn = $('<button type="button" class="btn btn-xs btn-default">{{ lang._("Copy HEX") }}</button>');
+                        $hexBtn.on('click', function () {
+                            navigator.clipboard.writeText(entry.public_key_hex).then(() => {
+                                $hexBtn.text('{{ lang._("Copied!") }}');
+                                setTimeout(() => $hexBtn.text('{{ lang._("Copy HEX") }}'), 1500);
+                            });
+                        });
+                        const $pemBtn = $('<button type="button" class="btn btn-xs btn-default __ml">{{ lang._("Copy PEM") }}</button>');
+                        $pemBtn.on('click', function () {
+                            navigator.clipboard.writeText(entry.public_key_pem).then(() => {
+                                $pemBtn.text('{{ lang._("Copied!") }}');
+                                setTimeout(() => $pemBtn.text('{{ lang._("Copy PEM") }}'), 1500);
+                            });
+                        });
+                        $pubCell.append($hexBtn).append($pemBtn);
+                    }
+                    $row.append($pubCell);
+                    $body.append($row);
+                });
+
+                $("#hnetListModal").modal("show");
+            });
+        });
+
+        $("#activate_existing_hnet").off('click').on('click', function () {
+            const network = localStorage.getItem("networkName");
+            let message;
+            if (network === "enablefiveSA") {
+                message = 'Re-loading the network! This will restart all services. Proceed?';
+            } else if (networkLabels[network]) {
+                message = 'The ' + networkLabels[network] + ' network is currently active! Do you want to switch to 5G SA?';
+            } else {
+                message = 'Do you want to activate the 5G SA network?';
+            }
+
+            BootstrapDialog.confirm({
+                title: 'Confirm Network Change',
+                message: message,
+                type: BootstrapDialog.TYPE_WARNING,
+                btnOKLabel: 'Proceed',
+                btnCancelLabel: 'No',
+                callback: function (result) {
+                    if (result) {
+                        $("#hnetListModal").modal("hide");
+                        localStorage.setItem('networkName', 'enablefiveSA');
+                        activateNetwork('enablefiveSA');
+                    }
+                }
+            });
+        });
+
+        $("#copy_hex_btn").on("click", function () {
+            const text = $("#hnet_result_hex").text();
+            navigator.clipboard.writeText(text).then(() => {
+                $(this).text("Copied!");
+                setTimeout(() => $(this).html('<i class="fa fa-copy"></i> Copy HEX'), 1500);
+            });
+        });
+
+        $("#copy_pem_btn").on("click", function () {
+            const text = $("#hnet_result_pem").text();
+            navigator.clipboard.writeText(text).then(() => {
+                $(this).text("Copied!");
+                setTimeout(() => $(this).html('<i class="fa fa-copy"></i> Copy PEM'), 1500);
+            });
+        });
     });
 
 </script>

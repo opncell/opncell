@@ -42,7 +42,6 @@ use OPNsense\Mvc\Request;
 use ReflectionException;
 use OPNsense\OPNCell\Hnet;
 use OPNsense\OPNCell\General;
-use Phalcon\Messages\Message;
 use OPNsense\Phalcon\Filter\Filter;
 
 
@@ -64,47 +63,61 @@ class HnetController extends ApiMutableModelControllerBase
 
    public function addAction(): array
      {
-     $backend = new Backend();
        $result = array("result" => "failed");
 
                $mdlHnet = new Hnet();
                $this->request = new Request();
                $mdlHnet->setNodes($this->request->getPost("hnet"));
-               $this->request->getPost("hnet");
 
                $valMsgs = $mdlHnet->performValidation();
-//
-               //serialize model to config and save
-               if ($valMsgs->count() == 0) {
-                   $mdlHnet->serializeToConfig();
-                  $result = Config::getInstance()->save();
-                   $result["result"] = "saved";
+
+               if ($valMsgs->count() > 0) {
+                   foreach ($valMsgs as $msg) {
+                       if (!isset($result["validations"])) {
+                           $result["validations"] = array();
+                       }
+                       $result["validations"]["hnet." . $msg->getField()] = $msg->getMessage();
+                   }
+                   return $result;
                }
 
-             $hnet_values = $mdlHnet->getNodes();
-             $val = $this-> prepareHnetForKeyGeneration($hnet_values);
-//              if (!file_exists($val['filepath'])) {
-                $valMsgs->appendMessage(new Message(gettext("Invalid file path"), 'filepath'));
+               //serialize model to config and save
+               $mdlHnet->serializeToConfig();
+               $result = Config::getInstance()->save();
+               $result["result"] = "saved";
 
-                 foreach ($valMsgs as $msg) {
-                     if (!isset($result["validations"])) {
-                         $result["validations"] = array();
-                     }
-                     $result["validations"]["hnet." . $msg->getField()] = $msg->getMessage();
-                     }
-//                 return $result;
-//                 }
+               return $result;
+     }
 
+   public function generateAction(): array
+     {
+         $backend = new Backend();
 
-              $val_encoded = base64_encode(json_encode($val));
-              $raw =  $backend->configdpRun("opncell showHnet", $val_encoded);
-              $decoded = json_decode((string)$raw, true);
+         $mdlHnet = new Hnet();
+         $hnet_values = $mdlHnet->getNodes();
+         $val = $this->prepareHnetForKeyGeneration($hnet_values);
 
-             return [
-                 "result" => "ok",
-                 "data" => $decoded
-             ];
+         $val_encoded = base64_encode(json_encode($val));
+         $raw = $backend->configdpRun("opncell showHnet", $val_encoded);
+         $decoded = json_decode((string)$raw, true);
 
+         return [
+             "result" => "ok",
+             "data" => $decoded
+         ];
+     }
+
+   public function listAction(): array
+     {
+         $backend = new Backend();
+
+         $raw = $backend->configdRun("opncell listHnet");
+         $decoded = json_decode((string)$raw, true);
+
+         return [
+             "result" => "ok",
+             "data" => $decoded
+         ];
      }
 private function prepareHnetForKeyGeneration($hnetData)
 {

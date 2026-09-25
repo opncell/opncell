@@ -161,8 +161,8 @@ def main():
             "error": repr(e)
         }))
         return
-    # Generate HEX public key
 
+    # Generate HEX public key
     if scheme == 1:
         der = run_command([
             "openssl", "pkey",
@@ -213,7 +213,9 @@ def main():
         "private_key_path":str(priv_key_path),
         "public_key_path": str(pub_key_path),
         "public_key_hex_path": str(hex_path),
-        "public_key_hex": hex_pub }
+        "public_key_hex": hex_pub,
+        "public_key_pem": pub_pem,
+    }
 
     print(json.dumps(response))
 

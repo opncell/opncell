@@ -3,6 +3,7 @@
     <li class="active"><a data-toggle="tab" href="#networks">{{ lang._('Network') }}</a></li>
     <li id="configTab"><a data-toggle="tab" href="#other-configs">{{ lang._('Configurations') }}</a></li>
     <li id="licenseTab"><a data-toggle="tab" href="#license">{{ lang._('License') }}</a></li>
+
 </ul>
 
 <div class="tab-content content-box tab-content">
@@ -111,9 +112,9 @@
         function confirmNetworkChange(newNetwork) {
             const previousNetwork = localStorage.getItem('networkName') || currentNetwork;
 
-            // Special case: 5G SA requires Hnet configuration first
+            // Special case: 5G SA requires Hnet configuration first (lives on the Users page)
             if (newNetwork === 'enablefiveSA' && previousNetwork !== 'enablefiveSA') {
-                window.location.href = "/ui/opncell/hnet";
+                window.location.href = '/ui/opncell/user#hnet';
                 return;
             }
             // Normal network change (not 5G SA or switching away from it)
@@ -334,7 +335,7 @@
                         if (data.response  !== 'OK') {
                             console.log(data.response);
                             dialog.getModalBody().html(`<div style="padding:15px;">Failed to ${action}... <i class="fa fa-exclamation-circle"></i></div>`);
-                            
+
                             setTimeout(function () {
                                 dialog.close();
                             }, 4000);

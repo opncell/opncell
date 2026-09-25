@@ -17,8 +17,12 @@
             <div class="row __mt">
                 <div class="col-md-12 __ml">
                     <button class="btn btn-primary mr-2" id="saveAct_hnet" type="button">
-                        <b>{{ lang._('Save & Generate Keys') }}</b>
+                        <b>{{ lang._('Save') }}</b>
                         <i id="saveAct_hnet_progress"></i>
+                    </button>
+                    <button class="btn btn-primary __ml" id="generateAct_hnet" type="button">
+                        <b>{{ lang._('Generate New Key') }}</b>
+                        <i id="generateAct_hnet_progress"></i>
                     </button>
                     <button class="btn btn-primary __ml" id="existing_keys" type="button">
                         <b>{{ lang._('Use existing keys') }}</b>
@@ -158,72 +162,83 @@
             $("#saveAct_hnet_progress").addClass("fa fa-spinner fa-pulse");
             $("#saveAct_hnet").prop("disabled", true);
 
+            saveFormToEndpoint('/api/opncell/hnet/add',
+                formid = 'frm_hnet_settings',
+                function (data, status) {
+                    $("#saveAct_hnet_progress").removeClass("fa fa-spinner fa-pulse");
+                    $("#saveAct_hnet").prop("disabled", false);
+
+                    if (data.result !== "saved") {
+                        return;
+                    }
+
+                    BootstrapDialog.show({
+                        message: "{{ lang._('Settings saved.') }}",
+                        type: BootstrapDialog.TYPE_SUCCESS,
+                        title: "{{ lang._('Saved') }}",
+                        closable: true
+                    });
+                },
+                true
+            );
+
+        });
+
+        $("#generateAct_hnet").off('click').on('click', function () {
+
             BootstrapDialog.confirm({
-                title: 'Generate keys for SUCI concealment!',
-                message: 'Proceed to generate keys for SUCI concealment?',
+                title: 'Generate a new key for SUCI concealment!',
+                message: 'This mints a brand new key pair and adds it as a new Hnet ID. Existing keys already provisioned to USIMs will keep working. Proceed?',
                 type: BootstrapDialog.TYPE_WARNING,
                 btnOKLabel: 'Proceed',
                 btnCancelLabel: 'No',
                 callback: function (result) {
-                    if (result) {
-                        saveFormToEndpoint('/api/opncell/hnet/add',
-                            formid = 'frm_hnet_settings',
-                            function (data, status) {
-                                console.log(data);
-
-                                $("#saveAct_hnet_progress").removeClass("fa fa-spinner fa-pulse");
-
-                                console.log(data.data);
-                                let payload = data.data;
-
-                                if (typeof payload === "string") {
-                                    payload = JSON.parse(payload);
-                                }
-                                if (data.data === null) {
-                                    const msg = 'Try checking if `configd` is running. If not run `service configd start`';
-                                    BootstrapDialog.show({
-                                        message:"{{ lang._ ('Key generation failed! ') }}" + msg,
-                                        type: BootstrapDialog.TYPE_ERR,
-                                        title: "{{ lang._('Error! Something went wrong.') }}",
-                                        closable: true,
-                                        onshow: function (dialogRef) {
-
-                                        }
-                                    });
-                                    return;
-                                }
-
-                                // fill result modal
-                                if (payload.result === "ok" ) {
-                                    $("#hnetResultModal").modal("show");
-
-                                    $("#hnet_result_path").text(payload.public_key_path);
-                                    $("#hnet_result_priv_path").text(payload.private_key_path);
-                                    $("#hnet_result_hex").text(payload.public_key_hex);
-                                    $("#hnet_id").text(payload.id);
-
-                                } else {
-                                    let msg = payload.error;
-                                    BootstrapDialog.show({
-                                        message:"{{ lang._ ('Key generation failed with error  ') }}" + msg,
-                                        type: BootstrapDialog.TYPE_ERR,
-                                        title: "{{ lang._('Error! Something went wrong.') }}",
-                                        closable: true,
-                                        onshow: function (dialogRef) {
-
-                                        }
-                                    });
-                                }
-                                $("#saveAct_hnet_progress").removeClass("fa fa-spinner fa-pulse");
-                                $("#saveAct_hnet").prop("disabled", false);
-
-                            },
-                            true
-                        );
-                    } else {
-                        $("#saveAct_hnet_progress").removeClass("fa fa-spinner fa-pulse");
-                        $("#saveAct_hnet").prop("disabled", false);
+                    if (!result) {
+                        return;
                     }
+
+                    $("#generateAct_hnet_progress").addClass("fa fa-spinner fa-pulse");
+                    $("#generateAct_hnet").prop("disabled", true);
+
+                    ajaxCall('/api/opncell/hnet/generate', {}, function (data, status) {
+                        $("#generateAct_hnet_progress").removeClass("fa fa-spinner fa-pulse");
+                        $("#generateAct_hnet").prop("disabled", false);
+
+                        let payload = data.data;
+
+                        if (typeof payload === "string") {
+                            payload = JSON.parse(payload);
+                        }
+                        if (data.data === null) {
+                            const msg = 'Try checking if `configd` is running. If not run `service configd start`';
+                            BootstrapDialog.show({
+                                message:"{{ lang._ ('Key generation failed! ') }}" + msg,
+                                type: BootstrapDialog.TYPE_ERR,
+                                title: "{{ lang._('Error! Something went wrong.') }}",
+                                closable: true
+                            });
+                            return;
+                        }
+
+                        // fill result modal
+                        if (payload.result === "ok" ) {
+                            $("#hnetResultModal").modal("show");
+
+                            $("#hnet_result_path").text(payload.public_key_path);
+                            $("#hnet_result_priv_path").text(payload.private_key_path);
+                            $("#hnet_result_hex").text(payload.public_key_hex);
+                            $("#hnet_id").text(payload.id);
+
+                        } else {
+                            let msg = payload.error;
+                            BootstrapDialog.show({
+                                message:"{{ lang._ ('Key generation failed with error  ') }}" + msg,
+                                type: BootstrapDialog.TYPE_ERR,
+                                title: "{{ lang._('Error! Something went wrong.') }}",
+                                closable: true
+                            });
+                        }
+                    });
                 }
             });
 

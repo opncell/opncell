@@ -37,7 +37,6 @@ class GeneralController extends \OPNsense\Base\IndexController
         $this->view->formDialogEditServiceConfig = $this->getForm("dialogEditServiceConfig");
         $this->view->opncellForm = $this->getForm("opncell");
         $this->view->userForm = $this->getForm("user");
-        $this->view->hnetForm = $this->getForm("hnet");
         $this->view->pick('OPNsense/OPNCell/general');
     }
 }

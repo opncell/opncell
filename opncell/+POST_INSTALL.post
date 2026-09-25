@@ -1,5 +1,8 @@
 #!/bin/sh
 
+BOLD="\033[1m"
+RESET="\033[0m"
+
 echo "=====> "
 echo "Enabling SCTP support ..."
 
@@ -103,8 +106,8 @@ else
 fi
 rm -f /tmp/opncell_set_maxsockbuf.php
 
-# Belt-and-suspenders: apply live right now regardless of the above, so this
-# install doesn't need a reboot before open5gs can bind its SCTP sockets.
+# Apply live right now regardless of the above, so that a reboot is not needed before open5gs can bind its SCTP sockets.
+
 sysctl kern.ipc.maxsockbuf="$sockbuf_target"
 
 if ! grep -q "DEVELOPER=yes" /etc/make.conf; then
@@ -183,28 +186,11 @@ checkMongo(){
 
    fi
 
-  echo "=====> Getting mongosh client"
-  if ! command -v mongosh >/dev/null 2>&1; then
-      if pkg install -yq npm; then
-          if npm install -g mongosh; then
-              echo "mongosh installed"
-          else
-              echo "WARNING: mongosh install failed" >&2
-          fi
-      else
-          echo "WARNING: could not install npm/mongosh" >&2
-      fi
-  fi
 
   # Disable mongosh telemetry globally. mongosh's per-user telemetry setup
-  # writes to ~/.mongodb/mongosh/config on first run, which fails (e.g.
-  # "Telemetry setup is missing userId or anonymousId") whenever $HOME isn't
-  # a writable, existing directory - exactly the case here, since
-  # opncell_db.sh invokes `npx mongosh` non-interactively as root via
-  # configd/cron, not from an interactive login shell. The global config
-  # file sidesteps that entirely: it's a one-time write, doesn't depend on
-  # $HOME, and forceDisableTelemetry can't be flipped back on later (by a
-  # script or an admin), unlike calling disableTelemetry() per-invocation.
+  # writes to ~/.mongodb/mongosh/config on first run, which fails (e.g. "Telemetry setup is missing userId or anonymousId") whenever $HOME isn't a writable, existing directory
+  # The global config file sidesteps that entirely: it's a one-time write, doesn't depend on $HOME, and forceDisableTelemetry can't be flipped back on later (by a script or an admin)
+
   echo "=====> Disabling mongosh telemetry"
   cat > /etc/mongosh.conf <<'EOF'
 mongosh:
@@ -213,9 +199,10 @@ mongosh:
 EOF
 
 }
-
-
+  echo "=====> Mongosh telemetry disabled"
+  echo
   echo "=====> Installation complete."
+  echo
   echo "=====> The below Virtual IPs should be enabled on the loopback address via the GUI. These are required for the smooth running of open5gs services."
   echo "=====> To add them ----> Interfaces ----->Virtual IPs "
   echo "MongoDB   = 127.0.0.1 (subscriber data) - http://localhost:3000"
@@ -265,5 +252,7 @@ if ! service configd status >/dev/null 2>&1; then
   service configd restart
 fi
 
+echo
+echo -e "Mongodb>=6.0 doesn't ship with the mongosh client. Run ${BOLD}npm install -g mongosh ${RESET} to install it globally using npm!"
 
 exit 0

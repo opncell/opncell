@@ -73,4 +73,5 @@
         <type>checkbox</type>
         <help>Enable just UPF provisioning for the network.</help>
     </field>
+
 </form>
