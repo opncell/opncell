@@ -5,6 +5,8 @@
 
 #include "dra-context.h"
 #include "provisioning.h"
+#include <freeDiameter/freeDiameter-host.h>
+#include <freeDiameter/libfdcore.h>
 
 static volatile sig_atomic_t shutdown_requested = 0;
 static volatile sig_atomic_t reload_requested = 0;
@@ -58,6 +60,13 @@ main(int argc, char *argv[])
         config_path = argv[1];
 
     printf("opncell-drad: starting\n");
+
+    if (fd_core_initialize() != 0) {
+        fprintf(stderr, "opncell-drad: freeDiameter initialization failed\n");
+        return EXIT_FAILURE;
+    }
+
+    printf("opncell-drad: freeDiameter initialized\n");
 
     if (dra_context_init(&ctx) != 0) {
         fprintf(stderr, "opncell-drad: failed to initialize context\n");

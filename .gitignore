@@ -5,3 +5,5 @@ opncell/moveToRepo.sh
 /opncell/.idea
 update_remote.sh
 dra/build/
+dra/subprojects/freeDiameter/
+dra/subprojects/.wraplock
