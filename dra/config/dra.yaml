@@ -1,0 +1,9 @@
+dra:
+  identity: dra01.local
+  realm: local
+
+  provisioning:
+    generation: 1
+
+  logging:
+    level: info
