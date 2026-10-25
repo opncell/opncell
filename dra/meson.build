@@ -11,7 +11,11 @@ project(
 
 inc = include_directories('src')
 
-freeDiameter_proj = subproject('freeDiameter')
+freeDiameter_proj = subproject(
+  'freeDiameter',
+  default_options: ['default_library=static'],
+)
+
 libfdcore_dep = freeDiameter_proj.get_variable('libfdcore_dep')
 
 sources = files(
