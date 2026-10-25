@@ -17,6 +17,7 @@ freeDiameter_proj = subproject(
 )
 
 libfdcore_dep = freeDiameter_proj.get_variable('libfdcore_dep')
+yaml_dep = dependency('yaml-0.1')
 
 sources = files(
   'src/main.c',
@@ -28,7 +29,7 @@ executable(
   'opncell-drad',
   sources,
   include_directories: inc,
-  dependencies: [libfdcore_dep],
+  dependencies: [libfdcore_dep, yaml_dep],
   install: true,
   install_dir: get_option('sbindir'),
 )

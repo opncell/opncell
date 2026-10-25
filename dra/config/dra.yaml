@@ -1,9 +1,43 @@
-dra:
-  identity: dra01.local
-  realm: local
+diameter:
+  identity: dra01.opncell.net
+  realm: opncell.net
 
-  provisioning:
-    generation: 1
+  listen:
+    address: 0.0.0.0
+    port: 3868
+    transport: tcp
 
-  logging:
-    level: info
+peers:
+  - name: operator-a
+    identity: dra.operator-a.net
+    realm: operator-a.net
+    address: 192.0.2.10
+    port: 3868
+    transport: tcp
+    priority: 100
+    enabled: true
+
+  - name: operator-b
+    identity: dra.operator-b.net
+    realm: operator-b.net
+    address: 192.0.2.20
+    port: 3868
+    transport: tcp
+    priority: 100
+    enabled: true
+
+routes:
+  - name: operator-a-default
+    realm: operator-a.net
+    peer: operator-a
+    priority: 100
+    enabled: true
+
+  - name: operator-b-default
+    realm: operator-b.net
+    peer: operator-b
+    priority: 100
+    enabled: true
+
+logging:
+  level: info
