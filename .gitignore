@@ -4,3 +4,4 @@ opncell/moveToRepo.sh
 /deploy.sh
 /opncell/.idea
 update_remote.sh
+dra/build/
