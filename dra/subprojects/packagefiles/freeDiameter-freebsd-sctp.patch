@@ -1,0 +1,17 @@
+diff --git a/include/freeDiameter/meson.build b/include/freeDiameter/meson.build
+index 5497d7d..e7732ac 100644
+--- a/include/freeDiameter/meson.build
++++ b/include/freeDiameter/meson.build
+@@ -165 +165,5 @@ endif
+-libsctp = cc.find_library('sctp', required : false)
++if host_system == 'freebsd'
++    libsctp = declare_dependency()
++else
++    libsctp = cc.find_library('sctp', required : false)
++endif
+diff --git a/meson.build b/meson.build
+index 2ca4837..6941407 100644
+--- a/meson.build
++++ b/meson.build
+@@ -52,0 +53 @@ if cc.get_id() == 'gcc' or cc.get_id() == 'clang'
++        '-Wno-compound-token-split-by-macro',
