@@ -128,8 +128,8 @@ parse_peers(
     ctx->peer_count = 0;
 
     for (item = peers->data.sequence.items.start;
-         item < peers->data.sequence.items.top;
-         item++) {
+        item < peers->data.sequence.items.top;
+        item++) {
         yaml_node_t *entry;
         yaml_node_t *node;
         dra_peer_t *peer;
@@ -230,6 +230,29 @@ parse_routes(
         if (node != NULL && node->type == YAML_SCALAR_NODE)
             copy_string(route->peer, sizeof(route->peer),
                 node->data.scalar.value);
+        node = mapping_lookup(document, entry, "application_id");
+        if (node != NULL && node->type == YAML_SCALAR_NODE)
+            route->application_id =
+                (uint32_t)parse_ulong(node->data.scalar.value);
+
+        node = mapping_lookup(document, entry, "action");
+        if (node != NULL && node->type == YAML_SCALAR_NODE) {
+            const char *value =
+                (const char *)node->data.scalar.value;
+
+            if (strcmp(value, "relay") == 0)
+                route->action = DRA_ROUTE_ACTION_RELAY;
+            else if (strcmp(value, "proxy") == 0)
+                route->action = DRA_ROUTE_ACTION_PROXY;
+            else if (strcmp(value, "redirect") == 0)
+                route->action = DRA_ROUTE_ACTION_REDIRECT;
+            else {
+                fprintf(stderr,
+                    "opncell-drad: invalid route action '%s'\n",
+                    value);
+                return -1;
+            }
+        }
 
         node = mapping_lookup(document, entry, "priority");
         if (node != NULL && node->type == YAML_SCALAR_NODE)
@@ -310,7 +333,8 @@ validate_config(const dra_context_t *ctx)
 
         if (route->name[0] == '\0' ||
             route->realm[0] == '\0' ||
-            route->peer[0] == '\0') {
+            route->peer[0] == '\0' ||
+            route->application_id == 0) {
             fprintf(
                 stderr,
                 "opncell-drad: route %u is incomplete or invalid\n",

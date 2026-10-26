@@ -23,13 +23,21 @@ typedef struct dra_peer_s {
     int enabled;
 } dra_peer_t;
 
+typedef enum dra_route_action_e {
+    DRA_ROUTE_ACTION_RELAY = 0,
+    DRA_ROUTE_ACTION_PROXY,
+    DRA_ROUTE_ACTION_REDIRECT
+} dra_route_action_t;
+
 typedef struct dra_route_s {
     char name[DRA_NAME_LEN];
     char realm[DRA_REALM_LEN];
     char peer[DRA_NAME_LEN];
 
+    uint32_t application_id;
     uint32_t priority;
 
+    dra_route_action_t action;
     int enabled;
 } dra_route_t;
 

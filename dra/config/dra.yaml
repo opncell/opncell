@@ -30,12 +30,16 @@ routes:
   - name: operator-a-default
     realm: operator-a.net
     peer: operator-a
+    application_id: 16777251
+    action: relay
     priority: 100
     enabled: true
 
   - name: operator-b-default
     realm: operator-b.net
     peer: operator-b
+    application_id: 16777251
+    action: relay
     priority: 100
     enabled: true
 
