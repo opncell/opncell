@@ -5,6 +5,7 @@
 
 #include "dra-context.h"
 #include "provisioning.h"
+#include "routing.h"
 #include <freeDiameter/freeDiameter-host.h>
 #include <freeDiameter/libfdcore.h>
 
@@ -50,6 +51,42 @@ install_signal_handlers(void)
     return 0;
 }
 
+static void
+log_routing_test(const dra_context_t *ctx)
+{
+    const dra_route_t *route;
+    const dra_peer_t *peer;
+
+    route = dra_route_find(
+        ctx,
+        "operator-a.net",
+        16777251);
+
+    if (route == NULL) {
+        fprintf(stderr,
+            "opncell-drad: routing test found no matching route\n");
+        return;
+    }
+
+    peer = dra_peer_select(ctx, route);
+
+    if (peer == NULL) {
+        fprintf(stderr,
+            "opncell-drad: routing test found no eligible peer\n");
+        return;
+    }
+
+    printf(
+        "opncell-drad: routing test realm=%s app=%u "
+        "route=%s group=%s peer=%s priority=%u\n",
+        route->realm,
+        route->application_id,
+        route->name,
+        route->peer_group,
+        peer->name,
+        peer->priority);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -85,14 +122,19 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    log_routing_test(&ctx);
+
     printf("opncell-drad: ready\n");
 
     while (!shutdown_requested) {
         if (reload_requested) {
             reload_requested = 0;
 
-            if (dra_provisioning_reload(&ctx, config_path) != 0)
+            if (dra_provisioning_reload(&ctx, config_path) != 0) {
                 fprintf(stderr, "opncell-drad: reload failed\n");
+            } else {
+                log_routing_test(&ctx);
+            }
         }
 
         sleep(1);

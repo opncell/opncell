@@ -23,6 +23,7 @@ sources = files(
   'src/main.c',
   'src/dra-context.c',
   'src/provisioning.c',
+  'src/routing.c',
 )
 
 executable(

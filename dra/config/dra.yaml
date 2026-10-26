@@ -18,6 +18,16 @@ peers:
     priority: 100
     enabled: true
 
+  - name: operator-a-backup
+    group: operator-a
+    identity: dra2.operator-a.net
+    realm: operator-a.net
+    address: 192.0.2.11
+    port: 3868
+    transport: tcp
+    priority: 200
+    enabled: true
+
   - name: operator-b
     group: operator-b
     identity: dra.operator-b.net
