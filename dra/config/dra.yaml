@@ -9,6 +9,7 @@ diameter:
 
 peers:
   - name: operator-a
+    group: operator-a
     identity: dra.operator-a.net
     realm: operator-a.net
     address: 192.0.2.10
@@ -18,6 +19,7 @@ peers:
     enabled: true
 
   - name: operator-b
+    group: operator-b
     identity: dra.operator-b.net
     realm: operator-b.net
     address: 192.0.2.20
@@ -29,7 +31,7 @@ peers:
 routes:
   - name: operator-a-default
     realm: operator-a.net
-    peer: operator-a
+    peer_group: operator-a
     application_id: 16777251
     action: relay
     priority: 100
@@ -37,7 +39,7 @@ routes:
 
   - name: operator-b-default
     realm: operator-b.net
-    peer: operator-b
+    peer_group: operator-b
     application_id: 16777251
     action: relay
     priority: 100

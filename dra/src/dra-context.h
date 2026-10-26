@@ -13,6 +13,7 @@
 
 typedef struct dra_peer_s {
     char name[DRA_NAME_LEN];
+    char group[DRA_NAME_LEN];
     char identity[DRA_IDENTITY_LEN];
     char realm[DRA_REALM_LEN];
     char address[DRA_ADDRESS_LEN];
@@ -32,7 +33,7 @@ typedef enum dra_route_action_e {
 typedef struct dra_route_s {
     char name[DRA_NAME_LEN];
     char realm[DRA_REALM_LEN];
-    char peer[DRA_NAME_LEN];
+    char peer_group[DRA_NAME_LEN];
 
     uint32_t application_id;
     uint32_t priority;

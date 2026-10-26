@@ -151,6 +151,11 @@ parse_peers(
             copy_string(peer->name, sizeof(peer->name),
                 node->data.scalar.value);
 
+        node = mapping_lookup(document, entry, "group");
+        if (node != NULL && node->type == YAML_SCALAR_NODE)
+            copy_string(peer->group, sizeof(peer->group),
+                node->data.scalar.value);
+
         node = mapping_lookup(document, entry, "identity");
         if (node != NULL && node->type == YAML_SCALAR_NODE)
             copy_string(peer->identity, sizeof(peer->identity),
@@ -226,10 +231,11 @@ parse_routes(
             copy_string(route->realm, sizeof(route->realm),
                 node->data.scalar.value);
 
-        node = mapping_lookup(document, entry, "peer");
+        node = mapping_lookup(document, entry, "peer_group");
         if (node != NULL && node->type == YAML_SCALAR_NODE)
-            copy_string(route->peer, sizeof(route->peer),
+            copy_string(route->peer_group, sizeof(route->peer_group),
                 node->data.scalar.value);
+
         node = mapping_lookup(document, entry, "application_id");
         if (node != NULL && node->type == YAML_SCALAR_NODE)
             route->application_id =
@@ -270,20 +276,21 @@ parse_routes(
 }
 
 static int
-peer_exists(const dra_context_t *ctx, const char *name)
+peer_group_exists(const dra_context_t *ctx, const char *group)
 {
     unsigned int i;
 
-    if (ctx == NULL || name == NULL || name[0] == '\0')
+    if (ctx == NULL || group == NULL || group[0] == '\0')
         return 0;
 
     for (i = 0; i < ctx->peer_count; i++) {
-        if (strcmp(ctx->peers[i].name, name) == 0)
+        if (strcmp(ctx->peers[i].group, group) == 0)
             return 1;
     }
 
     return 0;
 }
+
 static int
 validate_config(const dra_context_t *ctx)
 {
@@ -316,6 +323,7 @@ validate_config(const dra_context_t *ctx)
         const dra_peer_t *peer = &ctx->peers[i];
 
         if (peer->name[0] == '\0' ||
+            peer->group[0] == '\0' ||
             peer->identity[0] == '\0' ||
             peer->realm[0] == '\0' ||
             peer->address[0] == '\0' ||
@@ -333,7 +341,7 @@ validate_config(const dra_context_t *ctx)
 
         if (route->name[0] == '\0' ||
             route->realm[0] == '\0' ||
-            route->peer[0] == '\0' ||
+            route->peer_group[0] == '\0' ||
             route->application_id == 0) {
             fprintf(
                 stderr,
@@ -342,12 +350,12 @@ validate_config(const dra_context_t *ctx)
             return -1;
         }
 
-        if (!peer_exists(ctx, route->peer)) {
+        if (!peer_group_exists(ctx, route->peer_group)) {
             fprintf(
                 stderr,
-                "opncell-drad: route %s references unknown peer %s\n",
+                "opncell-drad: route %s references unknown peer group %s\n",
                 route->name,
-                route->peer);
+                route->peer_group);
             return -1;
         }
     }
