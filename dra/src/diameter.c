@@ -413,6 +413,8 @@ dra_score_candidates(
     const unsigned char *realm,
     size_t realm_len,
     uint32_t application_id,
+    const unsigned char *destination_host,
+    size_t destination_host_len,
     struct fd_list *candidates)
 {
     const dra_route_t *route;
@@ -477,6 +479,29 @@ dra_score_candidates(
             strcmp(peer->group, route->peer_group) != 0) {
             force_candidate_no_delivery(candidate);
             continue;
+        }
+
+        /*
+         * An explicit Destination-Host is authoritative within the
+         * peer group selected by the DRA route.
+         *
+         * Candidates other than the requested host are excluded.
+         * If the requested host is unknown, outside the selected group,
+         * disabled, or unavailable, all candidates will therefore become
+         * unroutable and the request will fail closed.
+         */
+        if (destination_host != NULL &&
+            destination_host_len != 0) {
+            if (candidate->diamidlen != destination_host_len ||
+                fd_os_almostcasesrch(
+                    candidate->diamid,
+                    candidate->diamidlen,
+                    destination_host,
+                    destination_host_len,
+                    NULL) != 0) {
+                force_candidate_no_delivery(candidate);
+                continue;
+            }
         }
 
         runtime = dra_peer_runtime_find_const(
@@ -564,7 +589,10 @@ dra_diameter_test_routing(
     dra_score_candidates(
         &test_ctx,
         (const unsigned char *)"OPERATOR-A.NET",
-        strlen("OPERATOR-A.NET"),        16777251,
+        strlen("OPERATOR-A.NET"),
+        16777251,
+        NULL,
+        0,
         &candidates);
 
     printf(
@@ -581,6 +609,71 @@ dra_diameter_test_routing(
         return -1;
 
     /*
+     * Explicit Destination-Host must override normal peer priority,
+     * but only within the route's allowed peer group.
+     *
+     * Select the lower-preference backup explicitly. The primary and
+     * out-of-group peer must become unroutable.
+     */
+    a.score = 100;
+    a_backup.score = 100;
+    b.score = 100;
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"operator-a.net",
+        strlen("operator-a.net"),
+        16777251,
+        (const unsigned char *)"dra2.operator-a.net",
+        strlen("dra2.operator-a.net"),
+        &candidates);
+
+    printf(
+        "opncell-drad: routing destination-host diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score >= 0)
+        return -1;
+
+    if (a_backup.score < 0)
+        return -1;
+
+    if (b.score >= 0)
+        return -1;
+
+    /*
+     * Verify fail-closed behavior when Destination-Host names a peer
+     * outside the route's allowed peer group.
+     */
+    a.score = 100;
+    a_backup.score = 100;
+    b.score = 100;
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"operator-a.net",
+        strlen("operator-a.net"),
+        16777251,
+        (const unsigned char *)"dra.operator-b.net",
+        strlen("dra.operator-b.net"),
+        &candidates);
+
+    printf(
+        "opncell-drad: routing destination-host fail-closed diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score >= 0 ||
+        a_backup.score >= 0 ||
+        b.score >= 0)
+        return -1;
+
+    /*
      * Verify fail-closed behavior for an unmatched realm.
      */
     a.score = 100;
@@ -592,6 +685,8 @@ dra_diameter_test_routing(
         (const unsigned char *)"unmatched.example.net",
         strlen("unmatched.example.net"),
         16777251,
+        NULL,
+        0,
         &candidates);
 
     printf(
@@ -620,6 +715,7 @@ dra_rt_out_cb(
     struct msg_hdr *hdr;
     struct avp *avp;
     union avp_value *destination_realm = NULL;
+    union avp_value *destination_host = NULL;
     struct fd_list *li;
 
     (void)cbdata;
@@ -650,17 +746,24 @@ dra_rt_out_cb(
         if (fd_msg_avp_hdr(avp, &ahdr) != 0)
             return EINVAL;
 
-        if (!(ahdr->avp_flags & AVP_FLAG_VENDOR) &&
-            ahdr->avp_code == AC_DESTINATION_REALM) {
+        if (!(ahdr->avp_flags & AVP_FLAG_VENDOR)) {
+            if (ahdr->avp_code == AC_DESTINATION_REALM) {
+                if (fd_msg_parse_dict(
+                        avp,
+                        fd_g_config->cnf_dict,
+                        NULL) != 0)
+                    return EINVAL;
 
-            if (fd_msg_parse_dict(
-                    avp,
-                    fd_g_config->cnf_dict,
-                    NULL) != 0)
-                return EINVAL;
+                destination_realm = ahdr->avp_value;
+            } else if (ahdr->avp_code == AC_DESTINATION_HOST) {
+                if (fd_msg_parse_dict(
+                        avp,
+                        fd_g_config->cnf_dict,
+                        NULL) != 0)
+                    return EINVAL;
 
-            destination_realm = ahdr->avp_value;
-            break;
+                destination_host = ahdr->avp_value;
+            }
         }
 
         if (fd_msg_browse(
@@ -705,12 +808,18 @@ dra_rt_out_cb(
 
     ctx = &routing_snapshot;
 
-    dra_score_candidates(
-        ctx,
-        destination_realm->os.data,
-        destination_realm->os.len,
-        hdr->msg_appl,
-        candidates);
+dra_score_candidates(
+    ctx,
+    destination_realm->os.data,
+    destination_realm->os.len,
+    hdr->msg_appl,
+    destination_host != NULL
+        ? destination_host->os.data
+        : NULL,
+    destination_host != NULL
+        ? destination_host->os.len
+        : 0,
+    candidates);
 
     pthread_rwlock_unlock(
         &routing_snapshot_lock);
