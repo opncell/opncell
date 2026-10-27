@@ -3,11 +3,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <freeDiameter/freeDiameter-host.h>
 #include <freeDiameter/libfdcore.h>
 
 #include "diameter.h"
+#include "routing.h"
+
+static pthread_rwlock_t routing_snapshot_lock =
+    PTHREAD_RWLOCK_INITIALIZER;
+
+static dra_context_t routing_snapshot;
+static int routing_snapshot_valid = 0;
 
 int
 dra_diameter_write_config(
@@ -362,6 +370,382 @@ dra_diameter_remove_peer(
     }
 
     return rc;
+}
+
+static void
+force_candidate_no_delivery(
+    struct rtd_candidate *candidate)
+{
+    if (candidate == NULL)
+        return;
+
+    /*
+     * Make the score definitively negative regardless of any
+     * earlier freeDiameter routing score.
+     */
+    if (candidate->score >= 0)
+        candidate->score = -1;
+}
+
+int
+dra_diameter_update_routing(
+    const dra_context_t *ctx)
+{
+    if (ctx == NULL)
+        return -1;
+
+    if (pthread_rwlock_wrlock(
+            &routing_snapshot_lock) != 0)
+        return -1;
+
+    routing_snapshot = *ctx;
+    routing_snapshot_valid = 1;
+
+    pthread_rwlock_unlock(
+        &routing_snapshot_lock);
+
+    return 0;
+}
+
+static void
+dra_score_candidates(
+    const dra_context_t *ctx,
+    const unsigned char *realm,
+    size_t realm_len,
+    uint32_t application_id,
+    struct fd_list *candidates)
+{
+    const dra_route_t *route;
+    struct fd_list *li;
+
+    if (ctx == NULL ||
+        realm == NULL ||
+        realm_len == 0 ||
+        candidates == NULL)
+        return;
+
+    route = dra_route_find_len(
+        ctx,
+        realm,
+        realm_len,
+        application_id);
+
+    /*
+     * No provisioned route: fail closed.
+     */
+    if (route == NULL) {
+        for (li = candidates->next;
+             li != candidates;
+             li = li->next) {
+            force_candidate_no_delivery(
+                (struct rtd_candidate *)li);
+        }
+
+        return;
+    }
+
+    for (li = candidates->next;
+         li != candidates;
+         li = li->next) {
+        struct rtd_candidate *candidate;
+        const dra_peer_t *peer;
+        const dra_peer_runtime_t *runtime;
+        unsigned int i;
+
+        candidate = (struct rtd_candidate *)li;
+        peer = NULL;
+
+        for (i = 0; i < ctx->peer_count; i++) {
+            if (strlen(ctx->peers[i].identity) !=
+                candidate->diamidlen)
+                continue;
+
+            if (fd_os_almostcasesrch(
+                    candidate->diamid,
+                    candidate->diamidlen,
+                    (const unsigned char *)
+                        ctx->peers[i].identity,
+                    strlen(ctx->peers[i].identity),
+                    NULL) == 0) {
+                peer = &ctx->peers[i];
+                break;
+            }
+        }
+
+        if (peer == NULL ||
+            !peer->enabled ||
+            strcmp(peer->group, route->peer_group) != 0) {
+            force_candidate_no_delivery(candidate);
+            continue;
+        }
+
+        runtime = dra_peer_runtime_find_const(
+            ctx,
+            peer->name);
+
+        if (runtime == NULL ||
+            runtime->state != DRA_PEER_STATE_OPEN) {
+            force_candidate_no_delivery(candidate);
+            continue;
+        }
+
+        /*
+         * DRA routing policy is authoritative among eligible peers.
+         *
+         * freeDiameter routing callbacks are additive, so add the delta
+         * required to normalize the candidate to a DRA-controlled score.
+         * Lower configured peer priority produces the higher final score.
+         */
+        candidate->score +=
+            (1000000 - (int)peer->priority) -
+            candidate->score;
+    }
+}
+
+int
+dra_diameter_test_routing(
+    const dra_context_t *ctx)
+{
+    dra_context_t test_ctx;
+    struct fd_list candidates;
+    struct rtd_candidate a;
+    struct rtd_candidate a_backup;
+    struct rtd_candidate b;
+
+    if (ctx == NULL)
+        return -1;
+
+    test_ctx = *ctx;
+
+    if (dra_peer_state_set(
+            &test_ctx,
+            "operator-a",
+            DRA_PEER_STATE_OPEN) != 0)
+        return -1;
+
+    if (dra_peer_state_set(
+            &test_ctx,
+            "operator-a-backup",
+            DRA_PEER_STATE_OPEN) != 0)
+        return -1;
+
+    if (dra_peer_state_set(
+            &test_ctx,
+            "operator-b",
+            DRA_PEER_STATE_OPEN) != 0)
+        return -1;
+
+    fd_list_init(&candidates, NULL);
+
+    memset(&a, 0, sizeof(a));
+    memset(&a_backup, 0, sizeof(a_backup));
+    memset(&b, 0, sizeof(b));
+
+    fd_list_init(&a.chain, &a);
+    fd_list_init(&a_backup.chain, &a_backup);
+    fd_list_init(&b.chain, &b);
+
+    a.diamid = (DiamId_t)"dra.operator-a.net";
+    a.diamidlen = strlen(a.diamid);
+    a.score = 100;
+
+    a_backup.diamid = (DiamId_t)"dra2.operator-a.net";
+    a_backup.diamidlen = strlen(a_backup.diamid);
+    a_backup.score = 100;
+
+    b.diamid = (DiamId_t)"dra.operator-b.net";
+    b.diamidlen = strlen(b.diamid);
+    b.score = 100;
+
+    fd_list_insert_before(&candidates, &a.chain);
+    fd_list_insert_before(&candidates, &a_backup.chain);
+    fd_list_insert_before(&candidates, &b.chain);
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"OPERATOR-A.NET",
+        strlen("OPERATOR-A.NET"),        16777251,
+        &candidates);
+
+    printf(
+        "opncell-drad: routing diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score <= a_backup.score)
+        return -1;
+
+    if (b.score >= 0)
+        return -1;
+
+    /*
+     * Verify fail-closed behavior for an unmatched realm.
+     */
+    a.score = 100;
+    a_backup.score = 100;
+    b.score = 100;
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"unmatched.example.net",
+        strlen("unmatched.example.net"),
+        16777251,
+        &candidates);
+
+    printf(
+        "opncell-drad: routing fail-closed diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score >= 0 ||
+        a_backup.score >= 0 ||
+        b.score >= 0)
+        return -1;
+
+    return 0;
+}
+
+static int
+dra_rt_out_cb(
+    void *cbdata,
+    struct msg **pmsg,
+    struct fd_list *candidates)
+{
+    const dra_context_t *ctx;
+    struct msg *msg;
+    struct msg_hdr *hdr;
+    struct avp *avp;
+    union avp_value *destination_realm = NULL;
+    struct fd_list *li;
+
+    (void)cbdata;
+
+    if (pmsg == NULL ||
+        *pmsg == NULL ||
+        candidates == NULL)
+        return EINVAL;
+
+    msg = *pmsg;
+
+    if (fd_msg_hdr(msg, &hdr) != 0)
+        return EINVAL;
+
+    /*
+     * Find Destination-Realm.
+     */
+    if (fd_msg_browse(
+            msg,
+            MSG_BRW_FIRST_CHILD,
+            &avp,
+            NULL) != 0)
+        return EINVAL;
+
+    while (avp != NULL) {
+        struct avp_hdr *ahdr;
+
+        if (fd_msg_avp_hdr(avp, &ahdr) != 0)
+            return EINVAL;
+
+        if (!(ahdr->avp_flags & AVP_FLAG_VENDOR) &&
+            ahdr->avp_code == AC_DESTINATION_REALM) {
+
+            if (fd_msg_parse_dict(
+                    avp,
+                    fd_g_config->cnf_dict,
+                    NULL) != 0)
+                return EINVAL;
+
+            destination_realm = ahdr->avp_value;
+            break;
+        }
+
+        if (fd_msg_browse(
+                avp,
+                MSG_BRW_NEXT,
+                &avp,
+                NULL) != 0)
+            return EINVAL;
+    }
+
+    /*
+     * Fail closed if Destination-Realm is absent.
+     */
+    if (destination_realm == NULL) {
+        for (li = candidates->next;
+             li != candidates;
+             li = li->next) {
+            force_candidate_no_delivery(
+                (struct rtd_candidate *)li);
+        }
+
+        return 0;
+    }
+
+    if (pthread_rwlock_rdlock(
+            &routing_snapshot_lock) != 0)
+        return EINVAL;
+
+    if (!routing_snapshot_valid) {
+        pthread_rwlock_unlock(
+            &routing_snapshot_lock);
+
+        for (li = candidates->next;
+             li != candidates;
+             li = li->next) {
+            force_candidate_no_delivery(
+                (struct rtd_candidate *)li);
+        }
+
+        return 0;
+    }
+
+    ctx = &routing_snapshot;
+
+    dra_score_candidates(
+        ctx,
+        destination_realm->os.data,
+        destination_realm->os.len,
+        hdr->msg_appl,
+        candidates);
+
+    pthread_rwlock_unlock(
+        &routing_snapshot_lock);
+
+    return 0;
+}
+
+int
+dra_diameter_register_routing(
+    dra_context_t *ctx,
+    struct fd_rt_out_hdl **handler)
+{
+    if (ctx == NULL || handler == NULL)
+        return -1;
+
+    if (dra_diameter_update_routing(ctx) != 0)
+        return -1;
+
+    return fd_rt_out_register(
+        dra_rt_out_cb,
+        NULL,
+        0,
+        handler);
+}
+
+int
+dra_diameter_unregister_routing(
+    struct fd_rt_out_hdl *handler)
+{
+    if (handler == NULL)
+        return 0;
+
+    return fd_rt_out_unregister(
+        handler,
+        NULL);
 }
 
 int

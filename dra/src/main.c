@@ -264,6 +264,7 @@ main(int argc, char *argv[])
     int pending_reload = 0;
     int rollback_pending = 0;
     struct fd_hook_hdl *peer_hook = NULL;
+    struct fd_rt_out_hdl *routing_hook = NULL;
     const char *config_path =
         "/usr/local/etc/opncell/dra.yaml";
 
@@ -402,9 +403,45 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    printf("opncell-drad: freeDiameter core running\n");
+printf("opncell-drad: freeDiameter core running\n");
 
-    log_routing_test(&ctx);
+if (dra_diameter_register_routing(
+        &ctx,
+        &routing_hook) != 0) {
+    fprintf(stderr,
+        "opncell-drad: failed to register "
+        "Diameter routing callback\n");
+
+    fd_core_shutdown();
+    fd_core_wait_shutdown_complete();
+
+    fd_hook_unregister(peer_hook);
+    dra_context_final(&ctx);
+
+    return EXIT_FAILURE;
+}
+
+    printf("opncell-drad: Diameter routing callback registered\n");
+
+    if (dra_diameter_test_routing(&ctx) != 0) {
+        fprintf(stderr,
+            "opncell-drad: Diameter routing diagnostic failed\n");
+
+        dra_diameter_unregister_routing(routing_hook);
+        routing_hook = NULL;
+
+        fd_core_shutdown();
+        fd_core_wait_shutdown_complete();
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+printf("opncell-drad: Diameter routing diagnostic passed\n");
+
+log_routing_test(&ctx);
 
     printf("opncell-drad: ready\n");
 
@@ -494,6 +531,12 @@ main(int argc, char *argv[])
                             dra_provisioning_commit(
                                 &ctx,
                                 &next);
+
+                            if (dra_diameter_update_routing(&ctx) != 0) {
+                                fprintf(stderr,
+                                    "opncell-drad: failed to update "
+                                    "Diameter routing snapshot\n");
+                            }
                         }
                     }
                 }
@@ -693,10 +736,29 @@ main(int argc, char *argv[])
             }
         }
         refresh_peer_runtime_states(&ctx);
+
+        if (dra_diameter_update_routing(&ctx) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to update "
+                "Diameter routing runtime snapshot\n");
+        }
+
         sleep(1);
+
     }
 
     printf("opncell-drad: shutdown requested\n");
+
+    if (routing_hook != NULL) {
+        if (dra_diameter_unregister_routing(
+                routing_hook) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to unregister "
+                "Diameter routing callback\n");
+        }
+
+        routing_hook = NULL;
+    }
 
     if (fd_core_shutdown() != 0) {
         fprintf(stderr,

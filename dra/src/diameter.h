@@ -18,6 +18,21 @@ int dra_diameter_add_configured_peers(
 int dra_diameter_remove_peer(
     const char *identity);
 
+struct fd_rt_out_hdl;
+
+int dra_diameter_update_routing(
+    const dra_context_t *ctx);
+
+int dra_diameter_test_routing(
+    const dra_context_t *ctx);
+
+int dra_diameter_register_routing(
+    dra_context_t *ctx,
+    struct fd_rt_out_hdl **handler);
+
+int dra_diameter_unregister_routing(
+    struct fd_rt_out_hdl *handler);
+
 int dra_diameter_peer_transport_equal(
     const dra_peer_t *a,
     const dra_peer_t *b);
