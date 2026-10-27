@@ -194,6 +194,60 @@ dra_diameter_preflight_peers(
 }
 
 int
+dra_diameter_get_peer_state(
+    const dra_peer_t *peer,
+    dra_peer_state_t *state)
+{
+    int fd_state;
+    int rc;
+
+    if (peer == NULL || state == NULL)
+        return -1;
+
+    if (!peer->enabled) {
+        *state = DRA_PEER_STATE_DOWN;
+        return 0;
+    }
+
+    rc = fd_peer_get_state_byid(
+        (DiamId_t)peer->identity,
+        strlen(peer->identity),
+        0,
+        &fd_state);
+
+    if (rc == ENOENT) {
+        *state = DRA_PEER_STATE_DOWN;
+        return 0;
+    }
+
+    if (rc != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed reading Diameter peer "
+            "state for %s identity=%s rc=%d\n",
+            peer->name,
+            peer->identity,
+            rc);
+        return -1;
+    }
+
+    switch (fd_state) {
+    case STATE_OPEN:
+        *state = DRA_PEER_STATE_OPEN;
+        break;
+
+    case STATE_ZOMBIE:
+        *state = DRA_PEER_STATE_DOWN;
+        break;
+
+    default:
+        *state = DRA_PEER_STATE_CONNECTING;
+        break;
+    }
+
+    return 0;
+}
+
+int
 dra_diameter_add_peer(
     const dra_peer_t *peer)
 {

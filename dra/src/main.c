@@ -107,6 +107,88 @@ log_routing_test(const dra_context_t *ctx)
 }
 
 static void
+refresh_peer_runtime_states(
+    dra_context_t *ctx)
+{
+    dra_peer_t peers[DRA_MAX_PEERS];
+    unsigned int peer_count;
+    unsigned int i;
+
+    if (ctx == NULL)
+        return;
+
+    /*
+     * Snapshot configured peers while holding only the DRA lock.
+     * Do not call freeDiameter while context_lock is held.
+     */
+    if (pthread_rwlock_rdlock(&context_lock) != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to lock context "
+            "for peer-state snapshot\n");
+        return;
+    }
+
+    peer_count = ctx->peer_count;
+
+    if (peer_count > DRA_MAX_PEERS)
+        peer_count = DRA_MAX_PEERS;
+
+    memcpy(
+        peers,
+        ctx->peers,
+        peer_count * sizeof(peers[0]));
+
+    pthread_rwlock_unlock(&context_lock);
+
+    /*
+     * Query freeDiameter outside context_lock.
+     */
+    for (i = 0; i < peer_count; i++) {
+        dra_peer_state_t state;
+
+        if (dra_diameter_get_peer_state(
+                &peers[i],
+                &state) != 0)
+            continue;
+
+        /*
+         * Publish the state only after the freeDiameter call
+         * has completed.
+         */
+        if (pthread_rwlock_wrlock(&context_lock) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to lock context "
+                "for peer-state update\n");
+            return;
+        }
+
+        /*
+         * Verify that the same configured peer still exists before
+         * publishing the sampled state.
+         */
+        {
+            const dra_peer_t *current_peer;
+
+            current_peer = dra_peer_find_by_name(
+                ctx,
+                peers[i].name);
+
+            if (current_peer != NULL &&
+                strcmp(
+                    current_peer->identity,
+                    peers[i].identity) == 0) {
+                dra_peer_state_set(
+                    ctx,
+                    peers[i].name,
+                    state);
+            }
+        }
+
+        pthread_rwlock_unlock(&context_lock);
+    }
+}
+
+static void
 peer_hook_cb(
     enum fd_hook_type type,
     struct msg *msg,
@@ -610,7 +692,7 @@ main(int argc, char *argv[])
                 }
             }
         }
-
+        refresh_peer_runtime_states(&ctx);
         sleep(1);
     }
 

@@ -37,6 +37,10 @@ int dra_diameter_add_pending_peers(
 int dra_diameter_preflight_peers(
     const dra_context_t *ctx);
 
+int dra_diameter_get_peer_state(
+    const dra_peer_t *peer,
+    dra_peer_state_t *state);
+
 int dra_diameter_remove_candidate_peers(
     const dra_context_t *current,
     const dra_context_t *candidate);

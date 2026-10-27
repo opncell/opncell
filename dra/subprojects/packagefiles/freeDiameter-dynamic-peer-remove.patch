@@ -1,5 +1,5 @@
 diff --git a/include/freeDiameter/libfdcore.h b/include/freeDiameter/libfdcore.h
-index 4f6edce..39659d4 100644
+index 4f6edce..fa60773 100644
 --- a/include/freeDiameter/libfdcore.h
 +++ b/include/freeDiameter/libfdcore.h
 @@ -374,7 +374,25 @@ extern pthread_rwlock_t fd_g_peers_rw; /* protect the list */
@@ -29,6 +29,30 @@ index 4f6edce..39659d4 100644
  /*
   * FUNCTION:	fd_peer_getbyid
   *
+@@ -408,6 +426,23 @@ int fd_peer_getbyid( DiamId_t diamid, size_t diamidlen, int igncase, struct peer
+  */
+ int fd_peer_get_state(struct peer_hdr *peer);
+ 
++/*
++ * Atomically look up a peer by Diameter Identity and read its state.
++ *
++ * Unlike fd_peer_getbyid(), this function does not expose a peer pointer
++ * after the global peer-table lock has been released.
++ *
++ * Returns:
++ *   0       peer found and *state updated
++ *   ENOENT  peer not found
++ *   EINVAL  invalid parameters
++ */
++int fd_peer_get_state_byid(
++    DiamId_t diamid,
++    size_t diamidlen,
++    int igncase,
++    int *state);
++
+ /* 
+  * FUNCTION:	fd_peer_cnx_proto_info
+  *
 diff --git a/libfdcore/p_psm.c b/libfdcore/p_psm.c
 index 6368bb0..f72d975 100644
 --- a/libfdcore/p_psm.c
@@ -55,7 +79,7 @@ index 6368bb0..f72d975 100644
  }
  
 diff --git a/libfdcore/peers.c b/libfdcore/peers.c
-index 456638f..7374ec3 100644
+index 456638f..e10e50f 100644
 --- a/libfdcore/peers.c
 +++ b/libfdcore/peers.c
 @@ -160,7 +160,7 @@ int fd_peer_add ( struct peer_info * info, const char * orig_dbg, void (*cb)(str
@@ -150,3 +174,101 @@ index 456638f..7374ec3 100644
  /* Search for a peer */
  int fd_peer_getbyid( DiamId_t diamid, size_t diamidlen, int igncase, struct peer_hdr ** peer )
  {
+@@ -219,6 +294,97 @@ int fd_peer_getbyid( DiamId_t diamid, size_t diamidlen, int igncase, struct peer
+ 	return 0;
+ }
+ 
++int
++fd_peer_get_state_byid(
++    DiamId_t diamid,
++    size_t diamidlen,
++    int igncase,
++    int *state)
++{
++    struct fd_list *li;
++    struct fd_peer *peer = NULL;
++
++    TRACE_ENTRY("%p %zd %d %p",
++        diamid,
++        diamidlen,
++        igncase,
++        state);
++
++    CHECK_PARAMS(
++        diamid &&
++        diamidlen &&
++        state);
++
++    CHECK_POSIX(
++        pthread_rwlock_rdlock(
++            &fd_g_peers_rw));
++
++    if (igncase) {
++        for (li = fd_g_peers.next;
++             li != &fd_g_peers;
++             li = li->next) {
++            struct fd_peer *next;
++            int cmp;
++            int cont;
++
++            next = (struct fd_peer *)li;
++
++            cmp = fd_os_almostcasesrch(
++                diamid,
++                diamidlen,
++                next->p_hdr.info.pi_diamid,
++                next->p_hdr.info.pi_diamidlen,
++                &cont);
++
++            if (cmp == 0) {
++                peer = next;
++                break;
++            }
++
++            if (!cont)
++                break;
++        }
++    } else {
++        for (li = fd_g_peers.next;
++             li != &fd_g_peers;
++             li = li->next) {
++            struct fd_peer *next;
++            int cmp;
++
++            next = (struct fd_peer *)li;
++
++            cmp = fd_os_cmp(
++                diamid,
++                diamidlen,
++                next->p_hdr.info.pi_diamid,
++                next->p_hdr.info.pi_diamidlen);
++
++            if (cmp > 0)
++                continue;
++
++            if (cmp == 0)
++                peer = next;
++
++            break;
++        }
++    }
++
++    if (peer == NULL) {
++        CHECK_POSIX(
++            pthread_rwlock_unlock(
++                &fd_g_peers_rw));
++
++        return ENOENT;
++    }
++
++    *state = fd_peer_getstate(peer);
++
++    CHECK_POSIX(
++        pthread_rwlock_unlock(
++            &fd_g_peers_rw));
++
++    return 0;
++}
+ 
+ #define free_null( _v ) 	\
+ 	if (_v) {		\
