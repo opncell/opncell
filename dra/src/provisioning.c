@@ -336,6 +336,40 @@ validate_config(const dra_context_t *ctx)
         }
     }
 
+    /*
+     * Peer names are the stable configuration keys used during
+     * reconciliation, so they must be unique.
+     *
+     * Diameter identities must also be unique because freeDiameter
+     * maintains peers by Diameter Identity.
+     */
+    for (i = 0; i < ctx->peer_count; i++) {
+        unsigned int j;
+
+        for (j = i + 1; j < ctx->peer_count; j++) {
+            if (strcmp(
+                    ctx->peers[i].name,
+                    ctx->peers[j].name) == 0) {
+                fprintf(
+                    stderr,
+                    "opncell-drad: duplicate peer name %s\n",
+                    ctx->peers[i].name);
+                return -1;
+            }
+
+            if (strcmp(
+                    ctx->peers[i].identity,
+                    ctx->peers[j].identity) == 0) {
+                fprintf(
+                    stderr,
+                    "opncell-drad: duplicate Diameter peer "
+                    "identity %s\n",
+                    ctx->peers[i].identity);
+                return -1;
+            }
+        }
+    }
+
     for (i = 0; i < ctx->route_count; i++) {
         const dra_route_t *route = &ctx->routes[i];
 
@@ -362,9 +396,120 @@ validate_config(const dra_context_t *ctx)
 
     return 0;
 }
+static void
+reconcile_peer_runtime(
+    dra_context_t *next,
+    const dra_context_t *current)
+{
+    unsigned int i;
+    unsigned int j;
+
+    next->peer_runtime_count = 0;
+
+    for (i = 0; i < next->peer_count; i++) {
+        dra_peer_runtime_t *runtime;
+
+        runtime = &next->peer_runtime[next->peer_runtime_count];
+        memset(runtime, 0, sizeof(*runtime));
+
+        copy_string(
+            runtime->name,
+            sizeof(runtime->name),
+            (const unsigned char *)next->peers[i].name);
+
+        runtime->state = DRA_PEER_STATE_DOWN;
+
+        if (current != NULL) {
+            const dra_peer_t *old_peer;
+
+            old_peer = dra_peer_find_by_name(
+                current,
+                next->peers[i].name);
+
+            if (old_peer != NULL &&
+                strcmp(old_peer->identity,
+                    next->peers[i].identity) == 0 &&
+                strcmp(old_peer->realm,
+                    next->peers[i].realm) == 0 &&
+                strcmp(old_peer->address,
+                    next->peers[i].address) == 0 &&
+                old_peer->port == next->peers[i].port &&
+                old_peer->enabled == next->peers[i].enabled) {
+
+                for (j = 0;
+                     j < current->peer_runtime_count;
+                     j++) {
+                    if (strcmp(
+                            current->peer_runtime[j].name,
+                            next->peers[i].name) == 0) {
+                        runtime->state =
+                            current->peer_runtime[j].state;
+                        break;
+                    }
+                }
+            }
+        }
+
+
+        next->peer_runtime_count++;
+    }
+}
+
+static int
+config_equal(
+    const dra_context_t *a,
+    const dra_context_t *b)
+{
+    unsigned int i;
+
+    if (a == NULL || b == NULL)
+        return 0;
+
+    if (strcmp(a->diameter_identity, b->diameter_identity) != 0 ||
+        strcmp(a->diameter_realm, b->diameter_realm) != 0 ||
+        strcmp(a->listen_address, b->listen_address) != 0 ||
+        a->listen_port != b->listen_port ||
+        a->peer_count != b->peer_count ||
+        a->route_count != b->route_count)
+        return 0;
+
+    for (i = 0; i < a->peer_count; i++) {
+        const dra_peer_t *pa = &a->peers[i];
+        const dra_peer_t *pb = &b->peers[i];
+
+        if (strcmp(pa->name, pb->name) != 0 ||
+            strcmp(pa->group, pb->group) != 0 ||
+            strcmp(pa->identity, pb->identity) != 0 ||
+            strcmp(pa->realm, pb->realm) != 0 ||
+            strcmp(pa->address, pb->address) != 0 ||
+            pa->port != pb->port ||
+            pa->priority != pb->priority ||
+            pa->enabled != pb->enabled)
+            return 0;
+    }
+
+    for (i = 0; i < a->route_count; i++) {
+        const dra_route_t *ra = &a->routes[i];
+        const dra_route_t *rb = &b->routes[i];
+
+        if (strcmp(ra->name, rb->name) != 0 ||
+            strcmp(ra->realm, rb->realm) != 0 ||
+            strcmp(ra->peer_group, rb->peer_group) != 0 ||
+            ra->application_id != rb->application_id ||
+            ra->priority != rb->priority ||
+            ra->action != rb->action ||
+            ra->enabled != rb->enabled)
+            return 0;
+    }
+
+    return 1;
+}
 
 int
-dra_provisioning_load(dra_context_t *ctx, const char *path)
+dra_provisioning_prepare(
+    const dra_context_t *current,
+    const char *path,
+    dra_context_t *next)
 {
     FILE *fp;
     yaml_parser_t parser;
@@ -373,13 +518,14 @@ dra_provisioning_load(dra_context_t *ctx, const char *path)
     yaml_node_t *diameter;
     yaml_node_t *peers;
     yaml_node_t *routes;
-    dra_context_t next;
     int rc = -1;
 
-    if (ctx == NULL || path == NULL)
+    if (current == NULL || path == NULL || next == NULL)
         return -1;
-    memset(&next, 0, sizeof(next));
-    next.running = ctx->running;
+
+    memset(next, 0, sizeof(*next));
+    next->running = current->running;
+
     fp = fopen(path, "r");
     if (fp == NULL) {
         perror("opncell-drad: fopen");
@@ -412,20 +558,62 @@ dra_provisioning_load(dra_context_t *ctx, const char *path)
     peers = mapping_lookup(&document, root, "peers");
     routes = mapping_lookup(&document, root, "routes");
 
-    if (parse_diameter(&next, &document, diameter) != 0)
+    if (parse_diameter(next, &document, diameter) != 0)
         goto out_document;
 
-    if (parse_peers(&next, &document, peers) != 0)
+    if (parse_peers(next, &document, peers) != 0)
         goto out_document;
 
-    if (parse_routes(&next, &document, routes) != 0)
+    if (parse_routes(next, &document, routes) != 0)
         goto out_document;
 
-    if (validate_config(&next) != 0)
+    if (validate_config(next) != 0)
         goto out_document;
 
-    next.generation = ctx->generation + 1;
-    *ctx = next;
+    reconcile_peer_runtime(next, current);
+
+    if (config_equal(current, next))
+        next->generation = current->generation;
+    else
+        next->generation = current->generation + 1;
+
+    rc = 0;
+
+out_document:
+    yaml_document_delete(&document);
+
+out_parser:
+    yaml_parser_delete(&parser);
+    fclose(fp);
+
+    return rc;
+}
+
+void
+dra_provisioning_commit(
+    dra_context_t *ctx,
+    const dra_context_t *next)
+{
+    if (ctx == NULL || next == NULL)
+        return;
+
+    *ctx = *next;
+}
+
+int
+dra_provisioning_load(
+    dra_context_t *ctx,
+    const char *path)
+{
+    dra_context_t next;
+
+    if (ctx == NULL || path == NULL)
+        return -1;
+
+    if (dra_provisioning_prepare(ctx, path, &next) != 0)
+        return -1;
+
+    dra_provisioning_commit(ctx, &next);
 
     printf(
         "opncell-drad: configuration generation %" PRIu64
@@ -445,20 +633,13 @@ dra_provisioning_load(dra_context_t *ctx, const char *path)
         ctx->peer_count,
         ctx->route_count);
 
-    rc = 0;
-
-out_document:
-    yaml_document_delete(&document);
-
-out_parser:
-    yaml_parser_delete(&parser);
-    fclose(fp);
-
-    return rc;
+    return 0;
 }
 
 int
-dra_provisioning_reload(dra_context_t *ctx, const char *path)
+dra_provisioning_reload(
+    dra_context_t *ctx,
+    const char *path)
 {
     if (ctx == NULL || path == NULL)
         return -1;

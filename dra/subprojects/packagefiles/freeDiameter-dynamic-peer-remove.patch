@@ -1,0 +1,152 @@
+diff --git a/include/freeDiameter/libfdcore.h b/include/freeDiameter/libfdcore.h
+index 4f6edce..39659d4 100644
+--- a/include/freeDiameter/libfdcore.h
++++ b/include/freeDiameter/libfdcore.h
+@@ -374,7 +374,25 @@ extern pthread_rwlock_t fd_g_peers_rw; /* protect the list */
+  *    ENOMEM 	: Memory allocation for the new object element failed.)
+  */
+ int fd_peer_add ( struct peer_info * info, const char * orig_dbg, void (*cb)(struct peer_info *, void *), void * cb_data );
+-
++/*
++ * Request removal of a peer from the global peer table.
++ *
++ * If the peer is still active, its state machine is asked to terminate
++ * and EAGAIN is returned. The caller may retry later.
++ *
++ * Once the peer reaches STATE_ZOMBIE, this function unlinks and frees
++ * the peer object and returns 0. After that, the same Diameter Identity
++ * may be added again with fd_peer_add().
++ *
++ * Returns:
++ *   0       peer removed
++ *   EAGAIN  termination in progress
++ *   ENOENT  peer not found
++ *   EINVAL  invalid parameters
++ */
++int fd_peer_remove(
++    DiamId_t diamid,
++    size_t diamidlen);
+ /*
+  * FUNCTION:	fd_peer_getbyid
+  *
+diff --git a/libfdcore/p_psm.c b/libfdcore/p_psm.c
+index 6368bb0..f72d975 100644
+--- a/libfdcore/p_psm.c
++++ b/libfdcore/p_psm.c
+@@ -897,9 +897,17 @@ psm_end:
+ 	TRACE_DEBUG(INFO, "'%s'\t-> 'STATE_ZOMBIE' (terminated)\t'%s'",
+ 			STATE_STR(fd_peer_getstate(peer)),
+ 			peer->p_hdr.info.pi_diamid);
+-	pthread_cleanup_pop(1); /* set STATE_ZOMBIE */
+-	peer->p_psm = (pthread_t)NULL;
+-	pthread_detach(pthread_self());
++/*
++ * Clear the PSM thread reference before publishing STATE_ZOMBIE.
++ *
++ * fd_peer_remove() may free the peer immediately after observing
++ * STATE_ZOMBIE, so the PSM must not access the peer object after
++ * that state becomes visible.
++ */
++peer->p_psm = (pthread_t)NULL;
++pthread_cleanup_pop(1); /* set STATE_ZOMBIE */
++
++pthread_detach(pthread_self());
+ 	return NULL;
+ }
+ 
+diff --git a/libfdcore/peers.c b/libfdcore/peers.c
+index 456638f..7374ec3 100644
+--- a/libfdcore/peers.c
++++ b/libfdcore/peers.c
+@@ -160,7 +160,7 @@ int fd_peer_add ( struct peer_info * info, const char * orig_dbg, void (*cb)(str
+ 		if (!cont)
+ 			break;
+ 	}
+-	
++
+ 	/* We can insert the new peer object */
+ 	if (! ret)
+ 		do {
+@@ -179,7 +179,82 @@ int fd_peer_add ( struct peer_info * info, const char * orig_dbg, void (*cb)(str
+ 	}
+ 	return ret;
+ }
++/* Remove a peer */
++int
++fd_peer_remove(
++    DiamId_t diamid,
++    size_t diamidlen)
++{
++    struct fd_list *li;
++    struct fd_peer *peer = NULL;
++    int state;
++
++    TRACE_ENTRY("%p %zd", diamid, diamidlen);
++
++    CHECK_PARAMS(diamid && diamidlen);
++
++    CHECK_POSIX(
++        pthread_rwlock_wrlock(&fd_g_peers_rw));
++
++    for (li = fd_g_peers.next;
++          li != &fd_g_peers;
++          li = li->next) {
++        struct fd_peer *next = (struct fd_peer *)li;
++        int cmp;
++        int cont;
++
++        cmp = fd_os_almostcasesrch(
++            diamid,
++            diamidlen,
++            next->p_hdr.info.pi_diamid,
++            next->p_hdr.info.pi_diamidlen,
++            &cont);
++
++        if (cmp == 0) {
++            peer = next;
++            break;
++        }
++
++        if (!cont)
++            break;
++    }
+ 
++    if (peer == NULL) {
++        CHECK_POSIX(
++            pthread_rwlock_unlock(&fd_g_peers_rw));
++        return ENOENT;
++    }
++
++    state = fd_peer_getstate(peer);
++
++    if (state != STATE_ZOMBIE) {
++        peer->p_flags.pf_delete = 1;
++
++        CHECK_FCT_DO(
++            fd_psm_terminate(
++                peer,
++                "OPNCELL_DRA_REMOVE"),
++            {
++                pthread_rwlock_unlock(
++                    &fd_g_peers_rw);
++                return EINVAL;
++            });
++
++        CHECK_POSIX(
++            pthread_rwlock_unlock(&fd_g_peers_rw));
++
++        return EAGAIN;
++    }
++
++    fd_list_unlink(&peer->p_hdr.chain);
++
++    CHECK_POSIX(
++        pthread_rwlock_unlock(&fd_g_peers_rw));
++
++    CHECK_FCT(fd_peer_free(&peer));
++
++    return 0;
++}
+ /* Search for a peer */
+ int fd_peer_getbyid( DiamId_t diamid, size_t diamidlen, int igncase, struct peer_hdr ** peer )
+ {

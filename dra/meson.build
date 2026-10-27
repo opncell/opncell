@@ -24,6 +24,7 @@ sources = files(
   'src/dra-context.c',
   'src/provisioning.c',
   'src/routing.c',
+  'src/diameter.c',
 )
 
 executable(

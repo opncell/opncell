@@ -47,10 +47,19 @@ dra_peer_select(
     for (i = 0; i < ctx->peer_count; i++) {
         const dra_peer_t *peer = &ctx->peers[i];
 
+        const dra_peer_runtime_t *runtime;
+
         if (!peer->enabled)
             continue;
 
         if (strcmp(peer->group, route->peer_group) != 0)
+            continue;
+
+        runtime = dra_peer_runtime_find_const(ctx, peer->name);
+        if (runtime == NULL)
+            continue;
+
+        if (runtime->state != DRA_PEER_STATE_OPEN)
             continue;
 
         if (best == NULL || peer->priority < best->priority)

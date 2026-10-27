@@ -24,6 +24,19 @@ typedef struct dra_peer_s {
     int enabled;
 } dra_peer_t;
 
+typedef enum dra_peer_state_e {
+    DRA_PEER_STATE_DOWN = 0,
+    DRA_PEER_STATE_CONNECTING,
+    DRA_PEER_STATE_OPEN,
+    DRA_PEER_STATE_DRAINING
+} dra_peer_state_t;
+
+typedef struct dra_peer_runtime_s {
+    char name[DRA_NAME_LEN];
+
+    dra_peer_state_t state;
+} dra_peer_runtime_t;
+
 typedef enum dra_route_action_e {
     DRA_ROUTE_ACTION_RELAY = 0,
     DRA_ROUTE_ACTION_PROXY,
@@ -54,11 +67,40 @@ typedef struct dra_context_s {
     dra_peer_t peers[DRA_MAX_PEERS];
     unsigned int peer_count;
 
+    dra_peer_runtime_t peer_runtime[DRA_MAX_PEERS];
+    unsigned int peer_runtime_count;
+
     dra_route_t routes[DRA_MAX_ROUTES];
     unsigned int route_count;
 } dra_context_t;
 
 int dra_context_init(dra_context_t *ctx);
 void dra_context_final(dra_context_t *ctx);
+
+dra_peer_runtime_t *
+dra_peer_runtime_find(
+    dra_context_t *ctx,
+    const char *name);
+
+const dra_peer_runtime_t *
+dra_peer_runtime_find_const(
+    const dra_context_t *ctx,
+    const char *name);
+
+int
+dra_peer_state_set(
+    dra_context_t *ctx,
+    const char *name,
+    dra_peer_state_t state);
+
+const dra_peer_t *
+dra_peer_find_by_identity(
+    const dra_context_t *ctx,
+    const char *identity);
+
+const dra_peer_t *dra_peer_find_by_name(
+    const dra_context_t *ctx,
+    const char *name);
+
 
 #endif /* OPNCELL_DRA_CONTEXT_H */

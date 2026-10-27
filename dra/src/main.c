@@ -1,16 +1,23 @@
+#include <inttypes.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
+#include <string.h>
 #include <unistd.h>
 
-#include "dra-context.h"
-#include "provisioning.h"
-#include "routing.h"
 #include <freeDiameter/freeDiameter-host.h>
 #include <freeDiameter/libfdcore.h>
 
+#include "diameter.h"
+#include "dra-context.h"
+#include "provisioning.h"
+#include "routing.h"
+
 static volatile sig_atomic_t shutdown_requested = 0;
 static volatile sig_atomic_t reload_requested = 0;
+
+static pthread_rwlock_t context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 static void
 signal_handler(int signo)
@@ -57,12 +64,20 @@ log_routing_test(const dra_context_t *ctx)
     const dra_route_t *route;
     const dra_peer_t *peer;
 
+    if (pthread_rwlock_rdlock(&context_lock) != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to lock context for routing test\n");
+        return;
+    }
+
     route = dra_route_find(
         ctx,
         "operator-a.net",
         16777251);
 
     if (route == NULL) {
+        pthread_rwlock_unlock(&context_lock);
+
         fprintf(stderr,
             "opncell-drad: routing test found no matching route\n");
         return;
@@ -71,6 +86,8 @@ log_routing_test(const dra_context_t *ctx)
     peer = dra_peer_select(ctx, route);
 
     if (peer == NULL) {
+        pthread_rwlock_unlock(&context_lock);
+
         fprintf(stderr,
             "opncell-drad: routing test found no eligible peer\n");
         return;
@@ -85,13 +102,88 @@ log_routing_test(const dra_context_t *ctx)
         route->peer_group,
         peer->name,
         peer->priority);
+
+    pthread_rwlock_unlock(&context_lock);
+}
+
+static void
+peer_hook_cb(
+    enum fd_hook_type type,
+    struct msg *msg,
+    struct peer_hdr *peer,
+    void *other,
+    struct fd_hook_permsgdata *pmd,
+    void *regdata)
+{
+    dra_context_t *ctx = regdata;
+    const dra_peer_t *configured_peer;
+    const char *identity;
+    int fd_state;
+
+    (void)msg;
+    (void)other;
+    (void)pmd;
+
+    if (ctx == NULL || peer == NULL)
+        return;
+
+    identity = (const char *)peer->info.pi_diamid;
+    if (identity == NULL || identity[0] == '\0')
+        return;
+
+    if (pthread_rwlock_wrlock(&context_lock) != 0)
+        return;
+
+    configured_peer = dra_peer_find_by_identity(
+        ctx,
+        identity);
+
+    if (configured_peer == NULL) {
+        pthread_rwlock_unlock(&context_lock);
+        return;
+    }
+
+    fd_state = fd_peer_get_state(peer);
+
+    switch (type) {
+    case HOOK_PEER_CONNECT_SUCCESS:
+        if (fd_state == STATE_OPEN) {
+            dra_peer_state_set(
+                ctx,
+                configured_peer->name,
+                DRA_PEER_STATE_OPEN);
+        } else {
+            dra_peer_state_set(
+                ctx,
+                configured_peer->name,
+                DRA_PEER_STATE_CONNECTING);
+        }
+        break;
+
+    case HOOK_PEER_CONNECT_FAILED:
+        dra_peer_state_set(
+            ctx,
+            configured_peer->name,
+            DRA_PEER_STATE_DOWN);
+        break;
+
+    default:
+        break;
+    }
+
+    pthread_rwlock_unlock(&context_lock);
 }
 
 int
 main(int argc, char *argv[])
 {
     dra_context_t ctx;
-    const char *config_path = "/usr/local/etc/opncell/dra.yaml";
+    dra_context_t pending_ctx;
+    int pending_reload = 0;
+    int rollback_pending = 0;
+    struct fd_hook_hdl *peer_hook = NULL;
+    const char *config_path =
+        "/usr/local/etc/opncell/dra.yaml";
 
     if (argc > 1)
         config_path = argv[1];
@@ -99,41 +191,423 @@ main(int argc, char *argv[])
     printf("opncell-drad: starting\n");
 
     if (fd_core_initialize() != 0) {
-        fprintf(stderr, "opncell-drad: freeDiameter initialization failed\n");
+        fprintf(stderr,
+            "opncell-drad: freeDiameter initialization failed\n");
         return EXIT_FAILURE;
     }
 
     printf("opncell-drad: freeDiameter initialized\n");
 
     if (dra_context_init(&ctx) != 0) {
-        fprintf(stderr, "opncell-drad: failed to initialize context\n");
+        fprintf(stderr,
+            "opncell-drad: failed to initialize context\n");
+        return EXIT_FAILURE;
+    }
+
+    memset(&pending_ctx, 0, sizeof(pending_ctx));
+
+    if (fd_hook_register(
+            HOOK_MASK(
+                HOOK_PEER_CONNECT_SUCCESS,
+                HOOK_PEER_CONNECT_FAILED),
+            peer_hook_cb,
+            &ctx,
+            NULL,
+            &peer_hook) != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to register peer hook\n");
+
+        dra_context_final(&ctx);
         return EXIT_FAILURE;
     }
 
     if (install_signal_handlers() != 0) {
         perror("opncell-drad: sigaction");
+
+        fd_hook_unregister(peer_hook);
         dra_context_final(&ctx);
+
         return EXIT_FAILURE;
     }
 
-    if (dra_provisioning_load(&ctx, config_path) != 0) {
-        fprintf(stderr, "opncell-drad: failed to load configuration\n");
+    if (dra_provisioning_load(
+            &ctx,
+            config_path) != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to load configuration\n");
+
+        fd_hook_unregister(peer_hook);
         dra_context_final(&ctx);
+
         return EXIT_FAILURE;
     }
+
+    if (dra_diameter_write_config(
+            &ctx,
+            "/tmp/opncell-drad-freediameter.conf") != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to generate "
+            "freeDiameter config\n");
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+    if (fd_core_parseconf(
+            "/tmp/opncell-drad-freediameter.conf") != 0) {
+        fprintf(stderr,
+            "opncell-drad: freeDiameter configuration failed\n");
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+    printf(
+        "opncell-drad: freeDiameter configuration ready\n");
+
+    /*
+     * Validate every configured peer before adding anything to
+     * freeDiameter. This prevents a partially populated peer table
+     * during startup.
+     */
+    if (dra_diameter_preflight_peers(&ctx) != 0) {
+        fprintf(stderr,
+            "opncell-drad: Diameter peer preflight failed\n");
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+    if (dra_diameter_add_configured_peers(
+            &ctx) != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to add configured "
+            "Diameter peers\n");
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+    if (fd_core_start() != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to start freeDiameter core\n");
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+    if (fd_core_waitstartcomplete() != 0) {
+        fprintf(stderr,
+            "opncell-drad: freeDiameter startup "
+            "did not complete\n");
+
+        fd_core_shutdown();
+        fd_core_wait_shutdown_complete();
+
+        fd_hook_unregister(peer_hook);
+        dra_context_final(&ctx);
+
+        return EXIT_FAILURE;
+    }
+
+    printf("opncell-drad: freeDiameter core running\n");
 
     log_routing_test(&ctx);
 
     printf("opncell-drad: ready\n");
 
     while (!shutdown_requested) {
+        /*
+         * Stage a new candidate configuration on SIGHUP.
+         *
+         * Do not allow pending_ctx to be overwritten while an
+         * earlier reconciliation or rollback is still active.
+         */
         if (reload_requested) {
             reload_requested = 0;
 
-            if (dra_provisioning_reload(&ctx, config_path) != 0) {
-                fprintf(stderr, "opncell-drad: reload failed\n");
+            if (pending_reload || rollback_pending) {
+                fprintf(stderr,
+                    "opncell-drad: reload deferred; "
+                    "Diameter reconciliation already in progress\n");
+            } else if (pthread_rwlock_wrlock(
+                    &context_lock) != 0) {
+                fprintf(stderr,
+                    "opncell-drad: failed to lock context "
+                    "for reload\n");
             } else {
-                log_routing_test(&ctx);
+                dra_context_t next;
+                int reload_rc;
+
+                printf(
+                    "opncell-drad: provisioning reload "
+                    "requested\n");
+
+                reload_rc = dra_provisioning_prepare(
+                    &ctx,
+                    config_path,
+                    &next);
+
+                /*
+                 * No persistent configuration delta.
+                 */
+                if (reload_rc == 0 &&
+                    next.generation == ctx.generation) {
+                    printf(
+                        "opncell-drad: configuration "
+                        "unchanged\n");
+
+                    reload_rc = 2;
+                }
+
+                /*
+                 * Validate all candidate Diameter peers before
+                 * touching any live association.
+                 */
+                if (reload_rc == 0) {
+                    int reconcile_rc;
+
+                    if (dra_diameter_preflight_peers(
+                            &next) != 0) {
+                        reload_rc = -1;
+                    } else {
+                        reconcile_rc =
+                            dra_diameter_reconcile_peers(
+                                &ctx,
+                                &next);
+
+                        if (reconcile_rc < 0) {
+                            reload_rc = -1;
+                        } else if (reconcile_rc > 0) {
+                            /*
+                             * Diameter peer changes are
+                             * asynchronous. Retain the
+                             * validated candidate until
+                             * reconciliation completes.
+                             */
+                            pending_ctx = next;
+                            pending_reload = 1;
+
+                            printf(
+                                "opncell-drad: reload pending "
+                                "Diameter peer reconciliation\n");
+
+                            reload_rc = 1;
+                        } else {
+                            /*
+                             * Routing/policy-only change.
+                             * No Diameter association needs
+                             * to be disturbed.
+                             */
+                            dra_provisioning_commit(
+                                &ctx,
+                                &next);
+                        }
+                    }
+                }
+
+                pthread_rwlock_unlock(
+                    &context_lock);
+
+                if (reload_rc < 0) {
+                    fprintf(stderr,
+                        "opncell-drad: reload failed\n");
+                } else if (reload_rc == 2) {
+                    /*
+                     * No-op reload was already logged.
+                     */
+                } else if (reload_rc > 0 &&
+                    pending_reload) {
+                    printf(
+                        "opncell-drad: reload staged pending "
+                        "Diameter reconciliation\n");
+                } else {
+                    printf(
+                        "opncell-drad: configuration "
+                        "generation %" PRIu64
+                        " loaded from %s\n",
+                        ctx.generation,
+                        config_path);
+
+                    printf(
+                        "opncell-drad: loaded %u roaming "
+                        "peers and %u routes\n",
+                        ctx.peer_count,
+                        ctx.route_count);
+
+                    log_routing_test(&ctx);
+                }
+            }
+        }
+
+        /*
+         * Forward reconciliation.
+         *
+         * Remove obsolete or replaced peers first. Removal is
+         * asynchronous and may require multiple main-loop passes.
+         *
+         * Do not hold context_lock while invoking freeDiameter.
+         */
+        if (pending_reload) {
+            int reconcile_rc;
+
+            reconcile_rc =
+                dra_diameter_remove_stale_peers(
+                    &ctx,
+                    &pending_ctx);
+
+            if (reconcile_rc < 0) {
+                fprintf(stderr,
+                    "opncell-drad: pending Diameter "
+                    "removal failed; starting rollback\n");
+
+                /*
+                 * Keep pending_ctx intact. Rollback needs it to
+                 * determine which candidate peers may need removal
+                 * and which active peers must be restored.
+                 */
+                pending_reload = 0;
+                rollback_pending = 1;
+            } else if (reconcile_rc == 0) {
+                printf(
+                    "opncell-drad: pending Diameter "
+                    "removals complete\n");
+
+                /*
+                 * Obsolete peers are gone. Install peers required
+                 * by the candidate.
+                 */
+                if (dra_diameter_add_pending_peers(
+                        &ctx,
+                        &pending_ctx) != 0) {
+                    fprintf(stderr,
+                        "opncell-drad: failed adding pending "
+                        "Diameter peers; starting rollback\n");
+
+                    /*
+                     * Do not clear pending_ctx here.
+                     */
+                    pending_reload = 0;
+                    rollback_pending = 1;
+                } else {
+                    /*
+                     * freeDiameter now reflects the candidate.
+                     * Commit pending_ctx as the authoritative DRA
+                     * configuration.
+                     */
+                    if (pthread_rwlock_wrlock(
+                            &context_lock) != 0) {
+                        fprintf(stderr,
+                            "opncell-drad: failed to lock "
+                            "context for pending reload "
+                            "commit; starting rollback\n");
+
+                        pending_reload = 0;
+                        rollback_pending = 1;
+                    } else {
+                        dra_provisioning_commit(
+                            &ctx,
+                            &pending_ctx);
+
+                        pthread_rwlock_unlock(
+                            &context_lock);
+
+                        printf(
+                            "opncell-drad: configuration "
+                            "generation %" PRIu64
+                            " committed after Diameter "
+                            "reconciliation\n",
+                            ctx.generation);
+
+                        printf(
+                            "opncell-drad: loaded %u roaming "
+                            "peers and %u routes\n",
+                            ctx.peer_count,
+                            ctx.route_count);
+
+                        pending_reload = 0;
+
+                        memset(
+                            &pending_ctx,
+                            0,
+                            sizeof(pending_ctx));
+
+                        log_routing_test(&ctx);
+                    }
+                }
+            }
+        }
+
+        /*
+         * Rollback reconciliation.
+         *
+         * ctx is still authoritative because pending_ctx was never
+         * committed.
+         *
+         * First remove any candidate-specific peers that may have
+         * been installed before the forward transaction failed.
+         */
+        if (rollback_pending) {
+            int rollback_rc;
+
+            rollback_rc =
+                dra_diameter_remove_candidate_peers(
+                    &ctx,
+                    &pending_ctx);
+
+            if (rollback_rc < 0) {
+                fprintf(stderr,
+                    "opncell-drad: Diameter rollback failed\n");
+
+                /*
+                 * Leave pending_ctx intact for diagnosis.
+                 * The active DRA context remains unchanged, but
+                 * operator intervention may be required to repair
+                 * the freeDiameter peer table.
+                 */
+                rollback_pending = 0;
+            } else if (rollback_rc == 0) {
+                /*
+                 * Candidate-specific peers are now gone.
+                 * Restore any enabled peers required by the active
+                 * configuration that were removed during the failed
+                 * forward transaction.
+                 */
+                if (dra_diameter_restore_current_peers(
+                        &ctx,
+                        &pending_ctx) != 0) {
+                    fprintf(stderr,
+                        "opncell-drad: failed restoring active "
+                        "Diameter configuration\n");
+
+                    /*
+                     * Keep pending_ctx available for diagnosis.
+                     */
+                    rollback_pending = 0;
+                } else {
+                    printf(
+                        "opncell-drad: Diameter rollback complete; "
+                        "active configuration unchanged\n");
+
+                    rollback_pending = 0;
+
+                    memset(
+                        &pending_ctx,
+                        0,
+                        sizeof(pending_ctx));
+
+                    log_routing_test(&ctx);
+                }
             }
         }
 
@@ -141,6 +615,34 @@ main(int argc, char *argv[])
     }
 
     printf("opncell-drad: shutdown requested\n");
+
+    if (fd_core_shutdown() != 0) {
+        fprintf(stderr,
+            "opncell-drad: freeDiameter shutdown "
+            "request failed\n");
+    }
+
+    if (fd_core_wait_shutdown_complete() != 0) {
+        fprintf(stderr,
+            "opncell-drad: freeDiameter shutdown "
+            "did not complete cleanly\n");
+    }
+
+    if (peer_hook != NULL) {
+        if (fd_hook_unregister(peer_hook) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to unregister "
+                "peer hook\n");
+        }
+
+        peer_hook = NULL;
+    }
+
+    if (unlink(
+            "/tmp/opncell-drad-freediameter.conf") != 0) {
+        perror(
+            "opncell-drad: unlink freeDiameter config");
+    }
 
     dra_context_final(&ctx);
 

@@ -3,7 +3,21 @@
 
 #include "dra-context.h"
 
-int dra_provisioning_load(dra_context_t *ctx, const char *path);
-int dra_provisioning_reload(dra_context_t *ctx, const char *path);
+int dra_provisioning_prepare(
+    const dra_context_t *current,
+    const char *path,
+    dra_context_t *next);
+
+void dra_provisioning_commit(
+    dra_context_t *ctx,
+    const dra_context_t *next);
+
+int dra_provisioning_load(
+    dra_context_t *ctx,
+    const char *path);
+
+int dra_provisioning_reload(
+    dra_context_t *ctx,
+    const char *path);
 
 #endif /* OPNCELL_DRA_PROVISIONING_H */
