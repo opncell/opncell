@@ -433,6 +433,24 @@ dra_score_candidates(
         application_id);
 
     /*
+     * Only relay routing is implemented at this stage.
+     * Proxy and redirect routes must fail closed rather than
+     * silently behaving as relay routes.
+     */
+    if (route != NULL &&
+        route->action != DRA_ROUTE_ACTION_RELAY) {
+        for (li = candidates->next;
+             li != candidates;
+             li = li->next) {
+            force_candidate_no_delivery(
+                (struct rtd_candidate *)li);
+        }
+
+        return;
+    }
+
+
+    /*
      * No provisioned route: fail closed.
      */
     if (route == NULL) {
@@ -645,6 +663,48 @@ dra_diameter_test_routing(
         return -1;
 
     /*
+     * An explicit Destination-Host that is allowed by policy but
+     * unavailable must fail closed rather than falling back to
+     * another peer in the same group.
+     */
+    if (dra_peer_state_set(
+            &test_ctx,
+            "operator-a-backup",
+            DRA_PEER_STATE_DOWN) != 0)
+        return -1;
+
+    a.score = 100;
+    a_backup.score = 100;
+    b.score = 100;
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"operator-a.net",
+        strlen("operator-a.net"),
+        16777251,
+        (const unsigned char *)"dra2.operator-a.net",
+        strlen("dra2.operator-a.net"),
+        &candidates);
+
+    printf(
+        "opncell-drad: routing destination-host unavailable diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score >= 0 ||
+        a_backup.score >= 0 ||
+        b.score >= 0)
+        return -1;
+
+    if (dra_peer_state_set(
+            &test_ctx,
+            "operator-a-backup",
+            DRA_PEER_STATE_OPEN) != 0)
+        return -1;
+
+    /*
      * Verify fail-closed behavior when Destination-Host names a peer
      * outside the route's allowed peer group.
      */
@@ -663,6 +723,67 @@ dra_diameter_test_routing(
 
     printf(
         "opncell-drad: routing destination-host fail-closed diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score >= 0 ||
+        a_backup.score >= 0 ||
+        b.score >= 0)
+        return -1;
+
+    /*
+     * Verify unsupported route actions fail closed.
+     */
+    a.score = 100;
+    a_backup.score = 100;
+    b.score = 100;
+
+    test_ctx.routes[0].action = DRA_ROUTE_ACTION_PROXY;
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"operator-a.net",
+        strlen("operator-a.net"),
+        16777251,
+        NULL,
+        0,
+        &candidates);
+
+    printf(
+        "opncell-drad: routing unsupported-action diagnostic "
+        "operator-a=%d operator-a-backup=%d operator-b=%d\n",
+        a.score,
+        a_backup.score,
+        b.score);
+
+    if (a.score >= 0 ||
+        a_backup.score >= 0 ||
+        b.score >= 0)
+        return -1;
+
+    test_ctx.routes[0].action = DRA_ROUTE_ACTION_RELAY;
+
+    /*
+     * Verify an unmatched Application-Id fails closed even when
+     * Destination-Realm matches a configured route.
+     */
+    a.score = 100;
+    a_backup.score = 100;
+    b.score = 100;
+
+    dra_score_candidates(
+        &test_ctx,
+        (const unsigned char *)"operator-a.net",
+        strlen("operator-a.net"),
+        4,
+        NULL,
+        0,
+        &candidates);
+
+    printf(
+        "opncell-drad: routing application-id fail-closed diagnostic "
         "operator-a=%d operator-a-backup=%d operator-b=%d\n",
         a.score,
         a_backup.score,
@@ -775,9 +896,11 @@ dra_rt_out_cb(
     }
 
     /*
-     * Fail closed if Destination-Realm is absent.
+     * Fail closed if Destination-Realm is absent or empty.
      */
-    if (destination_realm == NULL) {
+    if (destination_realm == NULL ||
+        destination_realm->os.data == NULL ||
+        destination_realm->os.len == 0) {
         for (li = candidates->next;
              li != candidates;
              li = li->next) {
