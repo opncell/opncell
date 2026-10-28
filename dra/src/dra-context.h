@@ -11,6 +11,10 @@
 #define DRA_REALM_LEN    256
 #define DRA_ADDRESS_LEN   64
 
+typedef enum dra_transport_e {
+    DRA_TRANSPORT_SCTP = 0
+} dra_transport_t;
+
 typedef struct dra_peer_s {
     char name[DRA_NAME_LEN];
     char group[DRA_NAME_LEN];
@@ -21,6 +25,7 @@ typedef struct dra_peer_s {
     uint16_t port;
     uint32_t priority;
 
+    dra_transport_t transport;
     int enabled;
 } dra_peer_t;
 
@@ -63,7 +68,7 @@ typedef struct dra_context_s {
     char diameter_realm[DRA_REALM_LEN];
     char listen_address[DRA_ADDRESS_LEN];
     uint16_t listen_port;
-
+    dra_transport_t listen_transport;
     dra_peer_t peers[DRA_MAX_PEERS];
     unsigned int peer_count;
 

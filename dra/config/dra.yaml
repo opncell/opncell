@@ -5,7 +5,7 @@ diameter:
   listen:
     address: 0.0.0.0
     port: 3868
-    transport: tcp
+    transport: sctp
 
 peers:
   - name: operator-a
@@ -14,7 +14,7 @@ peers:
     realm: operator-a.net
     address: 192.0.2.10
     port: 3868
-    transport: tcp
+    transport: sctp
     priority: 100
     enabled: true
 
@@ -24,7 +24,7 @@ peers:
     realm: operator-a.net
     address: 192.0.2.11
     port: 3868
-    transport: tcp
+    transport: sctp
     priority: 200
     enabled: true
 
@@ -34,7 +34,7 @@ peers:
     realm: operator-b.net
     address: 192.0.2.20
     port: 3868
-    transport: tcp
+    transport: sctp
     priority: 100
     enabled: true
 

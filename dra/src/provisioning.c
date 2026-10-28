@@ -111,6 +111,21 @@ parse_diameter(
     if (node != NULL && node->type == YAML_SCALAR_NODE)
         ctx->listen_port = (uint16_t)parse_ulong(node->data.scalar.value);
 
+    node = mapping_lookup(document, listen, "transport");
+    if (node != NULL && node->type == YAML_SCALAR_NODE) {
+        const char *value =
+            (const char *)node->data.scalar.value;
+
+        if (strcmp(value, "sctp") == 0)
+            ctx->listen_transport = DRA_TRANSPORT_SCTP;
+        else {
+            fprintf(stderr,
+                "opncell-drad: unsupported listen transport '%s'\n",
+                value);
+            return -1;
+        }
+    }
+
     return 0;
 }
 
@@ -174,6 +189,21 @@ parse_peers(
         node = mapping_lookup(document, entry, "port");
         if (node != NULL && node->type == YAML_SCALAR_NODE)
             peer->port = (uint16_t)parse_ulong(node->data.scalar.value);
+
+        node = mapping_lookup(document, entry, "transport");
+        if (node != NULL && node->type == YAML_SCALAR_NODE) {
+            const char *value =
+                (const char *)node->data.scalar.value;
+
+            if (strcmp(value, "sctp") == 0)
+                peer->transport = DRA_TRANSPORT_SCTP;
+            else {
+                fprintf(stderr,
+                    "opncell-drad: unsupported peer transport '%s'\n",
+                    value);
+                return -1;
+            }
+        }
 
         node = mapping_lookup(document, entry, "priority");
         if (node != NULL && node->type == YAML_SCALAR_NODE)
@@ -434,6 +464,7 @@ reconcile_peer_runtime(
                 strcmp(old_peer->address,
                     next->peers[i].address) == 0 &&
                 old_peer->port == next->peers[i].port &&
+                old_peer->transport == next->peers[i].transport &&
                 old_peer->enabled == next->peers[i].enabled) {
 
                 for (j = 0;
@@ -469,6 +500,7 @@ config_equal(
         strcmp(a->diameter_realm, b->diameter_realm) != 0 ||
         strcmp(a->listen_address, b->listen_address) != 0 ||
         a->listen_port != b->listen_port ||
+        a->listen_transport != b->listen_transport ||
         a->peer_count != b->peer_count ||
         a->route_count != b->route_count)
         return 0;
@@ -483,6 +515,7 @@ config_equal(
             strcmp(pa->realm, pb->realm) != 0 ||
             strcmp(pa->address, pb->address) != 0 ||
             pa->port != pb->port ||
+            pa->transport != pb->transport ||
             pa->priority != pb->priority ||
             pa->enabled != pb->enabled)
             return 0;
