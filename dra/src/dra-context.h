@@ -3,13 +3,16 @@
 
 #include <stdint.h>
 
-#define DRA_MAX_PEERS   64
-#define DRA_MAX_ROUTES  128
-
 #define DRA_NAME_LEN      64
 #define DRA_IDENTITY_LEN 256
 #define DRA_REALM_LEN    256
 #define DRA_ADDRESS_LEN   64
+
+typedef uint32_t dra_peer_id_t;
+typedef uint32_t dra_route_id_t;
+
+#define DRA_INVALID_PEER_ID UINT32_MAX
+#define DRA_INVALID_ROUTE_ID UINT32_MAX
 
 typedef enum dra_transport_e {
     DRA_TRANSPORT_SCTP = 0
@@ -69,17 +72,44 @@ typedef struct dra_context_s {
     char listen_address[DRA_ADDRESS_LEN];
     uint16_t listen_port;
     dra_transport_t listen_transport;
-    dra_peer_t peers[DRA_MAX_PEERS];
+
+    dra_peer_t *peers;
     unsigned int peer_count;
+    unsigned int peer_capacity;
 
-    dra_peer_runtime_t peer_runtime[DRA_MAX_PEERS];
+    dra_peer_runtime_t *peer_runtime;
     unsigned int peer_runtime_count;
+    unsigned int peer_runtime_capacity;
 
-    dra_route_t routes[DRA_MAX_ROUTES];
+    dra_route_t *routes;
     unsigned int route_count;
+    unsigned int route_capacity;
+
 } dra_context_t;
 
 int dra_context_init(dra_context_t *ctx);
+
+int
+dra_context_clone(
+    dra_context_t *dst,
+    const dra_context_t *src);
+
+int
+dra_context_reserve_peers(
+    dra_context_t *ctx,
+    unsigned int capacity);
+
+int
+dra_context_reserve_peer_runtime(
+    dra_context_t *ctx,
+    unsigned int capacity);
+
+int
+dra_context_reserve_routes(
+    dra_context_t *ctx,
+    unsigned int capacity);
+
+void dra_context_reset(dra_context_t *ctx);
 void dra_context_final(dra_context_t *ctx);
 
 dra_peer_runtime_t *
@@ -106,6 +136,5 @@ dra_peer_find_by_identity(
 const dra_peer_t *dra_peer_find_by_name(
     const dra_context_t *ctx,
     const char *name);
-
 
 #endif /* OPNCELL_DRA_CONTEXT_H */

@@ -125,6 +125,7 @@ dra_diameter_peer_transport_equal(
            strcmp(a->realm, b->realm) == 0 &&
            strcmp(a->address, b->address) == 0 &&
            a->port == b->port &&
+           a->transport == b->transport &&
            a->enabled == b->enabled;
 }
 
@@ -391,6 +392,8 @@ int
 dra_diameter_update_routing(
     const dra_context_t *ctx)
 {
+    int rc;
+
     if (ctx == NULL)
         return -1;
 
@@ -398,13 +401,17 @@ dra_diameter_update_routing(
             &routing_snapshot_lock) != 0)
         return -1;
 
-    routing_snapshot = *ctx;
-    routing_snapshot_valid = 1;
+    rc = dra_context_clone(
+        &routing_snapshot,
+        ctx);
+
+    if (rc == 0)
+        routing_snapshot_valid = 1;
 
     pthread_rwlock_unlock(
         &routing_snapshot_lock);
 
-    return 0;
+    return rc;
 }
 
 static void
@@ -448,7 +455,6 @@ dra_score_candidates(
 
         return;
     }
-
 
     /*
      * No provisioned route: fail closed.
@@ -554,29 +560,35 @@ dra_diameter_test_routing(
     struct rtd_candidate a;
     struct rtd_candidate a_backup;
     struct rtd_candidate b;
+    int rc = -1;
 
     if (ctx == NULL)
         return -1;
 
-    test_ctx = *ctx;
+    memset(&test_ctx, 0, sizeof(test_ctx));
+
+    if (dra_context_clone(
+            &test_ctx,
+            ctx) != 0)
+        return -1;
 
     if (dra_peer_state_set(
             &test_ctx,
             "operator-a",
             DRA_PEER_STATE_OPEN) != 0)
-        return -1;
+        goto out;
 
     if (dra_peer_state_set(
             &test_ctx,
             "operator-a-backup",
             DRA_PEER_STATE_OPEN) != 0)
-        return -1;
+        goto out;
 
     if (dra_peer_state_set(
             &test_ctx,
             "operator-b",
             DRA_PEER_STATE_OPEN) != 0)
-        return -1;
+        goto out;
 
     fd_list_init(&candidates, NULL);
 
@@ -621,18 +633,11 @@ dra_diameter_test_routing(
         b.score);
 
     if (a.score <= a_backup.score)
-        return -1;
+        goto out;
 
     if (b.score >= 0)
-        return -1;
+        goto out;
 
-    /*
-     * Explicit Destination-Host must override normal peer priority,
-     * but only within the route's allowed peer group.
-     *
-     * Select the lower-preference backup explicitly. The primary and
-     * out-of-group peer must become unroutable.
-     */
     a.score = 100;
     a_backup.score = 100;
     b.score = 100;
@@ -654,24 +659,19 @@ dra_diameter_test_routing(
         b.score);
 
     if (a.score >= 0)
-        return -1;
+        goto out;
 
     if (a_backup.score < 0)
-        return -1;
+        goto out;
 
     if (b.score >= 0)
-        return -1;
+        goto out;
 
-    /*
-     * An explicit Destination-Host that is allowed by policy but
-     * unavailable must fail closed rather than falling back to
-     * another peer in the same group.
-     */
     if (dra_peer_state_set(
             &test_ctx,
             "operator-a-backup",
             DRA_PEER_STATE_DOWN) != 0)
-        return -1;
+        goto out;
 
     a.score = 100;
     a_backup.score = 100;
@@ -696,18 +696,14 @@ dra_diameter_test_routing(
     if (a.score >= 0 ||
         a_backup.score >= 0 ||
         b.score >= 0)
-        return -1;
+        goto out;
 
     if (dra_peer_state_set(
             &test_ctx,
             "operator-a-backup",
             DRA_PEER_STATE_OPEN) != 0)
-        return -1;
+        goto out;
 
-    /*
-     * Verify fail-closed behavior when Destination-Host names a peer
-     * outside the route's allowed peer group.
-     */
     a.score = 100;
     a_backup.score = 100;
     b.score = 100;
@@ -731,11 +727,8 @@ dra_diameter_test_routing(
     if (a.score >= 0 ||
         a_backup.score >= 0 ||
         b.score >= 0)
-        return -1;
+        goto out;
 
-    /*
-     * Verify unsupported route actions fail closed.
-     */
     a.score = 100;
     a_backup.score = 100;
     b.score = 100;
@@ -761,14 +754,10 @@ dra_diameter_test_routing(
     if (a.score >= 0 ||
         a_backup.score >= 0 ||
         b.score >= 0)
-        return -1;
+        goto out;
 
     test_ctx.routes[0].action = DRA_ROUTE_ACTION_RELAY;
 
-    /*
-     * Verify an unmatched Application-Id fails closed even when
-     * Destination-Realm matches a configured route.
-     */
     a.score = 100;
     a_backup.score = 100;
     b.score = 100;
@@ -792,11 +781,8 @@ dra_diameter_test_routing(
     if (a.score >= 0 ||
         a_backup.score >= 0 ||
         b.score >= 0)
-        return -1;
+        goto out;
 
-    /*
-     * Verify fail-closed behavior for an unmatched realm.
-     */
     a.score = 100;
     a_backup.score = 100;
     b.score = 100;
@@ -820,9 +806,13 @@ dra_diameter_test_routing(
     if (a.score >= 0 ||
         a_backup.score >= 0 ||
         b.score >= 0)
-        return -1;
+        goto out;
 
-    return 0;
+    rc = 0;
+
+out:
+    dra_context_reset(&test_ctx);
+    return rc;
 }
 
 static int
@@ -931,18 +921,18 @@ dra_rt_out_cb(
 
     ctx = &routing_snapshot;
 
-dra_score_candidates(
-    ctx,
-    destination_realm->os.data,
-    destination_realm->os.len,
-    hdr->msg_appl,
-    destination_host != NULL
-        ? destination_host->os.data
-        : NULL,
-    destination_host != NULL
-        ? destination_host->os.len
-        : 0,
-    candidates);
+    dra_score_candidates(
+        ctx,
+        destination_realm->os.data,
+        destination_realm->os.len,
+        hdr->msg_appl,
+        destination_host != NULL
+            ? destination_host->os.data
+            : NULL,
+        destination_host != NULL
+            ? destination_host->os.len
+            : 0,
+        candidates);
 
     pthread_rwlock_unlock(
         &routing_snapshot_lock);
@@ -972,12 +962,30 @@ int
 dra_diameter_unregister_routing(
     struct fd_rt_out_hdl *handler)
 {
-    if (handler == NULL)
-        return 0;
+    int rc = 0;
 
-    return fd_rt_out_unregister(
-        handler,
-        NULL);
+    if (handler != NULL) {
+        rc = fd_rt_out_unregister(
+            handler,
+            NULL);
+
+        if (rc != 0)
+            return rc;
+    }
+
+    if (pthread_rwlock_wrlock(
+            &routing_snapshot_lock) != 0)
+        return -1;
+
+    if (routing_snapshot_valid) {
+        dra_context_reset(&routing_snapshot);
+        routing_snapshot_valid = 0;
+    }
+
+    pthread_rwlock_unlock(
+        &routing_snapshot_lock);
+
+    return 0;
 }
 
 int

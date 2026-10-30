@@ -149,8 +149,13 @@ parse_peers(
         yaml_node_t *node;
         dra_peer_t *peer;
 
-        if (ctx->peer_count >= DRA_MAX_PEERS) {
-            fprintf(stderr, "opncell-drad: too many configured peers\n");
+        if (dra_context_reserve_peers(
+                ctx,
+                ctx->peer_count + 1) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to grow peer store "
+                "for peer %u\n",
+                ctx->peer_count + 1);
             return -1;
         }
 
@@ -239,8 +244,13 @@ parse_routes(
         yaml_node_t *node;
         dra_route_t *route;
 
-        if (ctx->route_count >= DRA_MAX_ROUTES) {
-            fprintf(stderr, "opncell-drad: too many configured routes\n");
+        if (dra_context_reserve_routes(
+                ctx,
+                ctx->route_count + 1) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to grow route store "
+                "for route %u\n",
+                ctx->route_count + 1);
             return -1;
         }
 
@@ -426,7 +436,8 @@ validate_config(const dra_context_t *ctx)
 
     return 0;
 }
-static void
+
+static int
 reconcile_peer_runtime(
     dra_context_t *next,
     const dra_context_t *current)
@@ -438,6 +449,16 @@ reconcile_peer_runtime(
 
     for (i = 0; i < next->peer_count; i++) {
         dra_peer_runtime_t *runtime;
+
+        if (dra_context_reserve_peer_runtime(
+                next,
+                next->peer_runtime_count + 1) != 0) {
+            fprintf(stderr,
+                "opncell-drad: failed to grow peer runtime store "
+                "for peer %u\n",
+                next->peer_runtime_count + 1);
+            return -1;
+        }
 
         runtime = &next->peer_runtime[next->peer_runtime_count];
         memset(runtime, 0, sizeof(*runtime));
@@ -484,6 +505,7 @@ reconcile_peer_runtime(
 
         next->peer_runtime_count++;
     }
+    return 0;
 }
 
 static int
@@ -603,7 +625,8 @@ dra_provisioning_prepare(
     if (validate_config(next) != 0)
         goto out_document;
 
-    reconcile_peer_runtime(next, current);
+    if (reconcile_peer_runtime(next, current) != 0)
+        goto out_document;
 
     if (config_equal(current, next))
         next->generation = current->generation;
@@ -619,18 +642,27 @@ out_parser:
     yaml_parser_delete(&parser);
     fclose(fp);
 
+    if (rc != 0)
+        dra_context_reset(next);
+
     return rc;
 }
 
-void
+int
 dra_provisioning_commit(
     dra_context_t *ctx,
     const dra_context_t *next)
 {
     if (ctx == NULL || next == NULL)
-        return;
+        return -1;
 
-    *ctx = *next;
+    if (dra_context_clone(ctx, next) != 0) {
+        fprintf(stderr,
+            "opncell-drad: failed to commit configuration context\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 int
@@ -639,6 +671,7 @@ dra_provisioning_load(
     const char *path)
 {
     dra_context_t next;
+    int rc;
 
     if (ctx == NULL || path == NULL)
         return -1;
@@ -646,7 +679,16 @@ dra_provisioning_load(
     if (dra_provisioning_prepare(ctx, path, &next) != 0)
         return -1;
 
-    dra_provisioning_commit(ctx, &next);
+    rc = dra_provisioning_commit(ctx, &next);
+
+    /*
+     * ctx owns its own deep copy after a successful commit.
+     * Always release the temporary candidate.
+     */
+    dra_context_reset(&next);
+
+    if (rc != 0)
+        return -1;
 
     printf(
         "opncell-drad: configuration generation %" PRIu64

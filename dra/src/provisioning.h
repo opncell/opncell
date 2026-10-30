@@ -8,7 +8,7 @@ int dra_provisioning_prepare(
     const char *path,
     dra_context_t *next);
 
-void dra_provisioning_commit(
+int dra_provisioning_commit(
     dra_context_t *ctx,
     const dra_context_t *next);
 
