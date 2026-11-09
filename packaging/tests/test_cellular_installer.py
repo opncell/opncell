@@ -149,6 +149,12 @@ class InstallerTests(unittest.TestCase):
             self.assertIn('Selected MongoDB flavor: ' + label, output.getvalue())
             self.assertIn('no catalog query, download or installation', output.getvalue())
 
+    def test_cpu_support_wording_distinguishes_missing_avx_from_missing_avx2(self):
+        self.assertEqual(i.cpu_support_message('amd64', 'Features2=<SSE2,XSAVE,OSXSAVE>'),
+                         'AVX instructions not supported on this processor.')
+        self.assertIn('AVX is supported', i.cpu_support_message('amd64', 'Features2=<AVX,XSAVE,OSXSAVE>'))
+        self.assertIn('could not be confirmed', i.cpu_support_message('amd64', ''))
+
     def test_cpu_failure_happens_before_package_deletion(self):
         with patch.object(i.os, "geteuid", return_value=0), \
              patch.object(i, "run", return_value="15.1-RELEASE\n") as run, \

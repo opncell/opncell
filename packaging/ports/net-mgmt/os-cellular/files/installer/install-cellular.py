@@ -42,18 +42,40 @@ def check_legacy_dependents():
         pending.extend(result.stdout.splitlines())
 
 
-def cpu_profile(architecture, boot_messages):
-    """Use kernel-reported flags; execution preflight remains authoritative."""
-    if architecture not in ('amd64', 'x86_64'):
-        return 'noavx'
+def cpu_features(boot_messages):
     flags = set()
     for line in boot_messages.splitlines():
         if re.search(r'Features[^<]*<', line, re.I):
             for group in re.findall(r'<([^>]+)>', line):
                 flags.update(group.upper().split(','))
-    # The optimized bundled SpiderMonkey can use AVX2, not just AVX.
+    return flags
+
+
+def cpu_profile(architecture, boot_messages):
+    """Use kernel-reported flags; execution preflight remains authoritative."""
+    if architecture not in ('amd64', 'x86_64'):
+        return 'noavx'
     required = {'AVX', 'AVX2', 'XSAVE', 'OSXSAVE', 'FMA', 'F16C'}
-    return 'avx' if required <= flags else 'noavx'
+    return 'avx' if required <= cpu_features(boot_messages) else 'noavx'
+
+
+def cpu_support_message(architecture, boot_messages):
+    flags = cpu_features(boot_messages)
+    if architecture not in ('amd64', 'x86_64') or not flags:
+        return 'AVX support could not be confirmed; using the compatible NOAVX build.'
+    if 'AVX' not in flags:
+        return 'AVX instructions not supported on this processor.'
+    if cpu_profile(architecture, boot_messages) != 'avx':
+        return 'AVX is supported, but the optimized build requirements are not met; using NOAVX.'
+    return 'AVX2 instructions and required CPU features are supported on this processor.'
+
+
+def detected_cpu_support_message():
+    try:
+        messages = Path('/var/run/dmesg.boot').read_text()
+    except OSError:
+        messages = ''
+    return cpu_support_message(os.uname().machine, messages)
 
 
 def detected_cpu_profile():
@@ -87,8 +109,9 @@ def repository_config(name, url):
 
 def cpu_info(args):
     repo, profile = select_repository(args)
-    flavor = 'AVX2 (AVX2, FMA and F16C required)' if profile == 'avx' else 'NOAVX (AVX not required)'
+    flavor = 'AVX2 (AVX2, FMA and F16C required)' if profile == 'avx' else 'NOAVX'
     print('Selected MongoDB flavor: ' + flavor, flush=True)
+    print(detected_cpu_support_message(), flush=True)
     base_url = getattr(args, 'repository_base_url', None)
     if base_url:
         suffix = '-avx2' if profile == 'avx' else ''
@@ -174,9 +197,10 @@ def preflight_binary(repo, directory, profile="noavx", repos_dir=None):
     require(run(["pkg-static", "version", "-t", version, minimum]).strip() in ("=", ">"),
             "Repository has no suitable MongoDB candidate (requires " + minimum + " or newer)")
     require(version.startswith("8.0."), "Installer supports MongoDB 8.0.x only")
-    flavor = 'AVX2 (requires AVX2, FMA and F16C)' if profile == 'avx' else 'NOAVX (AVX not required)'
+    flavor = 'AVX2 (requires AVX2, FMA and F16C)' if profile == 'avx' else 'NOAVX'
     print('Selected MongoDB package: mongodb80-' + version, flush=True)
     print('Selected MongoDB flavor: ' + flavor, flush=True)
+    print(detected_cpu_support_message(), flush=True)
     if profile == 'avx' and 'NOAVX=on' in options:
         print('Official package has an incorrect NOAVX label; exact tested SHA256 verified for AVX2 use.')
     # Read the package manifest instead of decompressing the whole archive twice.
