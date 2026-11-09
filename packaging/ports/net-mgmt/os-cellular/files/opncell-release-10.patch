@@ -1,0 +1,260 @@
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/LogController.php
+@@ -12,7 +12,8 @@
+         }
+ 
+         $this->renderPage('opncell', $scope);
+-        $this->view->opncell_log_path = '/var/log/opncell/' . $scope . '.log';
++        $source = json_decode((new \OPNsense\Core\Backend())->configdpRun('opncell logSource', [$scope]), true);
++        $this->view->opncell_log_path = $source['path'] ?? gettext('Log destination unavailable');
+         $this->view->pick('OPNsense/OPNCell/log');
+     }
+ }
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
+@@ -8,6 +8,41 @@
+ 
+ class LogController extends ApiControllerBase
+ {
++    public function queryAction($scope = '', $action = '')
++    {
++        $scope = ServiceNames::logScope($scope);
++        if ($scope === null) {
++            return $this->response->setStatusCode(404, 'Not Found');
++        }
++        $search = $this->request->get('searchPhrase', 'string', '');
++        $severity = $this->request->get('severity', null, '');
++        $severity = is_array($severity) ? implode(',', $severity) : $severity;
++        $since = max(0, (int)$this->request->get('validFrom', 'int', 0));
++        if ($action === 'export' && $this->request->isGet()) {
++            return $this->configdStream('opncell exportLog', [$search, $scope, $severity, $since], [
++                'Content-Type: text/plain; charset=utf-8',
++                'Content-Disposition: attachment; filename="' . $scope . '.log"',
++                'Cache-Control: no-store'
++            ], 60, true);
++        }
++        if (!$this->request->isPost()) {
++            return $this->response->setStatusCode(405, 'Method Not Allowed');
++        }
++        $limit = max(1, min(9999, (int)$this->request->getPost('rowCount', 'int', 50)));
++        $page = max(1, (int)$this->request->getPost('current', 'int', 1));
++        $backend = new Backend();
++        $result = json_decode($backend->configdpRun('opncell queryLog', [
++            $limit, ($page - 1) * $limit, $search, $scope, $severity, $since
++        ]), true);
++        if (!is_array($result) || !isset($result['rows'])) {
++            return $this->response->setStatusCode(500, 'Unable to read log');
++        }
++        $result['rowCount'] = count($result['rows']);
++        $result['total'] = $result['total_rows'] ?? count($result['rows']);
++        $result['current'] = $page;
++        return $result;
++    }
++
+     public function clearAction($scope = '')
+     {
+         if (!$this->request->isPost()) {
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -1,3 +1,9 @@
++<script>
++// Register before the platform partial creates its grid and initial request.
++$.ajaxPrefilter(function (options) {
++    options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
++});
++</script>
+ {{ partial("OPNsense/Diagnostics/log") }}
+ 
+ <div id="opncell_log_refresh" class="btn-group">
+@@ -17,8 +23,16 @@
+ 
+         $("#opncell_log_refresh").prependTo("#grid-log-header .actionBar .actions");
+ 
+-        $("#filter_container").css({display: "flex", flexBasis: "100%", flexWrap: "wrap", alignItems: "center"});
+-        $("#opncell_log_path").css("margin-right", "auto").prependTo("#filter_container");
++        const bar = $("#grid-log-header .actionBar");
++        const details = $('<div class="opncell-log-details"></div>').css({
++            display: "flex", clear: "both", width: "100%", gap: "16px",
++            alignItems: "center", flexWrap: "wrap", paddingTop: "8px"
++        });
++        bar.css({display: "flex", flexWrap: "wrap", alignItems: "center"});
++        details.append($("#opncell_log_path"));
++        const timeframe = $("#validFrom_filter");
++        details.append(timeframe.closest(".bootstrap-select").length ? timeframe.closest(".bootstrap-select") : timeframe);
++        bar.append(details);
+         // Replace the core handlers: direct daemon files must not be unlinked.
+         $("#flushlog").off("click").on("click", function (event) {
+             event.preventDefault();
+@@ -50,7 +64,7 @@
+             const seconds = {day: 86400, week: 604800, month: 2678400}[$("#validFrom_filter").val()];
+             if (seconds) { params.set("validFrom", Math.floor(Date.now() / 1000) - seconds); }
+             const link = document.createElement("a");
+-            link.href = "/api/diagnostics/log/opncell/{{scope}}/export?" + params.toString();
++            link.href = "/api/opncell/log/query/{{scope}}/export?" + params.toString();
+             document.body.appendChild(link);
+             link.click();
+             link.remove();
+--- a/opnsense/scripts/opncell/clear_log.py
++++ b/opnsense/scripts/opncell/clear_log.py
+@@ -6,14 +6,16 @@
+ import stat
+ import sys
+ 
+-SCOPES = frozenset("amf ausf bsf hss mme nrf nssf pcf pcrf scp sgwc sgwu smf udm udr upf mongod".split())
++from log_source import SCOPES, resolve_log
+ 
+ 
+-def clear_log(scope, directory=Path("/var/log/opncell")):
++def clear_log(scope, directory=None):
+     if scope not in SCOPES:
+         raise ValueError("Unknown cellular log")
+     # Include dated history read by the Diagnostics viewer. Never follow links.
+-    paths = [directory / (scope + ".log")]
++    active = resolve_log(scope) if directory is None else directory / (scope + ".log")
++    directory = active.parent
++    paths = [active]
+     history = directory / scope
+     if history.is_dir() and not history.is_symlink():
+         paths.extend(sorted(history.glob(scope + "_*.log")))
+--- /dev/null
++++ b/opnsense/scripts/opncell/log_source.py
+@@ -0,0 +1,29 @@
++"""Resolve the same daemon log for viewing, exporting, and clearing."""
++from pathlib import Path
++import shlex
++import subprocess
++
++SCOPES = frozenset("amf ausf bsf hss mme nrf nssf pcf pcrf scp sgwc sgwu smf udm udr upf mongod".split())
++
++
++def resolve_log(scope, processes=None):
++    if scope not in SCOPES:
++        raise ValueError("Unknown cellular log")
++    if processes is None:
++        processes = subprocess.check_output(["/bin/ps", "axww", "-o", "command="], text=True)
++    executable = "mongod" if scope == "mongod" else "open5gs-" + scope + "d"
++    for line in processes.splitlines():
++        try:
++            args = shlex.split(line)
++        except ValueError:
++            continue
++        if not args or Path(args[0]).name != executable:
++            continue
++        option = "--logpath" if scope == "mongod" else "-l"
++        for index, arg in enumerate(args):
++            value = args[index + 1] if arg == option and index + 1 < len(args) else None
++            if arg.startswith(option + "="):
++                value = arg.split("=", 1)[1]
++            if value and Path(value).is_absolute() and ".." not in Path(value).parts:
++                return Path(value)
++    return Path("/var/db/mongodb/mongod.log") if scope == "mongod" else Path("/var/log/opncell") / (scope + ".log")
+--- /dev/null
++++ b/opnsense/scripts/opncell/query_log.py
+@@ -0,0 +1,22 @@
++#!/usr/local/bin/python3
++"""Use the platform log parser with the actual cellular daemon destination."""
++import json
++from pathlib import Path
++import runpy
++import sys
++from log_source import resolve_log
++
++if len(sys.argv) == 3 and sys.argv[1] == "--source":
++    print(json.dumps({"path": str(resolve_log(sys.argv[2]))}))
++else:
++    sys.path.insert(0, "/usr/local/opnsense/scripts/syslog")
++    from log_matcher import LogMatcher
++    original = LogMatcher.fetch_log_filenames
++
++    def filenames(filename, module):
++        if module == "opncell":
++            return [str(resolve_log(filename))]
++        return original(filename, module)
++
++    LogMatcher.fetch_log_filenames = staticmethod(filenames)
++    runpy.run_path("/usr/local/opnsense/scripts/syslog/queryLog.py", run_name="__main__")
+--- /dev/null
++++ b/opnsense/scripts/opncell/cleanup_log_links.py
+@@ -0,0 +1,38 @@
++#!/usr/local/bin/python3
++"""Remove only obsolete, unreferenced OPNcore log links; retain targets."""
++import json
++from pathlib import Path
++import subprocess
++from log_source import SCOPES
++
++
++def cleanup(directory=Path('/var/log/opncore'), references='', backup=Path('/var/db/opncell/legacy-log-links.json')):
++    removed = {}
++    if str(directory) in references:
++        return {'removed': [], 'skipped': 'Legacy log directory is still referenced'}
++    for scope in SCOPES - {'mongod'}:
++        path = directory / (scope + '.log')
++        expected = '/usr/ports/open5gs/install/var/log/open5gs/' + scope + '.log'
++        if path.is_symlink() and str(path.readlink()) == expected:
++            removed[str(path)] = expected
++    if removed:
++        backup.parent.mkdir(parents=True, exist_ok=True)
++        existing = json.loads(backup.read_text()) if backup.exists() else {}
++        existing.update(removed)
++        with backup.open('w') as output:
++            json.dump(existing, output, indent=2)
++        backup.chmod(0o600)
++        for name, target in removed.items():
++            path = Path(name)
++            if path.is_symlink() and str(path.readlink()) == target:
++                path.unlink()
++    return {'removed': list(removed)}
++
++
++if __name__ == '__main__':
++    references = subprocess.check_output(['/bin/ps', 'axww', '-o', 'command='], text=True)
++    for directory in ['/usr/local/etc/open5gs', '/usr/local/etc/rc.d', '/etc/rc.conf.d']:
++        for path in Path(directory).glob('*'):
++            if path.is_file():
++                references += path.read_text(errors='replace')
++    print(json.dumps(cleanup(references=references)))
+--- a/opnsense/scripts/syslog/logformats/opncell.py
++++ b/opnsense/scripts/syslog/logformats/opncell.py
+@@ -979,7 +979,7 @@
+         self._parts = list()
+ 
+     def match(self, line):
+-        return self._filename.find('opncell/mongod.log') > -1
++        return self._filename.endswith('/mongod.log')
+ 
+     def set_line(self, line):
+         super().set_line(line)
+@@ -990,7 +990,7 @@
+     def timestamp(self):
+         # opncore format return actual log data
+         try:
+-            part_two = parts[0]
++            part_two = self._parts[0]
+             date = part_two.split('"$date":"')
+             formatted_date = date[1]
+             d = formatted_date.strip('"}')
+--- a/opnsense/service/conf/actions.d/actions_opncell.conf
++++ b/opnsense/service/conf/actions.d/actions_opncell.conf
+@@ -102,3 +102,21 @@
+ parameters:%s
+ type:script_output
+ message: Clearing cellular log without restarting services
++
++[logSource]
++command:/usr/local/opnsense/scripts/opncell/query_log.py
++parameters:--source %s
++type:script_output
++message: Resolving cellular log source
++
++[queryLog]
++command:/usr/local/opnsense/scripts/opncell/query_log.py
++parameters:--limit %s --offset %s --filter %s --module opncell --filename %s --severity %s --valid_from %s
++type:script_output
++message: Reading cellular log
++
++[exportLog]
++command:/usr/local/opnsense/scripts/opncell/query_log.py
++parameters:--limit 0 --offset 0 --filter %s --module opncell --filename %s --severity %s --valid_from %s --output text
++type:stream_output
++message: Downloading cellular log

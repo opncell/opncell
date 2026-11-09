@@ -1,0 +1,5 @@
+Open5GS is an open-source implementation of a 4G EPC and 5G Core network.
+
+It provides the core network functions required for LTE and 5G deployments,
+including MME, SGW, PGW/SMF, UPF, AMF, AUSF, UDM, UDR, NRF, NSSF, PCF,
+BSF, SCP, SEPP, HSS, and PCRF components.

@@ -41,7 +41,7 @@ while test $# -gt 0; do
   esac
 done
 
-DB_URI="${DB_URI:-mongodb://localhost/open5gs}"
+DB_URI="${DB_URI:-mongodb://127.0.0.1:27017/open5gs}"
 
 if [ "$#" -lt 1 ]; then
     display_help

@@ -62,7 +62,6 @@ class ProfileController extends ApiMutableModelControllerBase
      */
     public function searchProfileAction(): array
     {
-        $profile_array = $this->searchBase('profiles.profile', array("apn"));
         $profile_array =  $this->searchBase(
             'profiles.profile',
             null,
@@ -81,9 +80,9 @@ class ProfileController extends ApiMutableModelControllerBase
         // Loop through the first array to attach counts
         foreach ($profile_array["rows"] as &$item) {
             $name = $item["apn"];
-            $item["count"] = $counts[$name] ?? "none";
-            $profile_array[] = $item;
+            $item["count"] = $counts[$name] ?? 0;
         }
+        unset($item);
 
         return $profile_array;
     }
@@ -116,17 +115,16 @@ class ProfileController extends ApiMutableModelControllerBase
 
     public function getSingleSubAction($imsi): array
     {
-        $backend = new Backend();
-        $profileClass = new ProfileController();
-        $userRepository = new UserRepository($backend);
-        $data = $userRepository->getUser($imsi);
-        $item = array();
-        if ($data != null) {
-            foreach ($data as $process) {
-                $item['imsi'] = $process['imsi'];
-                $item['attached'] = $process['apn'];
-            }
+        if (!preg_match('/^[0-9]{5,16}$/D', $imsi)) {
+            return ['result' => 'failed'];
         }
+
+        $repository = new UserRepository(new Backend());
+        $response = $repository->getSubscriberForEdit($imsi);
+        if (($response['result'] ?? '') !== 'success') {
+            return $response;
+        }
+        $item = $response['user'];
         $customProfile = [];
         $r = $this->searchBase('profiles.profile', array("apn"));
         $APNArray = explode(",", $item['attached']);

@@ -1,4 +1,6 @@
-{% if OPNsense.opncell.general.enablefour == "1" or OPNsense.opncell.general.enablefiveNSA == "1"  %}
+{% set cellular = (OPNsense | default({})).get('opncell') or {} %}
+{% set general = cellular.get('general') or {} %}
+{% if general.get('enablefour') == "1" or general.get('enablefiveNSA') == "1"  %}
 epcsgwud_enable="YES"
 epcsgwud_setup="/usr/local/opnsense/scripts/opncell/epcsgwud_setup.sh"
 {% else %}

@@ -95,11 +95,14 @@ class BulkController extends ApiMutableModelControllerBase
     public function saveBulkUsersAction($uuid): array
     {
         $backend = new Backend();
-        $mdlUser = new User();
+        if (!(new \OPNsense\Mvc\Request())->isPost()) {
+            return ['result' => 'failed'];
+        }
         $userRepository = new UserRepository($backend);
         session_start();
-        $result['status'] = "Failed";
-        $duplicates = array();
+        $duplicates = [];
+        $failed = [];
+        $inserted = 0;
         $profile = $this->getAction($uuid);
         $selected_profile_uuid = $this->multipart($profile['bulk']['profile']);
         $numberOfProfiles = count($selected_profile_uuid);
@@ -108,17 +111,17 @@ class BulkController extends ApiMutableModelControllerBase
 
         if (isset($_SESSION['fileValues'])) {
             $outputKeyValue = $_SESSION['fileValues'];
-            foreach ($outputKeyValue as $item) {
-                $userDetails = [];
+            foreach ($outputKeyValue as $indexInFile => $item) {
+                $userDetails = array_intersect_key($item, array_flip(['imsi', 'ki', 'opc', 'op', 'amf', 'msisdn',
+                    'ue_ambr_downlink', 'ue_ambr_downlink_unit', 'ue_ambr_uplink', 'ue_ambr_uplink_unit', 'subscriber_status', 'operator_determined_barring', 'default_slice', 'session_addresses', 'pcc_rules']));
                 $index = 0;
-                $sub_user = [];
-                $sub_user['count'] = $numberOfProfiles;
-                $userDetails["imsi"] = $item['imsi'];
-                $userDetails["ki"] = $item['ki'];
-                $userDetails["opc"] = $item['opc'];
+                $sub_user = ['count' => $numberOfProfiles];
 
                 foreach ($selected_profile_uuid as $p_uuid) {
                     $profile = $profileClass->getProfileAction($p_uuid);
+                    if (empty($profile['profile']['apn'])) {
+                        return ['result' => 'failed', 'message' => 'Selected profile no longer exists'];
+                    }
                     $index += 1;
                     $userDetails['sst'] = $profile['profile']['sst'];
                     $userDetails["dl"] = $profile['profile']['dl'];
@@ -132,13 +135,17 @@ class BulkController extends ApiMutableModelControllerBase
                 $data = $userRepository->saveUser($sub_user);
                 if ($data == "Duplicate") {
                     $duplicates[] = $userDetails["imsi"];
+                } elseif ($data === 'Success') {
+                    $inserted++;
+                } else {
+                    $failed[] = $indexInFile + 1;
                 }
             }
         }
         else {
-            echo "Error: outputKeyValue not found in session.";
+            return ['result' => 'failed', 'message' => 'Upload a subscriber file first'];
         }
 
-        return $duplicates;
+        return ['result' => 'processed', 'inserted' => $inserted, 'duplicates' => $duplicates, 'failed' => $failed];
     }
 }

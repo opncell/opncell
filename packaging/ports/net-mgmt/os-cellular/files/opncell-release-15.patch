@@ -1,0 +1,29 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -1,6 +1,17 @@
+ <script>
+ // Register before the platform partial creates its grid and initial request.
++$(function () {
++    // Add before the platform grid restores its saved timeframe selection.
++    $("#validFrom_filter").prepend($('<option value="hour"></option>').text("{{ lang._('Last hour') }}"));
++});
+ $.ajaxPrefilter(function (options) {
++    const cellularLog = options.url.indexOf('/api/diagnostics/log/opncell/') !== -1;
++    if (cellularLog && $("#validFrom_filter").val() === "hour") {
++        // The platform request handler only knows day/week/month.
++        const params = new URLSearchParams(options.data || "");
++        params.set("validFrom", Math.floor(Date.now() / 1000) - 3600);
++        options.data = params.toString();
++    }
+     options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
+ });
+ </script>
+@@ -65,7 +76,7 @@
+             const exact = $("#exact_severity").hasClass("fa-toggle-on");
+             const severity = exact ? [].concat(selected || []) : options.slice(0, options.indexOf(selected) + 1);
+             params.set("severity", severity.join(","));
+-            const seconds = {day: 86400, week: 604800, month: 2678400}[$("#validFrom_filter").val()];
++            const seconds = {hour: 3600, day: 86400, week: 604800, month: 2678400}[$("#validFrom_filter").val()];
+             if (seconds) { params.set("validFrom", Math.floor(Date.now() / 1000) - seconds); }
+             const link = document.createElement("a");
+             link.href = "/api/opncell/log/query/{{scope}}/export?" + params.toString();

@@ -30,7 +30,6 @@ def main():
     fourGServices = ["hss", "mme", "pcrf", "sgwu", "sgwc", "smf", "upf", "nrf", "scp"]
     upfServices = ["amf", "udm", "nssf", "smf", "udr", "pcf", "upf", "ausf"]
     fiveGSAServices = ["nrf", "scp", "amf", "smf", "upf", "ausf", "udm", "udr", "pcf", "nssf", "bsf"]
-    fiveNSAGServices = ["hss", "mme", "pcrf", "sgwu", "sgwc", "smf", "upf"]
 
     target_keys = ['metrics', 'dns', 'tai', 'network_name', 'nsi', 's1ap', 'ngap']
 
@@ -86,14 +85,12 @@ def main():
 
     # Add not running processes
     try:
-        if network == "enablefour":
+        if network in ("enablefour", "enablefiveNSA"):
             not_running = list(set(fourGServices) - set(running_processes_names))
         elif network == "enablefiveSA":
             not_running = list(set(fiveGSAServices) - set(running_processes_names))
         elif network == "enableupf":
             not_running = list(set(upfServices) - set(running_processes_names))
-        elif network == "enablefiveNSA":
-            not_running = list(set(fiveNSAGServices) - set(running_processes_names))
         else:
             not_running = []
 

@@ -979,7 +979,7 @@ class OpncoreMongoLogFormat(NewBaseLogFormat):
         self._parts = list()
 
     def match(self, line):
-        return self._filename.find('opncell/mongod.log') > -1
+        return self._filename.endswith('/mongod.log')
 
     def set_line(self, line):
         super().set_line(line)
@@ -990,7 +990,7 @@ class OpncoreMongoLogFormat(NewBaseLogFormat):
     def timestamp(self):
         # opncore format return actual log data
         try:
-            part_two = parts[0]
+            part_two = self._parts[0]
             date = part_two.split('"$date":"')
             formatted_date = date[1]
             d = formatted_date.strip('"}')

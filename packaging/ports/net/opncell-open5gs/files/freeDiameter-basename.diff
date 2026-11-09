@@ -1,0 +1,22 @@
+diff --git a/subprojects/freeDiameter/include/freeDiameter/libfdproto.h b/subprojects/freeDiameter/include/freeDiameter/libfdproto.h
+index 26f8617..73b90cb 100644
+--- a/subprojects/freeDiameter/include/freeDiameter/libfdproto.h
++++ b/subprojects/freeDiameter/include/freeDiameter/libfdproto.h
+@@ -290,10 +290,13 @@ extern int fd_g_debug_lvl;
+ #define __PRETTY_FUNCTION__ __func__
+ #endif /* __PRETTY_FUNCTION__ */
+ 
+-/* A version of __FILE__ without the full path. This is specific to each C file being compiled */
+-static char * file_bname = NULL;
+-static char * file_bname_init(char * full) { file_bname = basename(full); return file_bname; }
+-#define __STRIPPED_FILE__	(file_bname ?: file_bname_init((char *)__FILE__))
++/* __FILE__ is immutable; some basename() implementations modify the input. */
++static inline const char *fd_source_filename(const char *path)
++{
++	const char *slash = strrchr(path, '/');
++	return slash ? slash + 1 : path;
++}
++#define __STRIPPED_FILE__ fd_source_filename(__FILE__)
+ 
+ 
+ 

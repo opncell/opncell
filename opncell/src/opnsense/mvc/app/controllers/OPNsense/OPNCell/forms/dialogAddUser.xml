@@ -1,5 +1,9 @@
 <form>
 <field>
+    <id>user.edit_token</id>
+    <type>hidden</type>
+</field>
+<field>
     <label>User Details</label>
     <type>header</type>
 </field>
@@ -21,7 +25,25 @@
     <id>user.opc</id>
     <label>OPc</label>
     <type>text</type>
-    <help>Enter the OPc Key associated with the IMSI.</help>
+    <help>Enter 32 hexadecimal digits for OPc, or leave it blank when using OP.</help>
+</field>
+<field>
+    <id>user.op</id>
+    <label>OP</label>
+    <type>text</type>
+    <help>Enter 32 hexadecimal digits for OP, or leave it blank when using OPc.</help>
+</field>
+<field>
+    <id>user.amf</id>
+    <label>Authentication Management Field</label>
+    <type>text</type>
+    <help>Enter four hexadecimal digits. New subscribers default to 8000.</help>
+</field>
+<field>
+    <id>user.msisdn</id>
+    <label>MSISDN</label>
+    <type>text</type>
+    <help>Enter up to two phone numbers using digits only, separated by a comma.</help>
 </field>
     <field>
         <id>user.ip</id>
@@ -30,11 +52,68 @@
         <help>Optionally enter a persistent IP from the UE pool.</help>
     </field>
 <field>
+    <id>user.ue_ambr_downlink</id>
+    <label>UE-AMBR Downlink</label>
+    <type>text</type>
+    <help>Subscriber-wide downlink limit. Enter a whole number and its unit.</help>
+</field>
+<field>
+    <id>user.ue_ambr_downlink_unit</id>
+    <label>UE-AMBR Downlink Unit</label>
+    <type>text</type>
+    <help>0 = bps, 1 = Kbps, 2 = Mbps, 3 = Gbps, 4 = Tbps.</help>
+</field>
+<field>
+    <id>user.ue_ambr_uplink</id>
+    <label>UE-AMBR Uplink</label>
+    <type>text</type>
+    <help>Subscriber-wide uplink limit. Enter a whole number and its unit.</help>
+</field>
+<field>
+    <id>user.ue_ambr_uplink_unit</id>
+    <label>UE-AMBR Uplink Unit</label>
+    <type>text</type>
+    <help>0 = bps, 1 = Kbps, 2 = Mbps, 3 = Gbps, 4 = Tbps.</help>
+</field>
+<field>
+    <id>user.subscriber_status</id>
+    <label>Subscriber Status</label>
+    <type>text</type>
+    <help>0 = Service granted, 1 = Operator-determined barring.</help>
+</field>
+<field>
+    <id>user.operator_determined_barring</id>
+    <label>Operator-Determined Barring</label>
+    <type>text</type>
+    <help>Enter the Open5GS barring code from 0 to 8.</help>
+</field>
+<field>
     <id>user.profile</id>
     <label>Profile</label>
     <style>tokenize</style>
     <type>select_multiple</type>
     <help>Define the profile (APN) to be associated with the IMSI.</help>
+</field>
+
+<field>
+    <id>user.default_slice</id>
+    <label>Default Slice</label>
+    <type>text</type>
+    <help>Enter an assigned SST or SST:SD, for example 1 or 1:010203. Leave blank to keep the current default on edit or use the first assigned slice for a new subscriber.</help>
+</field>
+
+<field>
+    <id>user.session_addresses</id>
+    <label>Per-Session Address Overrides</label>
+    <type>textbox</type>
+    <help>Optional JSON keyed by SST[:SD]/APN. Use ue or smf with ipv4 or ipv6 fields. For example, {"1/internet":{"ue":{"ipv4":"192.0.2.10"}}}. Omit an address to leave it unchanged, or use null to clear it. These overrides take precedence over the single IP field.</help>
+</field>
+
+<field>
+    <id>user.pcc_rules</id>
+    <label>Per-Session PCC Rules</label>
+    <type>textbox</type>
+    <help>Optional JSON keyed by SST[:SD]/APN. Each value is an array of Open5GS PCC rules with flow and qos. Omit a session to keep its rules, or use [] to clear them.</help>
 </field>
 
 </form>

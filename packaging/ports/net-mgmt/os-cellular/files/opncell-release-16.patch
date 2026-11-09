@@ -1,0 +1,39 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -2,7 +2,13 @@
+ // Register before the platform partial creates its grid and initial request.
+ $(function () {
+     // Add before the platform grid restores its saved timeframe selection.
+-    $("#validFrom_filter").prepend($('<option value="hour"></option>').text("{{ lang._('Last hour') }}"));
++    const timeframe = $("#validFrom_filter");
++    if (!timeframe.find('option[value="hour"]').length) {
++        timeframe.prepend($('<option value="hour"></option>').text("{{ lang._('Last hour') }}"));
++    }
++    // The styled picker can already be initialized before document-ready.
++    // Refresh its option cache as well as the underlying select element.
++    if (timeframe.data("selectpicker")) { timeframe.selectpicker("refresh"); }
+ });
+ $.ajaxPrefilter(function (options) {
+     const cellularLog = options.url.indexOf('/api/diagnostics/log/opncell/') !== -1;
+@@ -45,6 +51,7 @@
+         top.append(buttons);
+         details.append($("#opncell_log_path").detach());
+         const timeframe = $("#validFrom_filter");
++        if (timeframe.data("selectpicker")) { timeframe.selectpicker("refresh"); }
+         details.append(timeframe.closest(".bootstrap-select").length ? timeframe.closest(".bootstrap-select").detach() : timeframe.detach());
+         $("#filter_container").remove();
+         bar.append(top, details);
+--- a/opnsense/scripts/opncell/cleanup_log_links.py
++++ b/opnsense/scripts/opncell/cleanup_log_links.py
+@@ -35,4 +35,10 @@
+         for path in Path(directory).glob('*'):
+             if path.is_file():
+                 references += path.read_text(errors='replace')
+-    print(json.dumps(cleanup(references=references)))
++    result = cleanup(references=references)
++    if result.get('skipped'):
++        print('Legacy log links retained: ' + result['skipped'])
++    elif result['removed']:
++        print('Removed ' + str(len(result['removed'])) + ' obsolete legacy log links; target files preserved.')
++    else:
++        print('No obsolete legacy log links needed removal.')

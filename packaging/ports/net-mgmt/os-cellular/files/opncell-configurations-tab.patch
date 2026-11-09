@@ -1,0 +1,10 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
+@@ -187,6 +187,7 @@
+                     $("#grid-other-configs").bootgrid('reload');
+                     if (result.result === "applied") {
+                         loadNetworkSelection();
++                        $('#configTab a').tab('show');
+                     } else {
+                         showNetworkSelection(currentNetwork);
+                         BootstrapDialog.alert(result.message || "{{ lang._('Could not apply network configuration') }}");

@@ -116,4 +116,22 @@
             a service data flow with higher ARP priority level</help>
     </field>
 
+    <field>
+        <id>profile.sd</id>
+        <label>Slice Differentiator (SD)</label>
+        <type>text</type>
+        <help>Optional six-digit hexadecimal slice identifier.</help>
+    </field>
+    <field>
+        <id>profile.session_type</id>
+        <label>Session Type</label>
+        <type>text</type>
+        <help>1 = IPv4, 2 = IPv6, 3 = IPv4v6. Leave blank to use IPv4v6 for new sessions.</help>
+    </field>
+    <field>
+        <id>profile.lbo_roaming_allowed</id>
+        <label>Local Breakout Roaming</label>
+        <type>text</type>
+        <help>0 = disabled, 1 = enabled. Leave blank to retain the existing setting.</help>
+    </field>
 </form>

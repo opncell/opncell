@@ -41,9 +41,9 @@ while test $# -gt 0; do
   esac
 done
 
-DB_URI="${DB_URI:-mongodb://localhost/open5gs}"
+DB_URI="${DB_URI:-mongodb://127.0.0.1:27017/open5gs}"
 
-npx mongosh --quiet --eval 'db.subscribers.createIndex({"imsi": 1}, {unique: true})' $DB_URI > /dev/null 2>&1
+/usr/local/bin/mongosh --quiet --eval 'db.subscribers.createIndex({"imsi": 1}, {unique: true})' $DB_URI > /dev/null 2>&1
 
 if [ "$#" -lt 1 ]; then
     display_help
@@ -122,7 +122,7 @@ if [ "$1" = "add" ]; then
         sessions=$(cat "$temp_file")
         rm "$temp_file"
 
-       output=$(npx mongosh --quiet --eval "
+       output=$(/usr/local/bin/mongosh --quiet --eval "
         var result;
         try {
              db.subscribers.insertOne({
@@ -188,7 +188,7 @@ if [ "$1" = "add_with_ip" ]; then
         sessions=$(cat "$temp_file")
         rm "$temp_file"
 
-       output=$(npx mongosh --quiet --eval "
+       output=$(/usr/local/bin/mongosh --quiet --eval "
         var result;
         try {
              db.subscribers.insertOne({
@@ -245,7 +245,7 @@ if [ "$1" = "add_with_ip" ]; then
         KI=$3
         OPC=$4
 
-        npx mongosh --eval "db.subscribers.insertOne(
+        /usr/local/bin/mongosh --eval "db.subscribers.insertOne(
             {
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
@@ -323,7 +323,7 @@ if [ "$1" = "addT1" ]; then
         KI=$3
         OPC=$4
 
-        npx mongosh --eval "db.subscribers.insertOne(
+        /usr/local/bin/mongosh --eval "db.subscribers.insertOne(
             {
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
@@ -452,7 +452,7 @@ if [ "$1" = "addT1" ]; then
         KI=$4
         OPC=$5
 
-        npx mongosh --eval "db.subscribers.insertOne(
+        /usr/local/bin/mongosh --eval "db.subscribers.insertOne(
             {
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
@@ -598,14 +598,14 @@ if [ "$1" = "remove" ]; then
     fi
 
     IMSI=$2
-    output=$(npx mongosh --quiet --eval "db.subscribers.deleteOne({\"imsi\": \"$IMSI\"});" $DB_URI 2>/dev/null)
-    json_output=$(echo "$output" | awk '/{/,/}/')
-    deleted_count=$(echo "$json_output" | awk -F '[:,]' '{for(i=1;i<=NF;i++) if($i ~ /"deletedCount"/) print $(i+1)}')
-    deleted_count=$(echo "$deleted_count" | awk '{$1=$1};1')
-    deleted_count=$(echo "$deleted_count" | cut -d' ' -f1)
-
-    deleted_count=$(echo "$deleted_count" | sed 's/0}$//')
-    echo $deleted_count
+    case "$IMSI" in
+        ''|*[!0-9]*) exit 1 ;;
+    esac
+    /usr/local/bin/mongosh --quiet --eval "
+        const result = db.subscribers.deleteOne({imsi: \"$IMSI\"});
+        if (!result.acknowledged) quit(1);
+        print(result.deletedCount);
+    " "$DB_URI"
     exit $?
 fi
 
@@ -615,7 +615,7 @@ if [ "$1" = "reset" ]; then
         exit 1
     fi
 
-    npx mongosh --eval "db.subscribers.deleteMany({});" $DB_URI
+    /usr/local/bin/mongosh --eval "db.subscribers.deleteMany({});" $DB_URI
     exit $?
 fi
 
@@ -627,7 +627,7 @@ if [ "$1" = "static_ip" ]; then
     IMSI=$2
     IP=$3
 
-   npx mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},{\$set: { \"slice.0.session.0.ue.addr\": \"$IP\" }});" $DB_URI
+   /usr/local/bin/mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},{\$set: { \"slice.0.session.0.ue.addr\": \"$IP\" }});" $DB_URI
     exit $?
 fi
 
@@ -639,7 +639,7 @@ if [ "$1" = "static_ip6" ]; then
     IMSI=$2
     IP=$3
 
-    npx mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},{\$set: { \"slice.0.session.0.ue.addr6\": \"$IP\" }});" $DB_URI
+    /usr/local/bin/mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},{\$set: { \"slice.0.session.0.ue.addr6\": \"$IP\" }});" $DB_URI
     exit $?
 fi
 
@@ -651,7 +651,7 @@ if [ "$1" = "type" ]; then
     IMSI=$2
     TYPE=$3
 
-    npx mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},{\$set: { \"slice.0.session.0.type\": NumberInt($TYPE) }});" $DB_URI
+    /usr/local/bin/mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},{\$set: { \"slice.0.session.0.type\": NumberInt($TYPE) }});" $DB_URI
     exit $?
 fi
 
@@ -662,7 +662,7 @@ if [ "$1" = "add_ue_with_apn" ]; then
         OPC=$4
         APN=$5
 
-        npx mongosh --eval "db.subscribers.insertOne(
+        /usr/local/bin/mongosh --eval "db.subscribers.insertOne(
             {
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
@@ -743,7 +743,7 @@ if [ "$1" = "add_ue_with_slice" ]; then
         SST=$6
         SD=$7
 
-        npx mongosh --eval "db.subscribers.insertOne(
+        /usr/local/bin/mongosh --eval "db.subscribers.insertOne(
             {
                 \"_id\": new ObjectId(),
                 \"schema_version\": NumberInt(1),
@@ -829,7 +829,7 @@ if [ "$1" = "update_apn" ]; then
         ARP_CAPA=${10}
         ARP_VUL=${11}
 
-        npx mongosh --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
+        /usr/local/bin/mongosh --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
             {\$push: { \"slice.$SLICE_NUM.session\":
                            {
                             \"name\" : \"$APN\",
@@ -875,7 +875,7 @@ if [ "$1" = "update_slice" ]; then
         ARP_VUL=${11}
 
 
-        npx mongosh --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
+        /usr/local/bin/mongosh --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
             {\$push: { \"slice\":
 
                             {
@@ -928,7 +928,7 @@ if [ "$1" = "set_apn" ]; then
         ARP_CAPA=${10}
         ARP_VUL=${11}
 
- npx mongosh --eval "db.subscribers.updateOne(
+ /usr/local/bin/mongosh --eval "db.subscribers.updateOne(
              {
                'imsi': '$IMSI',
                'slice.session.name': '$APN'
@@ -965,7 +965,7 @@ if [ "$1" = "subscriber_status" ]; then
         IMSI=$2
         SUB_STATUS=$3
         OP_DET_BARRING=$4
-        npx mongosh --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
+        /usr/local/bin/mongosh --eval "db.subscribers.updateOne({ \"imsi\": \"$IMSI\"},
             {\$set: { \"subscriber_status\": $SUB_STATUS,
                       \"operator_determined_barring\": $OP_DET_BARRING
                     }
@@ -976,22 +976,22 @@ if [ "$1" = "subscriber_status" ]; then
     exit 1
 fi
 if [ "$1" = "showall" ]; then
-   npx mongosh --eval "db.subscribers.find().batchSize(1000).forEach(doc => print(EJSON.stringify(doc)))" $DB_URI
+   /usr/local/bin/mongosh --eval "db.subscribers.find().batchSize(1000).forEach(doc => print(EJSON.stringify(doc)))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showone" ]; then
     if [ "$#" -eq 2 ]; then
         IMSI=$2
-        npx mongosh --eval "db.subscribers.find({ \"imsi\": \"$IMSI\"},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1})" $DB_URI
+        /usr/local/bin/mongosh --eval "db.subscribers.find({ \"imsi\": \"$IMSI\"},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1})" $DB_URI
         exit $?
     fi
 fi
 if [ "$1" = "showpretty" ]; then
-   npx mongosh --eval "db.subscribers.find().pretty().batchSize(1000).forEach(doc => print(EJSON.stringify(doc)))" $DB_URI
+   /usr/local/bin/mongosh --eval "db.subscribers.find().pretty().batchSize(1000).forEach(doc => print(EJSON.stringify(doc)))" $DB_URI
         exit $?
 fi
 if [ "$1" = "showfiltered" ]; then
-   npx mongosh --quiet --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1}).batchSize(1000).forEach(doc => print(EJSON.stringify(doc)))" $DB_URI
+   /usr/local/bin/mongosh --quiet --eval "db.subscribers.find({},{'_id':0,'imsi':1,'security.k':1, 'security.opc':1,'slice.session.name':1,'slice.session.ue.addr':1}).batchSize(1000).forEach(doc => print(EJSON.stringify(doc)))" $DB_URI
         exit $?
 fi
 
@@ -1002,7 +1002,7 @@ if [ "$1" = "ambr_speed" ]; then
         DL_UNIT=$4
         UL_VALUE=$5
         UL_UNIT=$6
-        npx mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},
+        /usr/local/bin/mongosh --eval "db.subscribers.updateOne({\"imsi\": \"$IMSI\"},
             {\$set: {
                 \"ambr\" : {
                     \"downlink\" : {

@@ -117,7 +117,7 @@ manifest: check
 	@echo "}"
 .endif
 
-scripts: check scripts-pre scripts-auto scripts-manual scripts-post
+scripts: check scripts-pre .WAIT scripts-auto .WAIT scripts-manual .WAIT scripts-post
 
 scripts-pre:
 	@for SCRIPT in ${PLUGIN_SCRIPTS}; do \
@@ -149,22 +149,19 @@ scripts-auto:
 	@if [ -d ${.CURDIR}/src/opnsense/mvc/app/models ]; then \
 		for FILE in $$(cd ${.CURDIR}/src/opnsense/mvc/app/models && \
 		    find -s . -depth 2 -type d); do \
-			cat ${TEMPLATESDIR}/models | \
-			    sed "s:%%ARG%%:$${FILE#./}:g" >> \
-			    ${DESTDIR}/+POST_INSTALL; \
+			sed "s:%%ARG%%:$${FILE#./}:g" ${TEMPLATESDIR}/models >> \
+			    ${DESTDIR}/+POST_INSTALL || exit 1; \
 		done; \
 		for SCRIPT in +POST_INSTALL +POST_DEINSTALL; do \
-			cat ${TEMPLATESDIR}/configure | \
-			    sed "s:%%ARG%%:$${SCRIPT#+}:g" >> \
-			    ${DESTDIR}/$${SCRIPT}; \
+			sed "s:%%ARG%%:$${SCRIPT#+}:g" ${TEMPLATESDIR}/configure >> \
+			    ${DESTDIR}/$${SCRIPT} || exit 1; \
 		done; \
 	fi
 	@if [ -d ${.CURDIR}/src/opnsense/service/templates ]; then \
 		for FILE in $$(cd ${.CURDIR}/src/opnsense/service/templates && \
 		    find -s . -depth 2 -type d); do \
-			cat ${TEMPLATESDIR}/templates | \
-			    sed "s:%%ARG%%:$${FILE#./}:g" >> \
-			    ${DESTDIR}/+POST_INSTALL; \
+			sed "s:%%ARG%%:$${FILE#./}:g" ${TEMPLATESDIR}/templates >> \
+			    ${DESTDIR}/+POST_INSTALL || exit 1; \
 		done; \
 	fi
 
@@ -184,7 +181,7 @@ scripts-post:
 
 install: check
 	@mkdir -p ${DESTDIR}${LOCALBASE}/opnsense/version
-	@(cd ${.CURDIR}/src; find * -type f) | while read FILE; do \
+	@(cd ${.CURDIR}/src; find * -type f ! -name .DS_Store) | while read FILE; do \
 		tar -C ${.CURDIR}/src -cpf - $${FILE} | \
 		    tar -C ${DESTDIR}${LOCALBASE} -xpf -; \
 		if [ "$${FILE%%.in}" != "$${FILE}" ]; then \
@@ -195,7 +192,7 @@ install: check
 	cat ${TEMPLATESDIR}/version | sed ${SED_REPLACE} > "${DESTDIR}${LOCALBASE}/opnsense/version/${PLUGIN_NAME}"
 
 plist: check
-	@(cd ${.CURDIR}/src; find * -type f) | while read FILE; do \
+	@(cd ${.CURDIR}/src; find * -type f ! -name .DS_Store) | while read FILE; do \
 		if [ -f "$${FILE}.in" ]; then continue; fi; \
 		FILE="$${FILE%%.in}"; \
 		echo ${LOCALBASE}/$${FILE}; \
@@ -210,18 +207,18 @@ description: check
 metadata: check
 	@mkdir -p ${DESTDIR}
 	@${MAKE} DESTDIR=${DESTDIR} scripts
-	@${MAKE} DESTDIR=${DESTDIR} manifest > ${DESTDIR}/+MANIFEST
-	@${MAKE} DESTDIR=${DESTDIR} description > ${DESTDIR}/+DESC
-	@${MAKE} DESTDIR=${DESTDIR} plist > ${DESTDIR}/plist
+	@${MAKE} -B DESTDIR=${DESTDIR} manifest > ${DESTDIR}/+MANIFEST
+	@${MAKE} -B DESTDIR=${DESTDIR} description > ${DESTDIR}/+DESC
+	@${MAKE} -B DESTDIR=${DESTDIR} plist > ${DESTDIR}/plist
 
 collect: check
-	@(cd ${.CURDIR}/src; find * -type f) | while read FILE; do \
+	@(cd ${.CURDIR}/src; find * -type f ! -name .DS_Store) | while read FILE; do \
 		tar -C ${DESTDIR}${LOCALBASE} -cpf - $${FILE} | \
 		    tar -C ${.CURDIR}/src -xpf -; \
 	done
 
 remove: check
-	@(cd ${.CURDIR}/src; find * -type f) | while read FILE; do \
+	@(cd ${.CURDIR}/src; find * -type f ! -name .DS_Store) | while read FILE; do \
 		rm -f ${DESTDIR}${LOCALBASE}/$${FILE}; \
 	done
 	@(cd ${.CURDIR}/src; find * -type d -depth) | while read DIR; do \

@@ -1,0 +1,31 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
+@@ -213,9 +213,14 @@
+             $('[id="row_general.upf_gtpu"]').toggleClass('hidden', !usesSa && network !== 'enableupf');
+             $('[id="row_general.sst"]').toggleClass('hidden', !usesSa);
+             $('[id="row_general.s1ap"]').toggleClass('hidden', !usesEpc && !usesSa);
+-            $('label[for="general.s1ap"]').text(usesSa
+-                ? "{{ lang._('AMF NGAP Bind Address') }}"
+-                : "{{ lang._('MME S1AP Bind Address') }}");
++            const signalingLabels = {
++                enablefour: "{{ lang._('S1 Bind Address') }}",
++                enablefiveSA: "{{ lang._('N2 Bind Address') }}",
++                enablefiveNSA: "{{ lang._('S1 Bind Address') }}"
++            };
++            const signalingLabel = signalingLabels[network] || "{{ lang._('S1 Bind Address') }}";
++            $('[id="control_label_general.s1ap"] > b').text(signalingLabel);
++            $('[id="general.s1ap"]').attr('aria-label', signalingLabel);
+             if (!network) return;
+ 
+             // Show common fields
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/forms/general.xml
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/forms/general.xml
+@@ -33,7 +33,7 @@
+         </field>
+         <field>
+             <id>general.s1ap</id>
+-            <label>Radio Signaling Bind Address</label>
++            <label>S1 Bind Address</label>
+             <type>text</type>
+             <help>Set the MME S1AP address for 4G and 5G NSA, or the AMF NGAP address for 5G SA.</help>
+         </field>

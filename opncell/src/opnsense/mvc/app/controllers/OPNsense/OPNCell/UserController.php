@@ -35,7 +35,6 @@ class UserController extends \OPNsense\Base\IndexController
     {
         $this->view->userForm = $this->getForm("user");
         $this->view->bulkForm = $this->getForm("bulk");
-        $this->view->formDialogEditUser = $this->getForm("dialogEditUser");
         $this->view->formDialogAddUser = $this->getForm("dialogAddUser");
         $this->view->formDialogEditProfile = $this->getForm("dialogEditProfile");
         $this->view->hnetForm = $this->getForm("hnet");

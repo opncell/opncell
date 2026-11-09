@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# PROVIDE: open5gs_upf
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="open5gs_upf"
+rcvar="${name}_enable"
+
+load_rc_config "${name}"
+
+: ${open5gs_upf_enable:="NO"}
+: ${open5gs_upf_config="%%ETCDIR%%/upf.yaml"}
+: ${open5gs_upf_flags=""}
+
+command="%%PREFIX%%/bin/open5gs-upfd"
+procname="${command}"
+pidfile="/var/run/${name}.pid"
+
+required_files="${open5gs_upf_config}"
+
+start_cmd="${name}_start"
+
+open5gs_upf_start()
+{
+	echo "Starting ${name}."
+	/usr/sbin/daemon -f -p "${pidfile}" \
+	    "${command}" \
+	    -c "${open5gs_upf_config}" \
+	    ${open5gs_upf_flags}
+}
+
+run_rc_command "$1"

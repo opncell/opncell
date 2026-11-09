@@ -22,7 +22,7 @@ class FileUploadService
     {
         $i=0;
         foreach ($headers as $item) {
-            $headers[$i] = strtolower($item);
+            $headers[$i] = strtolower(trim($item));
             $i++;
         }
         return $headers;
@@ -49,6 +49,7 @@ class FileUploadService
                 $line = str_replace("var_out:", "", $line);
                 $headers = explode("/", trim($line));
                 $headers = $this->headersToLowerCase($headers);
+                continue;
             }
             if ($foundStart) {
                 // Split the line by tabs or multiple spaces if inp file and by comma if outfile
@@ -74,16 +75,26 @@ class FileUploadService
 
     public function processCSVFile($handle): array
     {
-        $headers = fgetcsv($handle);
-        $headers = $this->headersToLowerCase($headers);
-        $data = array();
-        while (($row = fgetcsv($handle)) !== false) {
-            $row = array_combine($headers, $row);
-            $data[] = $row;
-            while (($row = fgetcsv($handle)) !== false) {
-                $row = array_combine($headers, $row);
-                $data[] = $row;
+        $rawHeaders = fgetcsv($handle, 0, ',', '"', '');
+        $headers = $this->headersToLowerCase($rawHeaders ?: []);
+        if (count($headers) !== count(array_unique($headers)) ||
+            !in_array('imsi', $headers, true) || !in_array('ki', $headers, true) ||
+            (!in_array('op', $headers, true) && !in_array('opc', $headers, true))
+        ) {
+            fclose($handle);
+            return ['result' => 'failed'];
+        }
+
+        $data = [];
+        while (($row = fgetcsv($handle, 0, ',', '"', '')) !== false) {
+            if ($row === [null]) {
+                continue;
             }
+            if (count($headers) !== count($row)) {
+                fclose($handle);
+                return ['result' => 'failed'];
+            }
+            $data[] = array_combine($headers, $row);
         }
         session_start();
         $_SESSION['fileValues'] = $data;

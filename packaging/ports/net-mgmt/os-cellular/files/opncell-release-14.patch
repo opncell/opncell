@@ -1,0 +1,79 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -96,26 +96,25 @@
+ 
+ <style>
+ #grid-log-header .opncell-log-toolbar {
+-    display: flex;
+-    flex-direction: column;
+-    align-items: stretch;
+-    gap: 12px;
++    display: grid;
++    grid-template-columns: minmax(180px, 380px) 200px max-content;
++    gap: 12px 8px;
++    align-items: center;
+     text-align: left;
+ }
+-.opncell-log-top {
+-    display: flex;
+-    flex-wrap: wrap;
+-    align-items: center;
+-    gap: 8px;
+-}
++.opncell-log-top, .opncell-log-details { display: contents; }
+ #grid-log-header .opncell-log-top .search {
++    grid-column: 1;
++    grid-row: 1;
+     float: none;
+-    flex: 1 1 260px;
+-    min-width: 180px;
+-    max-width: 380px;
++    width: 100%;
++    min-width: 0;
+     margin: 0;
+ }
++.opncell-log-top > :nth-child(2) { grid-column: 2; grid-row: 1; }
+ .opncell-log-buttons {
++    grid-column: 3;
++    grid-row: 1;
+     display: flex;
+     flex-wrap: wrap;
+     align-items: center;
+@@ -129,23 +128,25 @@
+     width: auto;
+     margin: 0;
+ }
+-.opncell-log-details {
+-    display: flex;
+-    flex-wrap: wrap;
+-    align-items: center;
+-    gap: 12px;
+-}
+ #opncell_log_path {
+-    flex: 0 1 380px;
++    grid-column: 1;
++    grid-row: 2;
+     min-width: 0;
+     margin: 0;
+     padding: 0 !important;
+ }
++.opncell-log-details > :nth-child(2) { grid-column: 2; grid-row: 2; }
++@media (max-width: 1100px) {
++    #grid-log-header .opncell-log-toolbar {
++        grid-template-columns: minmax(180px, 380px) 200px;
++    }
++    .opncell-log-buttons { grid-column: 1 / -1; grid-row: 3; }
++}
+ @media (max-width: 640px) {
+-    #grid-log-header .opncell-log-top .search {
+-        flex-basis: 100%;
+-        max-width: none;
+-    }
+-    #opncell_log_path { flex-basis: 100%; }
++    #grid-log-header .opncell-log-toolbar { grid-template-columns: minmax(0, 1fr); }
++    .opncell-log-top > :nth-child(2) { grid-column: 1; grid-row: 2; }
++    #opncell_log_path { grid-column: 1; grid-row: 3; }
++    .opncell-log-details > :nth-child(2) { grid-column: 1; grid-row: 4; }
++    .opncell-log-buttons { grid-column: 1; grid-row: 5; }
+ }
+ </style>

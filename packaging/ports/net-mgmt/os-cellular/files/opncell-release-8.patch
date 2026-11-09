@@ -1,0 +1,380 @@
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/ServiceController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/ServiceController.php
+@@ -179,11 +179,21 @@
+         if ($template !== 'OK') {
+             return ['result' => 'failed', 'message' => 'Could not render service enablement'];
+         }
+-        $backend->configdRun('mongod start');
++        if (!str_contains((string)$backend->configdRun('mongod status'), 'is running')) {
++            $backend->configdRun('mongod start');
++        }
+         if (!str_contains((string)$backend->configdRun('mongod status'), 'is running')) {
+             return ['result' => 'failed', 'message' => 'MongoDB did not start'];
+         }
+-        return $this->manageNetworkServices($network, $backend);
++        $runtime = $this->manageNetworkServices($network, $backend);
++        if ($runtime['result'] !== 'applied') {
++            return $runtime;
++        }
++        $boot = json_decode((string)$backend->configdpRun('opncell verifyBoot', [$network]), true);
++        if (($boot['result'] ?? '') !== 'verified') {
++            return ['result' => 'failed', 'message' => $boot['message'] ?? 'Services started, but boot settings could not be verified'];
++        }
++        return ['result' => 'applied'];
+     }
+ 
+     private function validateGeneral($mdlGeneral)
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserController.php
+@@ -134,26 +134,19 @@
+     {
+ 
+         $this->request = new \OPNsense\Mvc\Request();
+-        if ($this->request->has('sort') &&
+-            is_array($this->request->getPost("sort")) &&
+-            !empty($this->request->getPost("sort"))
+-        ) {
+-            $tmp = array_keys($this->request->getPost("sort"));
+-            $sortBy = $tmp[0] . " " . $this->request->getPost("sort")[$tmp[0]];
+-        }
+         // fetch query parameters (limit results to prevent out of memory issues)
+         if ($this->request->isPost()) {
+             $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
+             $currentPage = $this->request->getPost('current', 'int', 1);
+ 
+-            $offset = ($currentPage - 1) * $itemsPerPage;
+             $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
+             $filteredResult = $this->filterResults($this->fetchUsersAction(), $searchPhrase);
+-            $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
+-        }
+-
+-        return ['total' => count($filteredResult), 'rowCount' => $itemsPerPage, 'current' => $currentPage,
+-            'rows' => $paginatedResult, $sortBy];
++            return \OPNsense\OPNCell\SubscriberGrid::page(
++                $filteredResult, $this->request->getPost('sort'), $itemsPerPage, $currentPage
++            );
++        }
++
++        return ['total' => 0, 'rowCount' => 0, 'current' => 1, 'rows' => []];
+     }
+ 
+     private function filterResults(array $results, string $searchPhrase): array
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
+@@ -129,8 +129,8 @@
+                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
+             <thead>
+             <tr>
+-                <th data-column-id="imsi" data-type="string" data-visible="true" >{{ lang._('IMSI') }}</th>
+-                <th data-column-id="profile" data-type="string" data-visible="true" >{{ lang._('Profile') }}</th>
++                <th data-column-id="imsi" data-type="string" data-visible="true" data-sortable="true" data-order="asc">{{ lang._('IMSI') }}</th>
++                <th data-column-id="profile" data-type="string" data-visible="true" data-sortable="true">{{ lang._('Profile') }}</th>
+                 <th data-column-id="commands" data-width="7em" data-formatter="commands" >{{
+                     lang._('Commands') }}
+                 </th>
+--- a/opnsense/service/conf/actions.d/actions_opncell.conf
++++ b/opnsense/service/conf/actions.d/actions_opncell.conf
+@@ -3,6 +3,12 @@
+ type:script_output
+ parameters:%s
+ message: Loading daemon configuration
++
++[verifyBoot]
++command:/usr/local/opnsense/scripts/opncell/verify_boot.py
++type:script_output
++parameters:%s
++message: Verifying effective cellular boot settings
+ 
+ [saveUsers]
+ command: /usr/local/opnsense/scripts/opncell/saveUsers.py
+@@ -63,7 +69,7 @@
+ message:Starting mongoDB
+ 
+ [restartMongo]
+-command:/usr/local/opnsense/scripts/opncell/startMongo.sh
++command:/usr/local/etc/rc.d/mongod onerestart
+ type:script_output
+ message:Restarting mongoDB
+ 
+--- a/opnsense/scripts/opncell/showUsers.py
++++ b/opnsense/scripts/opncell/showUsers.py
+@@ -1,66 +1,31 @@
+-#!/usr/local/bin/python3.12
++#!/usr/local/bin/python3.13 -S
++"""Read subscriber-list fields directly, without launching a JavaScript shell."""
++import json
++import sys
+ 
+-import yaml
+-import subprocess
+-import ujson
+-import sys
+-import json
+-import os
++# Private client modules do not shadow the OPNsense Python environment.
++sys.path.insert(0, "/usr/local/share/opncell-pymongo")
+ 
+ 
+-def fetch_users():
+-    os.environ['PATH'] = '/usr/local/opnsense/scripts/opncell/opncell_db.sh:' + os.environ.get('PATH', '')
+-    os.environ['PATH'] = '/bin/bash:' + os.environ.get('PATH', '')
+-    os.environ['PATH'] = '/root/mongo/build/install/bin/:' + os.environ.get('PATH', '')
+-    os.environ['PATH'] = '/root/mongo/build/install/bin/mongod:' + os.environ.get('PATH', '')
+-    os.environ['PWD'] = '/usr/local/opnsense/scripts/opncell:' + os.environ.get('PWD', '')
+-
+-    script_path = '/usr/local/opnsense/scripts/opncell/opncell_db.sh'
+-    bash_script = f'{script_path} showfiltered'
+-    script_arguments = ['showfiltered']
+-    # Use subprocess to run the Bash script
+-    user_details = []
+-    dets = {}
+-
+-    try:
+-        output = subprocess.check_output([script_path] + script_arguments , text=True, stderr=subprocess.STDOUT)
+-        #  Run the Bash script
+-        output_list = output.strip().split('\n')
+-
+-        # Parse each JSON object separately
+-        for json_str in output_list:
+-            try:
+-                data = json.loads(json_str)
+-                imsi = data.get("imsi")
+-                k = data.get("security", {}).get("k")
+-                opc = data.get("security", {}).get("opc")
+-
+-                # Extract the "name" field from the "session" array if it exists
+-               # session = data.get("slice", [{}])[0].get("session", [{}])
+-                slice_array = data.get("slice", [])
+-                names = []
+-               # print(type(slice_array))
+-                for slice_data in slice_array:
+-                   # print(slice_array)
+-                    session_array = slice_data.get("session", [])
+-                    for session_data in session_array:
+-                        name = session_data.get("name")
+-                        names.append(name)
+-                #names = [session_data.get("name") for session_data in session]
+-                names_str = ",".join(names)
+-                dets = {"imsi": imsi, "ki": k, "opc": opc, "apn": names_str}
+-                user_details.append(dets)
+-
+-            except json.JSONDecodeError as e:
+-               # print(f"Error parsing JSON: {e}")
+-                pass
+-        print(ujson.dumps(user_details))
+-
+-    except subprocess.CalledProcessError as e:
+-
+-        pass
+-
+-    return user_details
++def fetch_users(client_factory=None):
++    if client_factory is None:
++        from pymongo import MongoClient
++        client_factory = MongoClient
++    with client_factory('mongodb://127.0.0.1:27017/open5gs', serverSelectionTimeoutMS=3000,
++                        connectTimeoutMS=3000, socketTimeoutMS=5000) as client:
++        rows = client.open5gs.subscribers.find({}, {'_id': 0, 'imsi': 1, 'slice.session.name': 1})
++        result = []
++        for doc in rows:
++            names = [session['name'] for slice_ in doc.get('slice', [])
++                     for session in slice_.get('session', []) if isinstance(session.get('name'), str)]
++            result.append({'imsi': str(doc['imsi']), 'apn': ','.join(names)})
++        return result
+ 
+ 
+-fetch_users()
++if __name__ == '__main__':
++    try:
++        print(json.dumps(fetch_users()))
++    except Exception as exc:
++        # Database failures must not masquerade as a successfully empty list.
++        print('Cannot read subscriber list: ' + type(exc).__name__, file=sys.stderr)
++        sys.exit(1)
+--- a/opnsense/scripts/opncell/startMongo.sh
++++ b/opnsense/scripts/opncell/startMongo.sh
+@@ -1,33 +1,19 @@
+-export PATH="/root/mongo/build/install/bin/:$PATH"
+-export PATH="/root/mongo/build/install/bin/mongod:$PATH"
+-
+-
+-checkMongo() {
+-
+-    command="ps aux | grep mongod | awk '\$8 == \"I+\" || \$8 == \"Is\" || \$8 == \"T\" {print \$8}'"
+-    status=$(eval "$command")
+-    if test "$status" == "T"; then
+-       pid_command="ps aux | grep mongod | awk '\$8 == \"T\" {print \$2}'"
+-       pid=$(eval "$pid_command")
+-       kill -9 "$pid"
+-      mongo_binary_path=$(which mongod)
+-      directory_path=$(dirname "$mongo_binary_path")
+-      cd "$directory_path" || exit 1
+-      mongod --dbpath ./data/db &
+-      echo "OK"
+-  #sleep 1
+-    fi
+-
+-   if test -z  "$status" ; then
+-      mongo_binary_path=$(which mongod)
+-      directory_path=$(dirname "$mongo_binary_path")
+-      cd "$directory_path" || exit 1
+-     
+-      mkdir -p ./data/db
+-      mongod --dbpath ./data/db &
+-      echo "OK" 
+-   #   sleep 1
+- fi
+-}
+-
+-checkMongo
++#!/bin/sh
++# All plugin start paths use the packaged rc service and its configured data path.
++set -eu
++umask 077
++if [ "${1:-}" != "--locked" ]; then
++    exec /usr/bin/lockf -t 15 /var/run/opncell-mongodb-start.lock "$0" --locked
++fi
++if /usr/sbin/service mongod onestatus >/dev/null 2>&1; then
++    echo OK
++    exit 0
++fi
++# Do not start a second instance against another data directory or kill its owner.
++if /usr/bin/sockstat -4l -p 27017 | /usr/bin/awk 'NR > 1 { found = 1 } END { exit !found }'; then
++    echo 'MongoDB port 27017 is already occupied; inspect the existing listener.' >&2
++    exit 1
++fi
++/usr/sbin/service mongod onestart
++/usr/sbin/service mongod onestatus >/dev/null
++echo OK
+--- a/opnsense/service/conf/actions.d/actions_mongod.conf
++++ b/opnsense/service/conf/actions.d/actions_mongod.conf
+@@ -1,5 +1,5 @@
+ [start]
+-command:/usr/local/etc/rc.d/mongod onestart
++command:/usr/local/opnsense/scripts/opncell/startMongo.sh
+ type:script
+ message: Starting mongod
+ 
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/ProfileController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/ProfileController.php
+@@ -62,7 +62,6 @@
+      */
+     public function searchProfileAction(): array
+     {
+-        $profile_array = $this->searchBase('profiles.profile', array("apn"));
+         $profile_array =  $this->searchBase(
+             'profiles.profile',
+             null,
+@@ -81,9 +80,9 @@
+         // Loop through the first array to attach counts
+         foreach ($profile_array["rows"] as &$item) {
+             $name = $item["apn"];
+-            $item["count"] = $counts[$name] ?? "none";
+-            $profile_array[] = $item;
+-        }
++            $item["count"] = $counts[$name] ?? 0;
++        }
++        unset($item);
+ 
+         return $profile_array;
+     }
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserRepository.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserRepository.php
+@@ -15,7 +15,11 @@
+     public function getUsers()
+     {
+         $response = $this->backend->configdpRun("opncell showUsers");
+-        return json_decode((string)$response, true);
++        $rows = json_decode((string)$response, true);
++        if (!is_array($rows) || !array_is_list($rows)) {
++            throw new \RuntimeException('Could not load subscribers. Check MongoDB and its diagnostic log.');
++        }
++        return $rows;
+     }
+ //    public function getUsers()
+ //    {
+@@ -72,4 +76,4 @@
+         $response = $this->backend->configdpRun("opncell deleteUser", [json_encode(['imsi' => $imsi])]);
+         return json_decode((string)$response, true);
+     }
+-}
+\ No newline at end of file
++}
+--- /dev/null
++++ b/opnsense/scripts/opncell/verify_boot.py
+@@ -0,0 +1,39 @@
++#!/usr/local/bin/python3
++"""Check effective rc settings, including rc.conf.d overrides rendered by configd."""
++import json
++import re
++import subprocess
++import sys
++
++ALL = ('amf', 'ausf', 'bsf', 'hss', 'mme', 'nrf', 'nssf', 'pcf', 'pcrf',
++       'scp', 'sgwc', 'sgwu', 'smf', 'udm', 'udr', 'upf')
++EPC = ('hss', 'mme', 'pcrf', 'sgwc', 'sgwu', 'smf', 'upf', 'nrf', 'scp')
++NETWORKS = {'enablefour': EPC, 'enablefiveNSA': EPC,
++            'enablefiveSA': ('nrf', 'scp', 'amf', 'smf', 'upf', 'ausf', 'udm', 'udr', 'pcf', 'nssf', 'bsf'),
++            'enableupf': ('upf',)}
++
++
++def check(network, runner=subprocess.run):
++    if network not in NETWORKS:
++        return {'result': 'failed', 'message': 'Unknown cellular topology'}
++    mismatches = []
++    mongo = runner(['/usr/sbin/service', 'mongod', 'rcvar'], capture_output=True, text=True)
++    if mongo.returncode or not re.search(r'^mongod_enable="YES"\s*$', mongo.stdout, re.M):
++        mismatches.append('mongod (expected YES)')
++    for daemon in ALL:
++        name = 'epc' + daemon + 'd'
++        result = runner(['/usr/sbin/service', name, 'rcvar'], capture_output=True, text=True)
++        match = re.search(r'^' + re.escape(name) + r'_enable="([^"]*)"\s*$', result.stdout, re.M)
++        expected = 'YES' if daemon in NETWORKS[network] else 'NO'
++        if result.returncode or match is None or match.group(1).upper() != expected:
++            mismatches.append('open5gs-' + daemon + 'd (expected ' + expected + ')')
++    if mismatches:
++        return {'result': 'failed', 'message': 'Effective boot settings do not match topology: ' + ', '.join(mismatches)}
++    return {'result': 'verified'}
++
++
++if __name__ == '__main__':
++    try:
++        print(json.dumps(check(sys.argv[1] if len(sys.argv) == 2 else '')))
++    except OSError as exc:
++        print(json.dumps({'result': 'failed', 'message': 'Cannot inspect boot settings: ' + str(exc)}))
+--- /dev/null
++++ b/opnsense/mvc/app/models/OPNsense/OPNCell/SubscriberGrid.php
+@@ -0,0 +1,33 @@
++<?php
++namespace OPNsense\OPNCell;
++
++/** Sorting must precede pagination; IMSIs remain string identifiers. */
++class SubscriberGrid
++{
++    public static function page(array $rows, $sort, int $rowCount, int $current): array
++    {
++        $sort = is_array($sort) ? array_intersect_key($sort, array_flip(['imsi', 'profile'])) : [];
++        $field = array_key_first($sort) ?? 'imsi';
++        $direction = ($sort[$field] ?? 'asc') === 'desc' ? -1 : 1;
++        usort($rows, static function (array $a, array $b) use ($field, $direction): int {
++            $left = (string)($a[$field] ?? '');
++            $right = (string)($b[$field] ?? '');
++            $comparison = $field === 'profile' ? strnatcasecmp($left, $right) : strcmp($left, $right);
++            if ($comparison !== 0) {
++                return $direction * $comparison;
++            }
++            // Stable page boundaries when many subscribers share one profile.
++            return strcmp((string)$a['imsi'], (string)$b['imsi']);
++        });
++        $total = count($rows);
++        $current = max(1, $current);
++        if ($rowCount === -1) {
++            $current = 1;
++            $page = $rows;
++        } else {
++            $rowCount = max(1, min(10000, $rowCount));
++            $page = array_slice($rows, ($current - 1) * $rowCount, $rowCount);
++        }
++        return ['total' => $total, 'rowCount' => $rowCount, 'current' => $current, 'rows' => $page];
++    }
++}

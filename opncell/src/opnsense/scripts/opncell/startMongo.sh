@@ -1,33 +1,19 @@
-export PATH="/root/mongo/build/install/bin/:$PATH"
-export PATH="/root/mongo/build/install/bin/mongod:$PATH"
-
-
-checkMongo() {
-
-    command="ps aux | grep mongod | awk '\$8 == \"I+\" || \$8 == \"Is\" || \$8 == \"T\" {print \$8}'"
-    status=$(eval "$command")
-    if test "$status" == "T"; then
-       pid_command="ps aux | grep mongod | awk '\$8 == \"T\" {print \$2}'"
-       pid=$(eval "$pid_command")
-       kill -9 "$pid"
-      mongo_binary_path=$(which mongod)
-      directory_path=$(dirname "$mongo_binary_path")
-      cd "$directory_path" || exit 1
-      mongod --dbpath ./data/db &
-      echo "OK"
-  #sleep 1
-    fi
-
-   if test -z  "$status" ; then
-      mongo_binary_path=$(which mongod)
-      directory_path=$(dirname "$mongo_binary_path")
-      cd "$directory_path" || exit 1
-     
-      mkdir -p ./data/db
-      mongod --dbpath ./data/db &
-      echo "OK" 
-   #   sleep 1
- fi
-}
-
-checkMongo
+#!/bin/sh
+# All plugin start paths use the packaged rc service and its configured data path.
+set -eu
+umask 077
+if [ "${1:-}" != "--locked" ]; then
+    exec /usr/bin/lockf -t 15 /var/run/opncell-mongodb-start.lock "$0" --locked
+fi
+if /usr/sbin/service mongod onestatus >/dev/null 2>&1; then
+    echo OK
+    exit 0
+fi
+# Do not start a second instance against another data directory or kill its owner.
+if /usr/bin/sockstat -4l -p 27017 | /usr/bin/awk 'NR > 1 { found = 1 } END { exit !found }'; then
+    echo 'MongoDB port 27017 is already occupied; inspect the existing listener.' >&2
+    exit 1
+fi
+/usr/sbin/service mongod onestart
+/usr/sbin/service mongod onestatus >/dev/null
+echo OK

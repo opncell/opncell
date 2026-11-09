@@ -1,0 +1,15 @@
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
+@@ -17,7 +17,11 @@
+         $search = $this->request->get('searchPhrase', 'string', '');
+         $severity = $this->request->get('severity', null, '');
+         $severity = is_array($severity) ? implode(',', $severity) : $severity;
+-        $since = max(0, (int)$this->request->get('validFrom', 'int', 0));
++        // The browser sends fractional epoch seconds. Integer sanitizing can
++        // strip the decimal point and turn seconds into a future timestamp.
++        $cutoff = $this->request->get('validFrom', null, 0);
++        $since = is_numeric($cutoff) && is_finite((float)$cutoff)
++            ? max(0, (int)floor((float)$cutoff)) : 0;
+         if ($action === 'export' && $this->request->isGet()) {
+             return $this->configdStream('opncell exportLog', [$search, $scope, $severity, $since], [
+                 'Content-Type: text/plain; charset=utf-8',

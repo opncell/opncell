@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# PROVIDE: open5gs_udm
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+#
+# Add the following to /etc/rc.conf to enable:
+#
+# open5gs_udm_enable="YES"
+#
+# Optional:
+# open5gs_udm_config="%%ETCDIR%%/udm.yaml"
+# open5gs_udm_flags=""
+#
+
+. /etc/rc.subr
+
+name="open5gs_udm"
+rcvar="${name}_enable"
+
+load_rc_config "${name}"
+
+: ${open5gs_udm_enable:="NO"}
+: ${open5gs_udm_config="%%ETCDIR%%/udm.yaml"}
+: ${open5gs_udm_flags=""}
+
+command="%%PREFIX%%/bin/open5gs-udmd"
+procname="${command}"
+pidfile="/var/run/${name}.pid"
+
+required_files="${open5gs_udm_config}"
+
+start_cmd="${name}_start"
+
+open5gs_udm_start()
+{
+	echo "Starting ${name}."
+	/usr/sbin/daemon -f -p "${pidfile}" \
+	    "${command}" \
+	    -c "${open5gs_udm_config}" \
+	    ${open5gs_udm_flags}
+}
+
+run_rc_command "$1"

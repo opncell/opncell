@@ -1,12 +1,11 @@
 #!/usr/local/bin/python3
 
 import yaml
-import subprocess
-import ujson
 import sys
 import json
-import os
 import base64
+
+from atomic_yaml import replace_yaml
 
 if len(sys.argv) > 1:
 
@@ -18,17 +17,15 @@ if len(sys.argv) > 1:
         print(f"Error decoding input: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # create a temporary directory with write permissions- to use for file editing
-    new_dir = '/tmp/yaml'
-    os.makedirs(new_dir, exist_ok=True)
-    os.chmod(new_dir, 0o777)
-
     if "general" in json_data and isinstance(json_data["general"], dict):
         new_addr = ''
+        sgwu_addr = json_data["general"].get("sgwu_gtpu")
+        upf_addr = json_data["general"].get("upf_gtpu")
+        sst = int(json_data["general"].get("sst", 1))
+        if not 1 <= sst <= 255:
+            sys.exit("SST must be between 1 and 255")
         new_mcc = ''
         for key, value in json_data["general"].items():
-            if key == 'sst':
-                sst = value
             if key == 'tac':
                 new_tac = value
             if key == 'mcc':
@@ -47,140 +44,83 @@ if len(sys.argv) > 1:
                 network_name = value
 
 
-    def running_processes():
-        command = "ps aux | grep open5gs | awk '$8 == \"Is\" || $8 == \"Ss\" || $8 == \"Rs\" {print $2}'"
-        output = subprocess.check_output(command, shell=True, text=True)
-
-        pid_list = output.strip().split("\n")
-        process_names = []
-
-        # Iterate through the list of PIDs
-        for pid in pid_list:
-            try:
-                process_name = subprocess.check_output(f"ps -p {pid} -o comm=", shell=True, text=True).strip()
-
-                process_info = {"PID": pid, "Name": process_name}
-                process_names.append(process_info)
-
-            except subprocess.CalledProcessError:
-                print(f"Process with PID {pid} does not exist or an error occurred")
-        # print(ujson.dumps(process_names))
-
-        return process_names
-
-
-    pList = running_processes()
-
-
-    def config(service_list, process_name, pid, name):
+    def config(process_name):
         yaml_path = '/usr/local/etc/open5gs/'
-        if process_name in service_list:
-            yaml_file = yaml_path + process_name + '.yaml'
-            # Copy the file to a directory where you have write permissions i.e /tmp/yaml .
-            # (/tmp/ folder because we copy the files back to where the service expects them, after the edit)
+        yaml_file = yaml_path + process_name + '.yaml'
+        # Read the YAML file
+        with open(yaml_file, 'r') as file:
+            yaml_data = yaml.safe_load(file)
 
-            copy_file = f"cp {yaml_file} {new_dir}/"
-            os.system(copy_file)
-            new = '/tmp/yaml/' + process_name + '.yaml'
-            os.chmod(new, 0o777)  # make file writable as well
+        # Replace values in the configuration--It's faster to access individual elements than loop through
+        # the whole file
+        if process_name == 'sgwu':
+            yaml_data['sgwu']['gtpu']['server'][0]['address'] = (sgwu_addr or new_addr).strip("'")
+            yaml_data['global']['max']['ue'] = ue
+            yaml_data['global']['max']['peer'] = peer
+            yaml_data['logger']['file']['level'] = "debug"
 
-            # Read the YAML file
-            with open(yaml_file, 'r') as file:
-                yaml_data = yaml.safe_load(file)
+        if process_name == 'upf':
+            gtpu = yaml_data['upf']['gtpu']['server'][0]
+            if network in ('enablefour', 'enablefiveNSA'):
+                # SGW-U owns the radio-facing GTP-U socket in EPC mode.
+                if gtpu.get('address') == (sgwu_addr or new_addr).strip("'"):
+                    gtpu['address'] = '127.0.0.7'
+                return yaml_file, yaml_data
+            if upf_addr:
+                gtpu['address'] = upf_addr.strip("'")
+            yaml_data['global']['max']['ue'] = ue
+            yaml_data['global']['max']['peer'] = peer
+            yaml_data['logger']['file']['level'] = "debug"
 
-            # Replace values in the configuration--It's faster to access individual elements than loop through
-            # the whole file
-            if process_name == 'sgwu':
-                yaml_data['sgwu']['gtpu']['server'][0]['address'] = new_addr.strip("'")
-                yaml_data['global']['max']['ue'] = ue
-                yaml_data['global']['max']['peer'] = peer
-                yaml_data['logger']['file']['level'] = "debug"
+        if process_name == 'nrf':
+            yaml_data['nrf']['serving'][0]['plmn_id']['mcc'] = new_mcc
+            yaml_data['nrf']['serving'][0]['plmn_id']['mnc'] = new_mnc
+            yaml_data['global']['max']['ue'] = ue
+            yaml_data['global']['max']['peer'] = peer
+            yaml_data['logger']['file']['level'] = "debug"
 
-            if process_name == 'upf':
-                yaml_data['upf']['gtpu']['server'][0]['address'] = new_addr.strip("'")
-                yaml_data['global']['max']['ue'] = ue
-                yaml_data['global']['max']['peer'] = peer
-                yaml_data['logger']['file']['level'] = "debug"
+        if process_name == 'nssf':
+            yaml_data['nssf']['sbi']['client']['nsi'][0]['s_nssai']['sst'] = sst
 
-            if process_name == 'nrf':
-                yaml_data['nrf']['serving'][0]['plmn_id']['mcc'] = new_mcc
-                yaml_data['nrf']['serving'][0]['plmn_id']['mnc'] = new_mnc
-                yaml_data['global']['max']['ue'] = ue
-                yaml_data['global']['max']['peer'] = peer
-                yaml_data['logger']['file']['level'] = "debug"
+        if process_name == 'amf':
+            yaml_data['amf']['ngap']['server'][0]['address'] = new_addr.strip("'")
+            yaml_data['amf']['guami'][0]['plmn_id']['mcc'] = new_mcc
+            yaml_data['amf']['guami'][0]['plmn_id']['mnc'] = new_mnc
+            yaml_data['amf']['tai'][0]['plmn_id']['mcc'] = new_mcc
+            yaml_data['amf']['tai'][0]['plmn_id']['mnc'] = new_mnc
+            yaml_data['amf']['plmn_support'][0]['plmn_id']['mcc'] = new_mcc
+            yaml_data['amf']['plmn_support'][0]['plmn_id']['mnc'] = new_mnc
+            yaml_data['amf']['plmn_support'][0]['s_nssai'][0]['sst'] = sst
+            yaml_data['amf']['tai'][0]['tac'] = int(new_tac)
+            yaml_data['amf']['network_name']['full'] = network_name
+            yaml_data['logger']['file']['level'] = "debug"
+            yaml_data['global']['max']['ue'] = ue
+            yaml_data['global']['max']['peer'] = peer
 
-            if process_name == 'amf':
-                yaml_data['amf']['ngap']['server'][0]['address'] = new_addr.strip("'")
-                yaml_data['amf']['guami'][0]['plmn_id']['mcc'] = new_mcc
-                yaml_data['amf']['guami'][0]['plmn_id']['mnc'] = new_mnc
-                yaml_data['amf']['tai'][0]['plmn_id']['mcc'] = new_mcc
-                yaml_data['amf']['tai'][0]['plmn_id']['mnc'] = new_mnc
-                yaml_data['amf']['plmn_support'][0]['plmn_id']['mcc'] = new_mcc
-                yaml_data['amf']['plmn_support'][0]['plmn_id']['mnc'] = new_mnc
-                yaml_data['amf']['tai'][0]['tac'] = int(new_tac)
-                yaml_data['amf']['network_name']['full'] = network_name
-                yaml_data['logger']['file']['level'] = "debug"
-                yaml_data['global']['max']['ue'] = ue
-                yaml_data['global']['max']['peer'] = peer
+        if process_name == 'mme':
+            yaml_data['mme']['tai'][0]['tac'] = int(new_tac)
+            yaml_data['mme']['s1ap']['server'][0]['address'] = new_addr.strip("'")
+            yaml_data['mme']['gummei'][0]['plmn_id']['mcc'] = new_mcc
+            yaml_data['mme']['gummei'][0]['plmn_id']['mnc'] = new_mnc
+            yaml_data['mme']['tai'][0]['plmn_id']['mcc'] = new_mcc
+            yaml_data['mme']['tai'][0]['plmn_id']['mnc'] =  new_mnc
+            yaml_data['mme']['network_name']['full'] = network_name
+            yaml_data['logger']['file']['level'] = "debug"
+            yaml_data['global']['max']['ue'] = ue
+            yaml_data['global']['max']['peer'] = peer
 
-            if process_name == 'mme':
-                yaml_data['mme']['tai'][0]['tac'] = int(new_tac)
-                yaml_data['mme']['s1ap']['server'][0]['address'] = new_addr.strip("'")
-                yaml_data['mme']['gummei'][0]['plmn_id']['mcc'] = new_mcc
-                yaml_data['mme']['gummei'][0]['plmn_id']['mnc'] = new_mnc
-                yaml_data['mme']['tai'][0]['plmn_id']['mcc'] = new_mcc
-                yaml_data['mme']['tai'][0]['plmn_id']['mnc'] =  new_mnc
-                yaml_data['mme']['network_name']['full'] = network_name
-                yaml_data['logger']['file']['level'] = "debug"
-                yaml_data['global']['max']['ue'] = ue
-                yaml_data['global']['max']['peer'] = peer
+        return yaml_file, yaml_data
 
-            if pid != 0:
-                kill_command = "kill -9 " + pid
-                output = subprocess.run(kill_command, shell=True, text=True)
+    services = {
+        'enablefour': ('mme', 'sgwu', 'upf'),
+        'enablefiveNSA': ('mme', 'sgwu', 'upf'),
+        'enablefiveSA': ('amf', 'upf', 'nrf', 'nssf'),
+        'enableupf': ('upf',),
+    }
+    configurations = [config(process_name) for process_name in services[network]]
+    for yaml_file, yaml_data in configurations:
+        replace_yaml(yaml_file, yaml_data)
+    print(json.dumps({"result": "rendered"}))
 
-            with open(new, 'w') as file:
-                yaml.safe_dump(yaml_data, file,sort_keys=False, default_style=None, default_flow_style=False)
-
-            copy_file = f"cp {new} {yaml_path}"
-            os.system(copy_file)
-
-    def configureProcess(process_name, pid, name):
-
-        configurable_fivesa_services = ['amf','upf','nrf']
-        configurable_four_services = ['mme', 'sgwu']
-        configurable_upf_services = ['upf', 'amf']   # TODO: Check out what services are in upf
-
-        if network == 'enablefour' or network == 'enablefiveNSA':
-            config(configurable_four_services, process_name, pid, name)
-        elif network == 'enableupf':
-            config(configurable_upf_services, process_name, pid, name)
-        else:
-            config(configurable_fivesa_services, process_name, pid, name)
-
-
-    def reconfigure(process_list):
-        # only edit what needs to be edited. mme + sgwu for 4g and 5g-nsa networks. amf + upf + nrf for 5gsa networks
-        currently_running_processes = []
-        all_configurable_services = ['mme', 'sgwu', 'nrf', 'amf', 'upf']
-        for process in process_list:
-            name = process.get("Name", "")
-            pid = process.get("PID", "")
-            process_name = name.replace("open5gs-", "").rstrip("d")
-            currently_running_processes.append(process_name)
-            configureProcess(process_name, pid, name)
-
-        # get the processes that should be reconfigured, but they weren't running initially.
-
-        difference_set = set(all_configurable_services) - set(currently_running_processes)
-        not_running_processes = list(difference_set)
-        d = set(currently_running_processes) - set(all_configurable_services)
-        n_r = list(d)
-        final_list = n_r + not_running_processes
-        for process in final_list:
-            name = "open5gs-" + process + "d"
-            configureProcess(process, 0, name)
-
-    reconfigure(pList)
 else:
     print("No arguments passed")

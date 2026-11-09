@@ -1,0 +1,34 @@
+--- a/databases/mongodb80/Makefile
++++ b/databases/mongodb80/Makefile
+@@ -1,8 +1,10 @@
+ PORTNAME=	mongodb
+ DISTVERSIONPREFIX=	r
+ DISTVERSION=	8.0.34
+-PORTREVISION=	3
++PORTREVISION=	4
+ CATEGORIES=	databases net
++PKG_NOTES+=	opncell_cpu_profile
++PKG_NOTE_opncell_cpu_profile=	avx2
+ MASTER_SITES+=	LOCAL/ronald:mongodb_bazel \
+ 		https://codeload.github.com/bazelbuild/bazel-central-registry/tar.gz/${BAZEL_REGISTRY_COMMIT}?dummy=/:bazel_registry \
+ 		https://codeload.github.com/mongodb-forks/rules_poetry/tar.gz/${RULES_POETRY_COMMIT}?dummy=/:rules_poetry
+@@ -150,7 +152,8 @@
+ 
+ OPTIONS_DEFINE=		LTO NOAVX
+ OPTIONS_DEFINE_aarch64=	ARMV80A
+-OPTIONS_DEFAULT=	NOAVX
++OPTIONS_DEFAULT=
++OPTIONS_UNSET_FORCE=	NOAVX
+ 
+ # MongoDB on non-LSE ARM cpu like Raspberry Pi can work but is unsupported upstream.
+ # Can give corruption on high concurrency.
+@@ -182,6 +185,9 @@
+ 
+ .if ${ARCH} == amd64
+ MOZJS_ARCH=	x86_64
++# AVX repository only: the installer requires AVX2, FMA and F16C.
++BAZEL_ARGS+= --copt=-mavx2 --copt=-mfma --copt=-mf16c \
++             --cxxopt=-mavx2 --cxxopt=-mfma --cxxopt=-mf16c
+ .if ${PORT_OPTIONS:MNOAVX}
+ # NOAVX must also constrain MongoDB and bundled C/C++ dependencies.
+ # The SpiderMonkey SIMD patch alone does not prevent AVX startup code.

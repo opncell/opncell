@@ -11,7 +11,7 @@ desc="SGWC daemon"
 rcvar=${name}_enable
 config_file="/usr/local/etc/open5gs/sgwc.yaml"
 log_file="/var/log/opncell/sgwc.log"
-command="/usr/ports/open5gs/install/bin/open5gs-${service_name}"
+command="/usr/local/bin/open5gs-${service_name}"
 start_cmd="${name}_start"
 command_args="-D > /dev/null 2>&1"
 

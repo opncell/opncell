@@ -1,0 +1,156 @@
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/LogController.php
+@@ -12,6 +12,7 @@
+         }
+ 
+         $this->renderPage('opncell', $scope);
++        $this->view->opncell_log_path = '/var/log/opncell/' . $scope . '.log';
+         $this->view->pick('OPNsense/OPNCell/log');
+     }
+ }
+--- /dev/null
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
+@@ -0,0 +1,25 @@
++<?php
++
++namespace OPNsense\OPNCell\Api;
++
++use OPNsense\Base\ApiControllerBase;
++use OPNsense\Core\Backend;
++use OPNsense\OPNCell\ServiceNames;
++
++class LogController extends ApiControllerBase
++{
++    public function clearAction($scope = '')
++    {
++        if (!$this->request->isPost()) {
++            return $this->response->setStatusCode(405, 'Method Not Allowed');
++        }
++        $scope = ServiceNames::logScope($scope);
++        if ($scope === null) {
++            return $this->response->setStatusCode(404, 'Not Found');
++        }
++        $result = json_decode((new Backend())->configdpRun('opncell clearLog', [$scope]), true);
++        return is_array($result) ? $result : [
++            'status' => 'failed', 'message' => gettext('Unable to clear the log file.')
++        ];
++    }
++}
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -6,6 +6,9 @@
+     </button>
+ </div>
+ 
++<div id="opncell_log_path" class="text-muted" style="padding: 7px 12px 7px 0; overflow-wrap: anywhere;">
++    {{ lang._('Log file') }}: <code>{{ opncell_log_path | escape }}</code>
++</div>
+ <script>
+     $(function () {
+         const grid = $("#grid-log");
+@@ -13,6 +16,45 @@
+         let timer = null;
+ 
+         $("#opncell_log_refresh").prependTo("#grid-log-header .actionBar .actions");
++
++        $("#filter_container").css({display: "flex", flexBasis: "100%", flexWrap: "wrap", alignItems: "center"});
++        $("#opncell_log_path").css("margin-right", "auto").prependTo("#filter_container");
++        // Replace the core handlers: direct daemon files must not be unlinked.
++        $("#flushlog").off("click").on("click", function (event) {
++            event.preventDefault();
++            BootstrapDialog.confirm({
++                type: BootstrapDialog.TYPE_DANGER,
++                title: "{{ lang._('Clear log') }}",
++                message: "{{ lang._('Clear this log history? New records will continue to be written.') }}",
++                callback: function (confirmed) {
++                    if (!confirmed) { return; }
++                    ajaxCall("/api/opncell/log/clear/{{scope}}", {}, function (result) {
++                        if (result && result.status === "ok") {
++                            grid.bootgrid("reload");
++                        } else {
++                            BootstrapDialog.alert(result && result.message ? result.message : "{{ lang._('Unable to clear the log file.') }}");
++                        }
++                    });
++                }
++            });
++        });
++        $("#exportbtn").off("click").on("click", function (event) {
++            event.preventDefault();
++            const params = new URLSearchParams();
++            params.set("searchPhrase", $("input.search-field").val() || "");
++            const options = $("#severity_filter option").map(function () { return this.value; }).get();
++            const selected = $("#severity_filter").val();
++            const exact = $("#exact_severity").hasClass("fa-toggle-on");
++            const severity = exact ? [].concat(selected || []) : options.slice(0, options.indexOf(selected) + 1);
++            params.set("severity", severity.join(","));
++            const seconds = {day: 86400, week: 604800, month: 2678400}[$("#validFrom_filter").val()];
++            if (seconds) { params.set("validFrom", Math.floor(Date.now() / 1000) - seconds); }
++            const link = document.createElement("a");
++            link.href = "/api/diagnostics/log/opncell/{{scope}}/export?" + params.toString();
++            document.body.appendChild(link);
++            link.click();
++            link.remove();
++        });
+ 
+         function refreshLatestPage() {
+             if (!document.hidden && grid.attr("aria-busy") !== "true" && grid.bootgrid("getCurrentPage") === 1) {
+--- /dev/null
++++ b/opnsense/scripts/opncell/clear_log.py
+@@ -0,0 +1,45 @@
++#!/usr/local/bin/python3
++"""Clear direct daemon logs without unlinking a writer's open file."""
++import json
++import os
++from pathlib import Path
++import stat
++import sys
++
++SCOPES = frozenset("amf ausf bsf hss mme nrf nssf pcf pcrf scp sgwc sgwu smf udm udr upf mongod".split())
++
++
++def clear_log(scope, directory=Path("/var/log/opncell")):
++    if scope not in SCOPES:
++        raise ValueError("Unknown cellular log")
++    # Include dated history read by the Diagnostics viewer. Never follow links.
++    paths = [directory / (scope + ".log")]
++    history = directory / scope
++    if history.is_dir() and not history.is_symlink():
++        paths.extend(sorted(history.glob(scope + "_*.log")))
++    cleared = []
++    for path in paths:
++        try:
++            fd = os.open(path, os.O_WRONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
++        except FileNotFoundError:
++            continue
++        try:
++            if not stat.S_ISREG(os.fstat(fd).st_mode):
++                raise ValueError("Log is not a regular file")
++            os.ftruncate(fd, 0)
++            cleared.append(str(path))
++        finally:
++            os.close(fd)
++    if not cleared:
++        raise FileNotFoundError("No cellular log file exists for " + scope)
++    return {"status": "ok", "files": cleared}
++
++
++if __name__ == "__main__":
++    try:
++        if len(sys.argv) != 2:
++            raise ValueError("Exactly one log scope is required")
++        print(json.dumps(clear_log(sys.argv[1])))
++    except (OSError, ValueError) as error:
++        print(json.dumps({"status": "failed", "message": str(error)}))
++        sys.exit(1)
+--- a/opnsense/service/conf/actions.d/actions_opncell.conf
++++ b/opnsense/service/conf/actions.d/actions_opncell.conf
+@@ -96,3 +96,9 @@
+ type:script_output
+ parameters:%s
+ message: Updating subscriber profiles
++
++[clearLog]
++command:/usr/local/opnsense/scripts/opncell/clear_log.py
++parameters:%s
++type:script_output
++message: Clearing cellular log without restarting services

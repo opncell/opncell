@@ -1,66 +1,31 @@
-#!/usr/local/bin/python3
-
-import yaml
-import subprocess
-import ujson
-import sys
+#!/usr/local/bin/python3.13 -S
+"""Read subscriber-list fields directly, without launching a JavaScript shell."""
 import json
-import os
+import sys
+
+# Private client modules do not shadow the OPNsense Python environment.
+sys.path.insert(0, "/usr/local/share/opncell-pymongo")
 
 
-def fetch_users():
-    os.environ['PATH'] = '/usr/local/opnsense/scripts/opncell/opncell_db.sh:' + os.environ.get('PATH', '')
-    os.environ['PATH'] = '/bin/bash:' + os.environ.get('PATH', '')
-    os.environ['PATH'] = '/root/mongo/build/install/bin/:' + os.environ.get('PATH', '')
-    os.environ['PATH'] = '/root/mongo/build/install/bin/mongod:' + os.environ.get('PATH', '')
-    os.environ['PWD'] = '/usr/local/opnsense/scripts/opncell:' + os.environ.get('PWD', '')
+def fetch_users(client_factory=None):
+    if client_factory is None:
+        from pymongo import MongoClient
+        client_factory = MongoClient
+    with client_factory('mongodb://127.0.0.1:27017/open5gs', serverSelectionTimeoutMS=3000,
+                        connectTimeoutMS=3000, socketTimeoutMS=5000) as client:
+        rows = client.open5gs.subscribers.find({}, {'_id': 0, 'imsi': 1, 'slice.session.name': 1})
+        result = []
+        for doc in rows:
+            names = [session['name'] for slice_ in doc.get('slice', [])
+                     for session in slice_.get('session', []) if isinstance(session.get('name'), str)]
+            result.append({'imsi': str(doc['imsi']), 'apn': ','.join(names)})
+        return result
 
-    script_path = '/usr/local/opnsense/scripts/opncell/opncell_db.sh'
-    bash_script = f'{script_path} showfiltered'
-    script_arguments = ['showfiltered']
-    # Use subprocess to run the Bash script
-    user_details = []
-    dets = {}
 
+if __name__ == '__main__':
     try:
-        output = subprocess.check_output([script_path] + script_arguments , text=True, stderr=subprocess.STDOUT)
-        #  Run the Bash script
-        output_list = output.strip().split('\n')
-
-        # Parse each JSON object separately
-        for json_str in output_list:
-            try:
-                data = json.loads(json_str)
-                imsi = data.get("imsi")
-                k = data.get("security", {}).get("k")
-                opc = data.get("security", {}).get("opc")
-
-                # Extract the "name" field from the "session" array if it exists
-               # session = data.get("slice", [{}])[0].get("session", [{}])
-                slice_array = data.get("slice", [])
-                names = []
-               # print(type(slice_array))
-                for slice_data in slice_array:
-                   # print(slice_array)
-                    session_array = slice_data.get("session", [])
-                    for session_data in session_array:
-                        name = session_data.get("name")
-                        names.append(name)
-                #names = [session_data.get("name") for session_data in session]
-                names_str = ",".join(names)
-                dets = {"imsi": imsi, "ki": k, "opc": opc, "apn": names_str}
-                user_details.append(dets)
-
-            except json.JSONDecodeError as e:
-               # print(f"Error parsing JSON: {e}")
-                pass
-        print(ujson.dumps(user_details))
-
-    except subprocess.CalledProcessError as e:
-
-        pass
-
-    return user_details
-
-
-fetch_users()
+        print(json.dumps(fetch_users()))
+    except Exception as exc:
+        # Database failures must not masquerade as a successfully empty list.
+        print('Cannot read subscriber list: ' + type(exc).__name__, file=sys.stderr)
+        sys.exit(1)

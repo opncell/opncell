@@ -1,0 +1,8 @@
+--- a/opnsense/scripts/opncell/query_log.py
++++ b/opnsense/scripts/opncell/query_log.py
+@@ -1,4 +1,4 @@
+-#!/usr/local/bin/python3
++#!/usr/local/bin/python3.13
+ """Use the platform log parser with the actual cellular daemon destination."""
+ import json
+ from pathlib import Path

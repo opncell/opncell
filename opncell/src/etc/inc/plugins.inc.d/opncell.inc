@@ -102,14 +102,17 @@ function opncell_services():array
     foreach ($serviceTypes as $type) {
         $service = array(
             'description' => $descriptions[$type],
-            'name' => 'opncell-' . $type,
+            'name' => $type === 'mongo' ? 'mongod' : 'open5gs-' . $type . 'd',
         );
 
         foreach ($commonServiceData['configd'] as $key => $commands) {
             $service['configd'][$key] = array(sprintf($commands[0], $type));
         }
 
+        // MongoDB can use a custom database directory, so check its process name.
+        if ($type !== 'mongo') {
             $service['pidfile'] = sprintf($commonServiceData['pidfile'], $type);
+        }
 
         $services[] = $service;
     }

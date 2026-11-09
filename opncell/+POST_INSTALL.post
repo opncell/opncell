@@ -1,27 +1,19 @@
 #!/bin/sh
 
-BOLD="\033[1m"
-RESET="\033[0m"
+echo "=====> Enabling SCTP support"
 
-echo "=====> "
-echo "Enabling SCTP support ..."
-
-touch /boot/loader.conf.local
-# shellcheck disable=SC2129
-
-if ! grep -q "DEVELOPER=yes" /etc/make.conf; then
-    echo "DEVELOPER=yes" >> /etc/make.conf
+if ! grep -Eq '^[[:space:]]*sctp_load="YES"[[:space:]]*$' /boot/loader.conf.local 2>/dev/null; then
+    printf '%s\n' 'sctp_load="YES"' >> /boot/loader.conf.local
 fi
 
-values='hw.ixgbe.unsupported_sfp=1 hw.ix.unsupported_sfp=1 hw.if_ix_updated.unsupported_sfp=1 if_ix_updated_load="YES" sctp_load="YES"'
-
-for val in $values; do
-    if ! grep -q "$val" /boot/loader.conf.local; then
-        echo "$val" >> /boot/loader.conf.local
-    fi
-done
-
-kldload sctp.ko
+if ! sysctl -n net.inet.sctp.sendspace >/dev/null 2>&1; then
+    kldload sctp.ko
+fi
+if sysctl -n net.inet.sctp.sendspace >/dev/null 2>&1; then
+    echo "=====> SCTP is available in the running kernel."
+else
+    echo "WARNING: SCTP is unavailable. Open5GS S1AP and NGAP cannot start until SCTP is available." >&2
+fi
 
 # ============================================
 # Raise kern.ipc.maxsockbuf for open5gs SCTP sockets
@@ -42,11 +34,11 @@ kldload sctp.ko
 # /etc/sysctl.conf edit, which OPNsense's config sync would otherwise
 # overwrite on the next boot or config apply.
 echo "=====> "
-echo "Raising kern.ipc.maxsockbuf for open5gs SCTP (S1AP/NGAP) sockets ..."
+echo "Checking socket-buffer limit (kern.ipc.maxsockbuf) for Open5GS SCTP (S1AP/NGAP) sockets ..."
 
 sockbuf_target=33554432 # 32 MiB - matches the value OPNsense's FRR plugin settled on for the same issue
 
-cat > /tmp/opncell_set_maxsockbuf.php <<'PHP_EOF'
+if php <<'PHP_EOF'
 <?php
 require_once('config.inc');
 
@@ -96,163 +88,34 @@ $mdl->serializeToConfig();
 Config::getInstance()->save();
 echo "set: {$target}\n";
 PHP_EOF
-
-if php -f /tmp/opncell_set_maxsockbuf.php; then
+then
     # Regenerate /etc/sysctl.conf from config.xml and apply it now, the same
     # way OPNsense's own boot hook does (rc.syshook.d/start/90-sysctl)
     pluginctl -s sysctl restart >/dev/null 2>&1
 else
     echo "WARNING: could not persist kern.ipc.maxsockbuf via config.xml - applying live only, this will not survive a reboot"
 fi
-rm -f /tmp/opncell_set_maxsockbuf.php
 
-# Apply live right now regardless of the above, so that a reboot is not needed before open5gs can bind its SCTP sockets.
-
-sysctl kern.ipc.maxsockbuf="$sockbuf_target"
-
-if ! grep -q "DEVELOPER=yes" /etc/make.conf; then
-    echo "DEVELOPER=yes" >> /etc/make.conf
+# Raise the live ceiling when needed. Preserve higher administrator settings.
+live_sockbuf=$(sysctl -n kern.ipc.maxsockbuf)
+if [ "$live_sockbuf" -lt "$sockbuf_target" ] 2>/dev/null; then
+    sysctl kern.ipc.maxsockbuf="$sockbuf_target"
 fi
 
-export LIBRARY_PATH=/usr/local/lib
-export C_INCLUDE_PATH=/usr/local/include
-
-echo "=====> "
-echo "Disabling the packet filter ..."
-pfctl -d
-
-# We have a custom mongod file, hence we need to move the mongod file that ships with the
-# mongod installation. This prevents the conflict when opncell tries to move the custom mongod file
-# into /usr/local/etc/rc.d/ . We could rename our custom file to something else but :) Too many moving parts
-
-mv /usr/local/etc/rc.d/mongod /usr/local/etc/rc.d/mongod.back
-
-mv /usr/local/etc/rc.d/mongod_custom  /usr/local/etc/rc.d/mongod
-
-mv /usr/local/etc/mongodb.conf /usr/local/etc/mongodb.conf.back
-
-cp /usr/local/etc/rc.d/mongod  /usr/local/etc/rc.d/mongod_custom
-
-cp /usr/local/etc/rc.d/mongodb_custom.conf  /usr/local/etc/mongodb.conf
-
-chmod +x /usr/local/etc/rc.d/mongod
-
-cd -
-
-rm -rf /var/log/opncell
-
-# ============================================
-# Schedule open5gs library update
-# ============================================
-echo "=====> Scheduling open5gs lib update..."
-
-(
-    # Wait for current installation to complete
-    sleep 10
-
-    # Wait for pkg lock to be released
-    while [ -f /var/run/pkg.lock ] || pgrep -x pkg >/dev/null; do
-        sleep 5
-    done
-
-    # Perform reinstallation
-    echo "Updating open5gs libraries... This might take some time."
-    if pkg install -fyq open5gs >/dev/null 2>&1; then
-        echo "Update completed successfully"
-        exit 0
-    else
-        echo "Failed to reinstall open5gs"
-        exit 1
-    fi
-) &
-
-
-
-pgrep open5gs | xargs kill -9
-
-checkMongo(){
-    if pgrep mongod; then
-         pid_mongod=$(pgrep mongod)
-         kill -9 ${pid_mongod}
-         rm -r /usr/local/bin/data/db  # Sometimes a new installation corrupts the db
-         configctl mongod start
-         sleep 5
-
-         if pgrep open5gs-hssd; then
-             pid_hss=$(pgrep open5gs-hssd)
-             kill -9 ${pid_hss}
-             configctl hssd start
-         fi
-
-   fi
-
-
-  # Disable mongosh telemetry globally. mongosh's per-user telemetry setup
-  # writes to ~/.mongodb/mongosh/config on first run, which fails (e.g. "Telemetry setup is missing userId or anonymousId") whenever $HOME isn't a writable, existing directory
-  # The global config file sidesteps that entirely: it's a one-time write, doesn't depend on $HOME, and forceDisableTelemetry can't be flipped back on later (by a script or an admin)
-
-  echo "=====> Disabling mongosh telemetry"
-  cat > /etc/mongosh.conf <<'EOF'
-mongosh:
-  enableTelemetry: false
-  forceDisableTelemetry: true
-EOF
-
-}
-  echo "=====> Mongosh telemetry disabled"
-  echo
-  echo "=====> Installation complete."
-  echo
-  echo "=====> The below Virtual IPs should be enabled on the loopback address via the GUI. These are required for the smooth running of open5gs services."
-  echo "=====> To add them ----> Interfaces ----->Virtual IPs "
-  echo "MongoDB   = 127.0.0.1 (subscriber data) - http://localhost:3000"
-  echo "MME-s1ap  = 127.0.0.2 :36412 for S1-MME"
-  echo "MME-gtpc  = 127.0.0.2 :2123 for S11"
-  echo "MME-frDi  = 127.0.0.2 :3868 for S6a"
-  echo "SGWC-gtpc = 127.0.0.3 :2123 for S11"
-  echo "SGWC-pfcp = 127.0.0.3 :8805 for Sxa"
-  echo "SMF-gtpc  = 127.0.0.4 :2123 for S5c, N11"
-  echo "SMF-gtpu  = 127.0.0.4 :2152 for N4u (Sxu)"
-  echo "SMF-pfcp  = 127.0.0.4 :8805 for N4 (Sxb)"
-  echo "SMF-frDi  = 127.0.0.4 :3868 for Gx auth"
-  echo "SMF-sbi   = 127.0.0.4 :7777 for 5G SBI (N7,N10,N11)"
-  echo "AMF-ngap  = 127.0.0.5 :38412 for N2"
-  echo "AMF-sbi   = 127.0.0.5 :7777 for 5G SBI (N8,N12,N11)"
-  echo "SGWU-pfcp = 127.0.0.6 :8805 for Sxa"
-  echo "SGWU-gtpu = 127.0.0.6 :2152 for S1-U, S5u"
-  echo "UPF-pfcp  = 127.0.0.7 :8805 for N4 (Sxb)"
-  echo "UPF-gtpu  = 127.0.0.7 :2152 for S5u, N3, N4u (Sxu) (needs to be changed to the interface hosting the xNBs)"
-  echo "HSS-frDi  = 127.0.0.8 :3868 for S6a, Cx"
-  echo "PCRF-frDi = 127.0.0.9 :3868 for Gx"
-  echo "NRF-sbi   = 127.0.0.10:7777 for 5G SBI"
-  echo "SCP-sbi   = 127.0.0.200:7777 for 5G SBI"
-  echo "SEPP-sbi  = 127.0.0.250:7777 for 5G SBI"
-  echo "SEPP-n32  = 127.0.0.251:7777 for 5G N32"
-  echo "SEPP-n32f = 127.0.0.252:7777 for 5G N32-f"
-  echo "AUSF-sbi  = 127.0.0.11:7777 for 5G SBI"
-  echo "UDM-sbi   = 127.0.0.12:7777 for 5G SBI"
-  echo "PCF-sbi   = 127.0.0.13:7777 for 5G SBI"
-  echo "NSSF-sbi  = 127.0.0.14:7777 for 5G SBI"
-  echo "BSF-sbi   = 127.0.0.15:7777 for 5G SBI"
-  echo "UDR-sbi   = 127.0.0.20:7777 for 5G SBI"
-
-values='mongod_enable="YES" epcmmed_enable="YES" epcamfd_enable="YES" epchssd_enable="YES" epcnrfd_enable="YES" epcnssfd_enable="YES" epcpcfd_enable="YES" epcbsfd_enable="YES" epcsmfd_enable="YES" epcupfd_enable="YES" epcsgwcd_enable="YES" epcsgwud_enable="YES" epcpcrfd_enable="YES" epcausfd_enable="YES" epcudmd_enable="YES" epcupfd_enable="YES" epcudrd_enable="YES" epcscpd_enable="YES"'
-
-for val in $values; do
-    if ! grep -q "$val" /etc/rc.conf; then
-        echo "$val" >> /etc/rc.conf
-    fi
-done
-
-#mkdir -p /root/data/db
-echo "=====> Starting MongoDB and HSS service"
-checkMongo
-
-if ! service configd status >/dev/null 2>&1; then
-  service configd restart
+# Reuse the installed MongoDB service and configuration. Only install the
+# compatibility defaults when those files are absent.
+if [ ! -e /usr/local/etc/rc.d/mongod ] && [ ! -L /usr/local/etc/rc.d/mongod ]; then
+    install -m 0555 /usr/local/etc/rc.d/mongod_custom /usr/local/etc/rc.d/mongod
+fi
+if [ ! -e /usr/local/etc/mongodb.conf ] && [ ! -L /usr/local/etc/mongodb.conf ]; then
+    install -m 0644 /usr/local/etc/rc.d/mongodb_custom.conf /usr/local/etc/mongodb.conf
 fi
 
-echo
-echo -e "Mongodb>=6.0 doesn't ship with the mongosh client. Run ${BOLD}npm install -g mongosh ${RESET} to install it globally using npm!"
+mkdir -p /var/log/opncell
 
-exit 0
+if ! php -f /usr/local/opnsense/scripts/opncell/install_vips.php; then
+    echo "WARNING: Verify OPNcell loopback addresses in Interfaces > Virtual IPs."
+fi
+
+printf '\n%s\n' '=====> Apply a topology from the Cellular Network tab to start its services.'
+printf '%s\n' '=====> If your MongoDB package does not include mongosh, install the client before managing subscribers.'

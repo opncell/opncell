@@ -1,0 +1,56 @@
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/ServiceController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/ServiceController.php
+@@ -54,9 +54,20 @@
+             }
+             $backend = new Backend();
+             $command = $topic . ' ' . $action;
+-            $response = $backend->configdRun($command);
+-
+-            return array('response' => $response);
++            $response = trim((string)$backend->configdRun($command));
++            if ($response !== 'OK') {
++                return ['response' => 'error', 'message' => 'Could not ' . $action . ' ' . ServiceNames::canonical($topic) . '. Check the configd log.'];
++            }
++            $status = trim((string)$backend->configdRun($topic . ' status'));
++            $expected = $action === 'stop' ? 'not running' : 'is running';
++            if (!str_contains($status, $expected)) {
++                return [
++                    'response' => 'error',
++                    'message' => 'Could not verify ' . ServiceNames::canonical($topic) . ' after ' . $action . '. Check its diagnostic log.',
++                ];
++            }
++
++            return ['response' => 'OK'];
+         } catch (Exception $e) {
+             return array('response' => 'error', 'message' => $e->getMessage());
+         }
+@@ -81,8 +92,7 @@
+     {
+         $this->request = new Request();
+         if ($this->request->isPost()) {
+-            $this->manageService($process, 'stop');
+-            return $this->manageService($process, 'start');
++            return $this->manageService($process, 'restart');
+         }
+         return array('response' => array());
+     }
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
+@@ -352,13 +352,10 @@
+                         // console.log(status)
+                         console.log(data)
+ 
+-                        if (data.response  !== 'OK') {
+-                            console.log(data.response);
+-                            dialog.getModalBody().html(`<div style="padding:15px;">Failed to ${action}... <i class="fa fa-exclamation-circle"></i></div>`);
+-
+-                            setTimeout(function () {
+-                                dialog.close();
+-                            }, 4000);
++                        if (status !== 'success' || !data || data.response !== 'OK') {
++                            const message = data && data.message ||
++                                "{{ lang._('The service operation was not confirmed. Check its diagnostic log.') }}";
++                            dialog.getModalBody().empty().append($("<div>").css("padding", "15px").text(message));
+                         } else {
+                             dialog.close();
+                         }

@@ -32,6 +32,7 @@ namespace OPNsense\OPNCell\Api;
 
 use Exception;
 use OPNsense\Base\ApiControllerBase;
+use OPNsense\OPNCell\ServiceNames;
 use OPNsense\Core\Backend;
 use OPNsense\Mvc\Request;
 use OPNsense\OPNCell\General;
@@ -47,11 +48,26 @@ class ServiceController extends ApiControllerBase
     private function manageService($process, $action): array
     {
         try {
+            $topic = ServiceNames::topic($process);
+            if ($topic === null) {
+                return ['response' => 'error', 'message' => 'Unknown cellular service'];
+            }
             $backend = new Backend();
-            $command = ($process == "mongodd" ? "mongod" : $process) . ' ' . $action;
-            $response = $backend->configdRun($command);
+            $command = $topic . ' ' . $action;
+            $response = trim((string)$backend->configdRun($command));
+            if ($response !== 'OK') {
+                return ['response' => 'error', 'message' => 'Could not ' . $action . ' ' . ServiceNames::canonical($topic) . '. Check the configd log.'];
+            }
+            $status = trim((string)$backend->configdRun($topic . ' status'));
+            $expected = $action === 'stop' ? 'not running' : 'is running';
+            if (!str_contains($status, $expected)) {
+                return [
+                    'response' => 'error',
+                    'message' => 'Could not verify ' . ServiceNames::canonical($topic) . ' after ' . $action . '. Check its diagnostic log.',
+                ];
+            }
 
-            return array('response' => $response);
+            return ['response' => 'OK'];
         } catch (Exception $e) {
             return array('response' => 'error', 'message' => $e->getMessage());
         }
@@ -76,8 +92,7 @@ class ServiceController extends ApiControllerBase
     {
         $this->request = new Request();
         if ($this->request->isPost()) {
-            $this->manageService($process, 'stop');
-            return $this->manageService($process, 'start');
+            return $this->manageService($process, 'restart');
         }
         return array('response' => array());
     }
@@ -109,50 +124,76 @@ class ServiceController extends ApiControllerBase
             "enablenrfd" => "nrfd", "enablescpd" => "scpd", "enableamfd" => "amfd",
             "enablesmfd" => "smfd", "enableupfd" => "upfd", "enableausfd" => "ausfd",
             "enableudmd" => "udmd", "enableudrd" => "udrd", "enablepcfd" => "pcfd",
-            "enablenssfd" => "nssfd", "enablebsfd" => "bsfd","enablesepp" =>"sepp"
+            "enablenssfd" => "nssfd", "enablebsfd" => "bsfd"
         ],
         'enableupf' => ["enableupfd" => "upfd"]
     ];
 
-    private function manageNetworkServices($network): array
+    private function manageNetworkServices(string $network, Backend $backend): array
     {
-        $services = $this->serviceMapping[$network] ?? [];
-        $allServices = [];
-        foreach ($this->serviceMapping as $networkServices) {
-            foreach ($networkServices as $daemon) {
-                $allServices[$daemon] = true;
+        $services = array_values($this->serviceMapping[$network]);
+        $allServices = array_unique(array_merge(...array_map('array_values', array_values($this->serviceMapping))));
+        $failed = [];
+
+        foreach ($allServices as $daemon) {
+            $backend->configdRun($daemon . ' stop');
+            $status = (string)$backend->configdRun($daemon . ' status');
+            if (!str_contains($status, 'not running')) {
+                $failed[] = ServiceNames::canonical($daemon) . ' stop';
             }
         }
 
-        // Stop all services that are not in the current network's services
-        foreach ($allServices as $daemon => $value) {
-            if (!in_array($daemon, $services)) {
-                $this->stopAction($daemon);
-            }
+        if ($failed) {
+            return [
+                'result' => 'failed',
+                'message' => 'Could not stop services before applying the topology: ' . implode(', ', $failed),
+            ];
         }
 
-        // Start the services that belong to the current network
         foreach ($services as $daemon) {
-            $this->stopAction($daemon);
-            $this->startAction($daemon);
+            $started = trim((string)$backend->configdRun($daemon . ' start'));
+            $status = (string)$backend->configdRun($daemon . ' status');
+            if ($started !== 'OK' || !str_contains($status, 'is running')) {
+                $failed[] = ServiceNames::canonical($daemon) . ' start';
+            }
         }
-        return array('response' => 'Success');
+
+        return $failed ? [
+            'result' => 'failed',
+            'message' => 'Could not verify the requested state for: ' . implode(', ', $failed),
+        ] : ['result' => 'applied'];
     }
 
-
-    /**
-     * @throws Exception
-     */
-    public function reconfigureActAction($network)
+    public function reconfigureActAction($network): array
     {
-        if ($this->request->isPost()) {
-//            $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
-            (new GeneralController)->setNetwork($network);
-            $backend = new Backend();
-            $backend->configdRun('mongod start');
-            $backend->configdRun('template reload OPNsense/OPNCell');
-            $this->manageNetworkServices($network);
+        if (!$this->request->isPost() || !isset($this->serviceMapping[$network])) {
+            return ['result' => 'failed', 'message' => 'Invalid network apply request'];
         }
+        $backend = new Backend();
+        $result = $this->saveNetworkSettings($network, $backend);
+        if ($result['result'] !== 'saved') {
+            return $result;
+        }
+
+        $template = trim((string)$backend->configdpRun('template reload', ['OPNsense/OPNCell']));
+        if ($template !== 'OK') {
+            return ['result' => 'failed', 'message' => 'Could not render service enablement'];
+        }
+        if (!str_contains((string)$backend->configdRun('mongod status'), 'is running')) {
+            $backend->configdRun('mongod start');
+        }
+        if (!str_contains((string)$backend->configdRun('mongod status'), 'is running')) {
+            return ['result' => 'failed', 'message' => 'MongoDB did not start'];
+        }
+        $runtime = $this->manageNetworkServices($network, $backend);
+        if ($runtime['result'] !== 'applied') {
+            return $runtime;
+        }
+        $boot = json_decode((string)$backend->configdpRun('opncell verifyBoot', [$network]), true);
+        if (($boot['result'] ?? '') !== 'verified') {
+            return ['result' => 'failed', 'message' => $boot['message'] ?? 'Services started, but boot settings could not be verified'];
+        }
+        return ['result' => 'applied'];
     }
 
     private function validateGeneral($mdlGeneral)
@@ -179,34 +220,45 @@ class ServiceController extends ApiControllerBase
      */
     public function setAction($network): array
     {
-        $result = array("result" => "failed");
-        if ($this->request->isPost()) {
-            $mdlGeneral = new General();
-            $mdlGeneral->setNodes($this->request->getPost("general"));
-            $mdlGeneral->setNodes([$network => "1"]);
+        if (!$this->request->isPost() || !isset($this->serviceMapping[$network])) {
+            return ['result' => 'failed', 'message' => 'Invalid network settings request'];
+        }
+        return $this->saveNetworkSettings($network);
+    }
 
-            $valMsgs = $this->validateGeneral($mdlGeneral, $network);
+    private function saveNetworkSettings(string $network, ?Backend $backend = null): array
+    {
+        $model = new General();
+        $settings = (array)$this->request->getPost('general');
+        foreach (array_keys($this->serviceMapping) as $mode) {
+            unset($settings[$mode]);
+        }
+        $model->setNodes($settings);
 
-            foreach ($valMsgs as $msg) {
-                if (!isset($result["validations"])) {
-                    $result["validations"] = array();
-                }
-                $result["validations"]["general." . $msg->getField()] = $msg->getMessage();
+        $validations = [];
+        foreach ($this->validateGeneral($model) as $message) {
+            $validations['general.' . $message->getField()] = $message->getMessage();
+        }
+        if ($validations) {
+            return ['result' => 'failed', 'validations' => $validations];
+        }
+
+        // Every activation path renders YAML, including direct requests from Hnet.
+        if ($backend !== null) {
+            $general = $model->getNodes();
+            $general['network'] = $network;
+            $payload = base64_encode(json_encode(['general' => $general], JSON_THROW_ON_ERROR));
+            $response = $backend->configdpRun('opncell loadConfiguration', [$payload]);
+            if ((json_decode((string)$response, true)['result'] ?? '') !== 'rendered') {
+                return ['result' => 'failed', 'message' => 'Could not write Open5GS configuration'];
             }
-
-            $result['general'] = $mdlGeneral->getNodes();
-            $result['general']['network'] = $network;
-//             $values = json_encode($result);
-            $values = base64_encode(json_encode($result));
-
-            if ($valMsgs->count() == 0) {
-                $mdlGeneral->serializeToConfig();
-                Config::getInstance()->save();
-                $backend = new Backend();
-               $here =  $backend->configdpRun("opncell loadConfiguration", $values);
-                $result["result"] = $values;
+            foreach (array_keys($this->serviceMapping) as $mode) {
+                $model->setNodes([$mode => $mode === $network ? '1' : '0']);
             }
         }
-        return $result;
+
+        $model->serializeToConfig();
+        Config::getInstance()->save();
+        return ['result' => 'saved'];
     }
 }

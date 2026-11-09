@@ -134,26 +134,19 @@ class UserController extends ApiMutableModelControllerBase
     {
 
         $this->request = new \OPNsense\Mvc\Request();
-        if ($this->request->has('sort') &&
-            is_array($this->request->getPost("sort")) &&
-            !empty($this->request->getPost("sort"))
-        ) {
-            $tmp = array_keys($this->request->getPost("sort"));
-            $sortBy = $tmp[0] . " " . $this->request->getPost("sort")[$tmp[0]];
-        }
         // fetch query parameters (limit results to prevent out of memory issues)
         if ($this->request->isPost()) {
             $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
             $currentPage = $this->request->getPost('current', 'int', 1);
 
-            $offset = ($currentPage - 1) * $itemsPerPage;
             $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
             $filteredResult = $this->filterResults($this->fetchUsersAction(), $searchPhrase);
-            $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
+            return \OPNsense\OPNCell\SubscriberGrid::page(
+                $filteredResult, $this->request->getPost('sort'), $itemsPerPage, $currentPage
+            );
         }
 
-        return ['total' => count($filteredResult), 'rowCount' => $itemsPerPage, 'current' => $currentPage,
-            'rows' => $paginatedResult, $sortBy];
+        return ['total' => 0, 'rowCount' => 0, 'current' => 1, 'rows' => []];
     }
 
     private function filterResults(array $results, string $searchPhrase): array
@@ -254,45 +247,45 @@ class UserController extends ApiMutableModelControllerBase
      * @throws ReflectionException
      * @throws UserException
      */
-    public function deleteSubAction($uuid)
+    public function deleteSubAction($uuid): array
     {
-
-        $user = $this->getBase('user', 'users.user', $uuid);
-        $imsi = $user['user']['imsi'];
-        $backend = new Backend();
-        $userRepository = new UserRepository($backend);
-        //remove user from db
-        $db_result = $userRepository->deleteUser($imsi);
-        if ($db_result == "deleted") {
-            return $this->delBase('users.user', $uuid);
+        if (!(new \OPNsense\Mvc\Request())->isPost()) {
+            return ['result' => 'failed'];
         }
+        $user = $this->getBase('user', 'users.user', $uuid);
+        $imsi = $user['user']['imsi'] ?? '';
+        return $this->deleteSubFromDBAction($imsi);
     }
 
-    /**
-     * @throws ReflectionException
-     * @throws UserException
-     */
     public function deleteSubFromDBAction($imsi): array
     {
-        $backend = new Backend();
-        $target_uuid = '';
-        $userRepository = new UserRepository($backend);
-        $allUsers = $this->getModelNodes();
+        if (!(new \OPNsense\Mvc\Request())->isPost() || !preg_match('/^[0-9]{5,16}$/D', $imsi)) {
+            return ['result' => 'failed', 'message' => 'Invalid subscriber deletion request'];
+        }
 
-        foreach ($allUsers['users']['user'] as $uuid => $user) {
+        $repository = new UserRepository(new Backend());
+        $result = $repository->deleteUser($imsi);
+        if (is_array($result)) {
+            if (($result['result'] ?? '') !== 'deleted') {
+                return $result;
+            }
+        } elseif ($result !== 'deleted') {
+            return [
+                'result' => $result === 'not found' ? 'not found' : 'failed',
+                'message' => $result === 'not found'
+                    ? 'Subscriber was not found in MongoDB. Refresh the subscriber list.'
+                    : 'Deletion was not confirmed. Refresh the subscriber list before retrying.',
+            ];
+        }
+
+        $users = $this->getModelNodes()['users']['user'] ?? [];
+        foreach ($users as $uuid => $user) {
             if ($user['imsi'] === $imsi) {
-                $target_uuid = $uuid;
+                $this->delAction($uuid);
                 break;
             }
         }
-        $db_result = $userRepository->deleteUser($imsi);
-
-
-        if ($db_result == "deleted") {
-            return $this->delAction($target_uuid);
-        } else {
-            return array("result" => $db_result);
-        }
+        return ['result' => 'deleted'];
     }
 
     /**
@@ -340,6 +333,9 @@ class UserController extends ApiMutableModelControllerBase
         $userRepository = new UserRepository($backend);
         $this->request = new \OPNsense\Mvc\Request();
         $userDetails = $this->request->getPost("user");
+        if (!$this->request->isPost() || !is_string($userDetails['profile'] ?? null) || $userDetails['profile'] === '') {
+            return ['result' => 'failed', 'message' => 'Select at least one subscriber profile'];
+        }
         $selected_profile_uuid = explode(",", $userDetails['profile']);
         $numberOfProfiles = count($selected_profile_uuid);
         $profileClass = new ProfileController();
@@ -347,6 +343,9 @@ class UserController extends ApiMutableModelControllerBase
         $sub['count'] = $numberOfProfiles;
         foreach ($selected_profile_uuid as $p_uuid) {
             $profile = $profileClass->getProfileAction($p_uuid);
+            if (empty($profile['profile']['apn'])) {
+                return ['result' => 'failed', 'message' => 'Selected profile no longer exists'];
+            }
             $index += 1;
             $userDetails['sst'] = $profile['profile']['sst'];
             $userDetails["dl"] = $profile['profile']['dl'];
@@ -380,70 +379,59 @@ class UserController extends ApiMutableModelControllerBase
     public function setSubAction($imsi): array
     {
         try {
-            $backend = new Backend();
             $this->request = new \OPNsense\Mvc\Request();
-            $updatedUserDetails = $this->request->getPost('user');
-
-            // Fetch user details
-            $userRepository = new UserRepository($backend);
-            $userDetails = $this->fetchUserDetails($userRepository, $imsi);
-
-            if (!$userDetails) {
-                return ["result" => "Failed", "message" => "User not found"];
+            $details = $this->request->getPost('user');
+            if (!$this->request->isPost() || !preg_match('/^[0-9]{5,16}$/D', $imsi)
+                || !is_string($details['profile'] ?? null) || $details['profile'] === ''
+            ) {
+                return ['result' => 'failed', 'message' => 'Invalid subscriber or profile selection'];
             }
 
-            $profileIDs = $updatedUserDetails['profile'];
-            if (empty($profileIDs)) {
-                return ["result" => "Failed", "message" => "No profiles provided"];
+            $profileController = new ProfileController();
+            $profiles = [];
+            foreach (array_unique(explode(',', $details['profile'])) as $id) {
+                $profile = $profileController->getProfileAction($id)['profile'] ?? [];
+                if (empty($profile['apn'])) {
+                    return ['result' => 'failed', 'message' => 'Selected profile no longer exists'];
+                }
+                $profiles[] = $this->getUserDetails($profile, $profile);
             }
 
-            $profileClass = new ProfileController();
-            $this->deleteSubFromDBAction($imsi);
-
-            $subUser = $this->buildSubUser($userDetails, $profileIDs, $profileClass);
-
-            // Save user details
-            $result = $userRepository->saveUser($subUser);
-
-            if ($result != "Success") {
-                return ["result" => $subUser];
+            $changes = array_intersect_key($details, array_flip(['imsi', 'ki', 'opc', 'op', 'amf', 'msisdn', 'ip',
+                    'ue_ambr_downlink', 'ue_ambr_downlink_unit', 'ue_ambr_uplink', 'ue_ambr_uplink_unit', 'subscriber_status', 'operator_determined_barring', 'default_slice', 'session_addresses', 'pcc_rules']));
+            if ($changes && !preg_match('/^[a-f0-9]{64}$/D', (string)($details['edit_token'] ?? ''))) {
+                return ['result' => 'failed', 'message' => 'Reload the subscriber before saving'];
             }
-            return ["result" => "success"];
+            foreach ($changes as $field => $value) {
+                $valid = is_string($value) && match ($field) {
+                    'imsi' => preg_match('/^[0-9]{5,16}$/D', $value),
+                    'ki', 'opc', 'op' => $value === '' || preg_match('/^[a-fA-F0-9]{32}$/D', $value),
+                    'amf' => $value === '' || preg_match('/^[a-fA-F0-9]{4}$/D', $value),
+                    'msisdn' => preg_match('/^\s*(?:[0-9]{1,15}(?:\s*,\s*[0-9]{1,15})?)?\s*$/D', $value),
+                    'ip' => $value === '' || filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4),
+                    'session_addresses', 'pcc_rules' => strlen($value) <= 16384,
+                    'default_slice' => $value === '' || preg_match('/^[0-9]{1,3}(?::[a-fA-F0-9]{6})?$/D', $value),
+                    default => $value === '' || preg_match('/^[0-9]{1,10}$/D', $value),
+                };
+                if (!$valid) {
+                    return ['result' => 'failed', 'message' => 'Invalid subscriber field: ' . $field];
+                }
+            }
+
+            $repository = new UserRepository(new Backend());
+            return $repository->editSubscriber([
+                'imsi' => $imsi,
+                'profiles' => $profiles,
+                'changes' => $changes,
+                'token' => $details['edit_token'] ?? null,
+                'managedNames' => array_column(
+                    (new \OPNsense\OPNCell\Profile())->getNodes()['profiles']['profile'] ?? [],
+                    'apn'
+                ),
+            ]);
         } catch (Exception $e) {
-            return ["result" => "Failed", "message" => $e->getMessage()];
+            return ['result' => 'failed', 'message' => 'Subscriber update failed'];
         }
-    }
-
-    private function fetchUserDetails($userRepository, $imsi): ?array
-    {
-        $data = $userRepository->getUser($imsi);
-        if ($data === null) {
-            return null;
-        }
-
-        $userDetails = [];
-        foreach ($data as $process) {
-            $userDetails['imsi'] = $process['imsi'];
-            $userDetails['ki'] = $process['ki'];
-            $userDetails['opc'] = $process['opc'];
-        }
-
-        return $userDetails;
-    }
-
-    private function buildSubUser($userDetails, $profileIDs, $profileClass): array
-    {
-        $profileList = explode(",", $profileIDs);
-        $subUser = ['count' => count($profileList)];
-
-        foreach ($profileList as $index => $profileID) {
-            $profile = $profileClass->getProfileAction($profileID);
-            $userDetails = array_merge($userDetails, ['sst' => $profile['profile']['sst'], 'dl' => $profile['profile']['dl'], 'ul' => $profile['profile']['ul'], 'QoS' => $profile['profile']['QoS'], 'arp_priority' => $profile['profile']['arp_priority'], 'apn' => $profile['profile']['apn']]);
-            $userDetails = $this->getUserDetails($profile['profile'], $userDetails);
-            $subUser[$index + 1] = $userDetails;
-        }
-
-        return $subUser;
     }
 
     /**
@@ -454,6 +442,9 @@ class UserController extends ApiMutableModelControllerBase
     public function getUserDetails($profile1, array $userDetails): array
     {
 
+        foreach (['sd', 'session_type', 'lbo_roaming_allowed'] as $field) {
+            $userDetails[$field] = $profile1[$field] ?? '';
+        }
         $userDetails['arp_capability'] = ($this->multipart($profile1['arp_capability']) == 'enabled') ? '1' : '2';
         $userDetails['arp_vulnerability'] = ($this->multipart($profile1 ['arp_vulnerability']) == 'enabled') ? '1' : '2';
         return $userDetails;

@@ -1,4 +1,6 @@
-{% if OPNsense.opncell.general.enablefiveSA == '1' or OPNsense.opncell.general.enableupf == '1' %}
+{% set cellular = (OPNsense | default({})).get('opncell') or {} %}
+{% set general = cellular.get('general') or {} %}
+{% if general.get('enablefiveSA') == '1' or general.get('enableupf') == '1' %}
 epcpcfd_enable="YES"
 epcpcfd_setup="/usr/local/opnsense/scripts/opncell/epcpcfd_setup.sh"
 {% else %}

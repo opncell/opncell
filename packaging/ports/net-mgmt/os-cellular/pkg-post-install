@@ -1,0 +1,136 @@
+#!/bin/sh
+
+if [ -x /usr/local/etc/rc.d/configd ]; then
+    /usr/local/etc/rc.d/configd restart
+fi
+if [ -x /usr/local/opnsense/mvc/script/run_migrations.php ]; then
+    /usr/local/opnsense/mvc/script/run_migrations.php "OPNsense/OPNCell"
+fi
+if [ -x /usr/local/etc/rc.configure_plugins ]; then
+    /usr/local/etc/rc.configure_plugins "POST_INSTALL"
+fi
+if [ -x /usr/local/sbin/configctl ]; then
+    /usr/local/sbin/configctl template reload "OPNsense/OPNCell"
+fi
+
+echo "=====> Enabling SCTP support"
+
+if ! grep -Eq '^[[:space:]]*sctp_load="YES"[[:space:]]*$' /boot/loader.conf.local 2>/dev/null; then
+    printf '%s\n' 'sctp_load="YES"' >> /boot/loader.conf.local
+fi
+
+if ! sysctl -n net.inet.sctp.sendspace >/dev/null 2>&1; then
+    kldload sctp.ko
+fi
+if sysctl -n net.inet.sctp.sendspace >/dev/null 2>&1; then
+    echo "=====> SCTP is available in the running kernel."
+else
+    echo "WARNING: SCTP is unavailable. Open5GS S1AP and NGAP cannot start until SCTP is available." >&2
+fi
+
+# ============================================
+# Raise kern.ipc.maxsockbuf for open5gs SCTP sockets
+# ============================================
+# open5gs' S1AP (mmed) and NGAP (amfd) interfaces open SCTP sockets. The
+# FreeBSD SCTP stack computes its default send/recv buffer size at boot from
+# the kernel's compiled-in SB_MAX constant, independent of the *live*
+# kern.ipc.maxsockbuf ceiling - on stock FreeBSD 14/15 those two numbers can
+# disagree, and when the default maxsockbuf ceiling ends up smaller than what
+# SCTP requests, socket() fails with ENOBUFS ("No buffer space available")
+# and the daemon aborts before it can bind its S1AP/NGAP listener. This is a
+# known FreeBSD/OPNsense base-tuning gap, not an open5gs bug - see e.g.
+# opnsense/plugins#5422, where FRR hit the identical symptom.
+#
+# kern.ipc.maxsockbuf has no loader-tunable hook (it can't be set via
+# /boot/loader.conf), so it has to go through OPNsense's own Tunables model
+# (System > Settings > Tunables / config.xml <sysctl>) rather than a raw
+# /etc/sysctl.conf edit, which OPNsense's config sync would otherwise
+# overwrite on the next boot or config apply.
+echo "=====> "
+echo "Checking socket-buffer limit (kern.ipc.maxsockbuf) for Open5GS SCTP (S1AP/NGAP) sockets ..."
+
+sockbuf_target=33554432 # 32 MiB - matches the value OPNsense's FRR plugin settled on for the same issue
+
+if php <<'PHP_EOF'
+<?php
+require_once('config.inc');
+
+use OPNsense\Core\Config;
+use OPNsense\Core\Tunables;
+
+$tunable = 'kern.ipc.maxsockbuf';
+$target = 33554432; // keep in sync with sockbuf_target above
+$descr = 'Required by OPNcell/open5gs SCTP sockets (S1AP/NGAP) - default maxsockbuf is smaller than what the kernel SCTP stack requests, causing ENOBUFS on socket creation.';
+
+$mdl = new Tunables();
+$node = null;
+
+foreach ($mdl->item->iterateItems() as $item) {
+    if ((string)$item->tunable === $tunable) {
+        $node = $item;
+        break;
+    }
+}
+
+$current = $node !== null ? (string)$node->value : '';
+
+if ($current !== '' && (int)$current >= $target) {
+    // Already set high enough (by an admin, or a previous run) - leave it alone
+    echo "ok: already {$current}\n";
+    exit(0);
+}
+
+if ($node === null) {
+    // No placeholder item for this tunable in config.xml - create one
+    $node = $mdl->item->Add();
+    $node->tunable = $tunable;
+}
+
+$node->descr = $descr;
+$node->value = (string)$target;
+
+$validations = $mdl->performValidation();
+if ($validations->count() > 0) {
+    foreach ($validations as $msg) {
+        fwrite(STDERR, "validation error: " . $msg->getMessage() . "\n");
+    }
+    exit(1);
+}
+
+$mdl->serializeToConfig();
+Config::getInstance()->save();
+echo "set: {$target}\n";
+PHP_EOF
+then
+    # Regenerate /etc/sysctl.conf from config.xml and apply it now, the same
+    # way OPNsense's own boot hook does (rc.syshook.d/start/90-sysctl)
+    pluginctl -s sysctl restart >/dev/null 2>&1
+else
+    echo "WARNING: could not persist kern.ipc.maxsockbuf via config.xml - applying live only, this will not survive a reboot"
+fi
+
+# Raise the live ceiling when needed. Preserve higher administrator settings.
+live_sockbuf=$(sysctl -n kern.ipc.maxsockbuf)
+if [ "$live_sockbuf" -lt "$sockbuf_target" ] 2>/dev/null; then
+    sysctl kern.ipc.maxsockbuf="$sockbuf_target"
+fi
+
+# Reuse the installed MongoDB service and configuration. Only install the
+# compatibility defaults when those files are absent.
+if [ ! -e /usr/local/etc/rc.d/mongod ] && [ ! -L /usr/local/etc/rc.d/mongod ]; then
+    install -m 0555 /usr/local/etc/rc.d/mongod_custom /usr/local/etc/rc.d/mongod
+fi
+if [ ! -e /usr/local/etc/mongodb.conf ] && [ ! -L /usr/local/etc/mongodb.conf ]; then
+    install -m 0644 /usr/local/etc/rc.d/mongodb_custom.conf /usr/local/etc/mongodb.conf
+fi
+
+mkdir -p /var/log/opncell
+
+if ! php -f /usr/local/opnsense/scripts/opncell/install_vips.php; then
+    echo "WARNING: Verify OPNcell loopback addresses in Interfaces > Virtual IPs."
+fi
+
+printf '\n%s\n' '=====> Apply a topology from the Cellular Network tab to start its services.'
+
+# Remove known legacy symlinks only when no active command or configuration uses them.
+/usr/local/bin/python3.12 /usr/local/opnsense/scripts/opncell/cleanup_log_links.py || echo "WARNING: legacy log links were retained; cleanup needs review."

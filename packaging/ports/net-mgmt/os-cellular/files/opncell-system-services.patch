@@ -1,0 +1,219 @@
+--- a/etc/inc/plugins.inc.d/opncell.inc
++++ b/etc/inc/plugins.inc.d/opncell.inc
+@@ -102,14 +102,17 @@
+     foreach ($serviceTypes as $type) {
+         $service = array(
+             'description' => $descriptions[$type],
+-            'name' => 'opncell-' . $type,
++            'name' => $type === 'mongo' ? 'mongod' : 'open5gs-' . $type . 'd',
+         );
+ 
+         foreach ($commonServiceData['configd'] as $key => $commands) {
+             $service['configd'][$key] = array(sprintf($commands[0], $type));
+         }
+ 
++        // MongoDB can use a custom database directory, so check its process name.
++        if ($type !== 'mongo') {
+             $service['pidfile'] = sprintf($commonServiceData['pidfile'], $type);
++        }
+ 
+         $services[] = $service;
+     }
+--- a/opnsense/service/conf/actions.d/actions_upfd.conf
++++ b/opnsense/service/conf/actions.d/actions_upfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-upfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcupfd onerestart
++type:script
++message: Restarting upfd
+--- a/opnsense/service/conf/actions.d/actions_nssfd.conf
++++ b/opnsense/service/conf/actions.d/actions_nssfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-nssfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcnssfd onerestart
++type:script
++message: Restarting nssfd
+--- a/opnsense/service/conf/actions.d/actions_pcfd.conf
++++ b/opnsense/service/conf/actions.d/actions_pcfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-pcfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcpcfd onerestart
++type:script
++message: Restarting pcfd
+--- a/opnsense/service/conf/actions.d/actions_sgwud.conf
++++ b/opnsense/service/conf/actions.d/actions_sgwud.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-sgwud status
++
++[restart]
++command:/usr/local/etc/rc.d/epcsgwud onerestart
++type:script
++message: Restarting sgwud
+--- a/opnsense/service/conf/actions.d/actions_ausfd.conf
++++ b/opnsense/service/conf/actions.d/actions_ausfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-ausfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcausfd onerestart
++type:script
++message: Restarting ausfd
+--- a/opnsense/service/conf/actions.d/actions_smfd.conf
++++ b/opnsense/service/conf/actions.d/actions_smfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-smfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcsmfd onerestart
++type:script
++message: Restarting smfd
+--- a/opnsense/service/conf/actions.d/actions_mmed.conf
++++ b/opnsense/service/conf/actions.d/actions_mmed.conf
+@@ -14,3 +14,8 @@
+ type:script_output
+ message: Requesting open5gs-mmed status
+ 
++
++[restart]
++command:/usr/local/etc/rc.d/epcmmed onerestart
++type:script
++message: Restarting mmed
+--- a/opnsense/service/conf/actions.d/actions_hssd.conf
++++ b/opnsense/service/conf/actions.d/actions_hssd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-hssd status
++
++[restart]
++command:/usr/local/etc/rc.d/epchssd onerestart
++type:script
++message: Restarting hssd
+--- a/opnsense/service/conf/actions.d/actions_pcrfd.conf
++++ b/opnsense/service/conf/actions.d/actions_pcrfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-pcrfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcpcrfd onerestart
++type:script
++message: Restarting pcrfd
+--- a/opnsense/service/conf/actions.d/actions_mongod.conf
++++ b/opnsense/service/conf/actions.d/actions_mongod.conf
+@@ -4,12 +4,17 @@
+ message: Starting mongod
+ 
+ [stop]
+-command:/usr/local/etc/rc.d/mongod stop
++command:/usr/local/etc/rc.d/mongod onestop
+ type:script
+ message: Stopping mongod
+ 
+ [status]
+-command:/usr/local/etc/rc.d/mongod status || exit 0
++command:/usr/local/etc/rc.d/mongod onestatus || exit 0
+ parameters:
+ type:script_output
+ message: Requesting mongod status
++
++[restart]
++command:/usr/local/etc/rc.d/mongod onerestart
++type:script
++message: Restarting mongod
+--- a/opnsense/service/conf/actions.d/actions_udmd.conf
++++ b/opnsense/service/conf/actions.d/actions_udmd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-udmd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcudmd onerestart
++type:script
++message: Restarting udmd
+--- a/opnsense/service/conf/actions.d/actions_sgwcd.conf
++++ b/opnsense/service/conf/actions.d/actions_sgwcd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-sgwcd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcsgwcd onerestart
++type:script
++message: Restarting sgwcd
+--- a/opnsense/service/conf/actions.d/actions_nrfd.conf
++++ b/opnsense/service/conf/actions.d/actions_nrfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-nrfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcnrfd onerestart
++type:script
++message: Restarting nrfd
+--- a/opnsense/service/conf/actions.d/actions_udrd.conf
++++ b/opnsense/service/conf/actions.d/actions_udrd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-udrd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcudrd onerestart
++type:script
++message: Restarting udrd
+--- a/opnsense/service/conf/actions.d/actions_bsfd.conf
++++ b/opnsense/service/conf/actions.d/actions_bsfd.conf
+@@ -14,3 +14,8 @@
+ type:script_output
+ message: Requesting open5gs-bsfd status
+ 
++
++[restart]
++command:/usr/local/etc/rc.d/epcbsfd onerestart
++type:script
++message: Restarting bsfd
+--- a/opnsense/service/conf/actions.d/actions_amfd.conf
++++ b/opnsense/service/conf/actions.d/actions_amfd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-amfd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcamfd onerestart
++type:script
++message: Restarting amfd
+--- a/opnsense/service/conf/actions.d/actions_scpd.conf
++++ b/opnsense/service/conf/actions.d/actions_scpd.conf
+@@ -13,3 +13,8 @@
+ parameters:
+ type:script_output
+ message: Requesting open5gs-scpd status
++
++[restart]
++command:/usr/local/etc/rc.d/epcscpd onerestart
++type:script
++message: Restarting scpd

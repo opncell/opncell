@@ -36,9 +36,17 @@
             <Required>Y</Required>
             <default>127.0.0.2</default>
         </s1ap>
-        <sst type="TextField">
+        <sgwu_gtpu type="NetworkField">
+            <Required>N</Required>
+        </sgwu_gtpu>
+        <upf_gtpu type="NetworkField">
+            <Required>N</Required>
+        </upf_gtpu>
+        <sst type="NumericField">
             <Required>Y</Required>
             <default>1</default>
+            <MinimumValue>1</MinimumValue>
+            <MaximumValue>255</MaximumValue>
         </sst>
         <ue type="NumericField">
             <Required>Y</Required>

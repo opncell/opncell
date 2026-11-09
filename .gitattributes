@@ -1,0 +1,8 @@
+# Preserve whitespace in patch context and imported upstream example files.
+*.patch -whitespace
+*.diff -whitespace
+packaging/ports/**/files/patch-* -whitespace
+packaging/ports/**/files/extrapatch-* -whitespace
+packaging/defaults/** -whitespace
+packaging/ports/net-mgmt/os-cellular/files/defaults/** -whitespace
+packaging/ports/databases/mongodb80/pkg-message -whitespace

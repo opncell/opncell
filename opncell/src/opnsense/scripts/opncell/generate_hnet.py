@@ -3,10 +3,13 @@
 import sys
 import json
 import base64
+import fcntl
 import subprocess
 from pathlib import Path
 import yaml
 import os
+
+from atomic_yaml import replace_yaml
 
 
 response = {}
@@ -53,17 +56,11 @@ def append_hnet_entry(yaml_file, hnet_id, scheme, key_path):
         "key": str(key_path)
     })
 
-    with open(yaml_file, "w") as f:
-        yaml.safe_dump(
-            config,
-            f,
-            sort_keys=False,
-            default_flow_style=False
-        )
+    replace_yaml(yaml_file, config)
 
     return result == "ok"
 
-def main():
+def generate(created_files):
 
     if len(sys.argv) < 2:
         print("Error: No input provided", file=sys.stderr)
@@ -79,6 +76,8 @@ def main():
     try:
 
         scheme = int(data.get("scheme", 2))
+        if scheme not in (1, 2):
+            raise ValueError("Invalid Hnet scheme")
         hnet_id = allocate_hnet_id(UDM_YAML)
 
         path_str = data.get("pubkey_path") or data.get("filepath")
@@ -101,7 +100,7 @@ def main():
         return
 
 
-    hnet_dir = Path("/usr/ports/open5gs/install/etc/open5gs/hnet")
+    hnet_dir = Path(UDM_YAML).with_name("hnet")
     hnet_dir.mkdir(parents=True, exist_ok=True)
 
     # Key selection
@@ -118,23 +117,16 @@ def main():
     priv_key_path = hnet_dir / priv_filename
     pub_key_path = Path(pubkey_path)
 
-    # Generate private key
-
-    if scheme == 1:
-        run_command([
-            "openssl", "genpkey",
-            "-algorithm", algo,
-            "-out", str(priv_key_path)
-        ])
-    else:
-        run_command([
-            "openssl", "ecparam",
-            "-name", algo,
-            "-genkey",
-            "-noout",
-            "-out", str(priv_key_path)
-        ])
-
+    # Create the private key exclusively with restrictive permissions.
+    command = (
+        ["openssl", "genpkey", "-algorithm", algo]
+        if scheme == 1 else
+        ["openssl", "ecparam", "-name", algo, "-genkey", "-noout"]
+    )
+    private_key = run_command(command, binary=True)
+    with os.fdopen(os.open(priv_key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as key:
+        created_files.append(priv_key_path)
+        key.write(private_key)
 
     # Generate public key PEM... rare case it's needed but, leave no stone unturned :)
 
@@ -153,7 +145,9 @@ def main():
         ])
 
     try:
-        pub_key_path.write_text(pub_pem)
+        with pub_key_path.open("x", encoding="utf-8") as public_key:
+            created_files.append(pub_key_path)
+            public_key.write(pub_pem)
 
     except Exception as e:
         print(json.dumps({
@@ -184,7 +178,9 @@ def main():
         hex_pub = der[-33:].hex()
 
     hex_path = pub_key_path.with_suffix(".pub.hex")
-    hex_path.write_text(hex_pub)
+    with hex_path.open("x", encoding="utf-8") as public_hex:
+        created_files.append(hex_path)
+        public_hex.write(hex_pub)
 
     try:
 
@@ -217,7 +213,19 @@ def main():
         "public_key_pem": pub_pem,
     }
 
+    created_files.clear()
     print(json.dumps(response))
 
 if __name__ == "__main__":
-    main()
+    try:
+        # Use a separate lock file because udm.yaml is replaced atomically.
+        with open(UDM_YAML + ".opncell.lock", "a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            created_files = []
+            try:
+                generate(created_files)
+            finally:
+                for path in reversed(created_files):
+                    path.unlink(missing_ok=True)
+    except OSError:
+        print(json.dumps({"result": "Failed", "error": "Could not write Hnet key files"}))

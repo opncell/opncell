@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# PROVIDE: open5gs_sepp1
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+#
+# Add the following to /etc/rc.conf to enable:
+#
+# open5gs_sepp1_enable="YES"
+#
+# Optional:
+# open5gs_sepp1_config="%%ETCDIR%%/sepp1.yaml"
+# open5gs_sepp1_flags=""
+#
+
+. /etc/rc.subr
+
+name="open5gs_sepp1"
+rcvar="${name}_enable"
+
+load_rc_config "${name}"
+
+: ${open5gs_sepp1_enable:="NO"}
+: ${open5gs_sepp1_config="%%ETCDIR%%/sepp1.yaml"}
+: ${open5gs_sepp1_flags=""}
+
+command="%%PREFIX%%/bin/open5gs-sepp1d"
+procname="${command}"
+pidfile="/var/run/${name}.pid"
+
+required_files="${open5gs_sepp1_config}"
+
+start_cmd="${name}_start"
+
+open5gs_sepp1_start()
+{
+	echo "Starting ${name}."
+	/usr/sbin/daemon -f -p "${pidfile}" \
+	    "${command}" \
+	    -c "${open5gs_sepp1_config}" \
+	    ${open5gs_sepp1_flags}
+}
+
+run_rc_command "$1"

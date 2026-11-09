@@ -1,0 +1,231 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
+@@ -105,7 +105,7 @@
+                 {{ lang._('A db Error occured. Check if the db is up and running, then try again.') }}<br>
+             </div>
+             <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
+-                {{ lang._('Subscriber added.') }}<br>
++                {{ lang._('Subscriber saved.') }}<br>
+             </div>
+         </div>
+         <div class="col-md-12 __mt">
+@@ -366,6 +366,23 @@
+ 
+     }
+ 
++    function subscriberSaveFailed(data) {
++        $("#successfulSave").stop(true, true).hide();
++        let message = data && data.message;
++        if (data && data.validations) {
++            message = Object.values(data.validations).flat().join("\n");
++        }
++        if (!message && data && typeof data.result === "string" &&
++                !["failed", "Failed"].includes(data.result)) {
++            message = data.result;
++        }
++        BootstrapDialog.alert({
++            type: BootstrapDialog.TYPE_DANGER,
++            title: "{{ lang._('Subscriber save failed') }}",
++            message: $("<div>").text(message || "{{ lang._('The server did not confirm the save. Check the subscriber list before retrying.') }}")
++        });
++    }
++
+     function fadeOut(strings) {
+         setTimeout(function() {
+             $(strings).fadeOut("slow");
+@@ -537,22 +554,15 @@
+                     $("#btn_" + 'DialogAddUsers' + "_save").unbind('click').click(function () {
+                         saveFormToEndpoint(url = "/api/opncell/user/addSub",
+                             formid = 'frm_' + 'DialogAddUsers', callback_ok = function (data) {
+-                                console.log(data.result)
+-                                console.log(data)
+-                                $("#" + 'DialogAddUsers').modal('hide');
+-                               gridOptions.bootgrid("reload");
+-                                if (data.result === "failed") {
+-                                    $("#failedSave").attr("style", "display:block");
+-                                    fadeOut("#failedSave")
+-                                } else if(data.result === "saved"  || data.result === "Success" ) {
+-                                    $("#successfulSave").attr("style", "display:block");
+-                                    fadeOut("#successfulSave")
+-                                } else {
+-                                    $("#Error").text("The following DB error occured: " + data.result)
+-                                        .attr("style", "display:block");
+-                                    fadeOut("#Error")
++                                if (!["saved", "Success", "success"].includes(data.result)) {
++                                    subscriberSaveFailed(data);
++                                    return;
+                                 }
+-                            }, true);
++                                $("#DialogAddUsers").modal('hide');
++                                gridOptions.bootgrid("reload");
++                                $("#failedSave, #Error").hide();
++                                $("#successfulSave").stop(true, true).show().delay(5000).fadeOut("slow");
++                            }, true, subscriberSaveFailed);
+                     });
+                 }
+                 else {
+@@ -606,12 +616,14 @@
+                         if (gridParams['set'] !== undefined) {
+                             saveFormToEndpoint("/api/opncell/user/setSub/" + imsi, 'frm_DialogUsers', function (data) {
+                                 if (data.result !== "success") {
+-                                    BootstrapDialog.alert(data.message || "{{ lang._('Subscriber update failed') }}");
++                                    subscriberSaveFailed(data);
+                                     return;
+                                 }
+                                 $("#DialogUsers").modal('hide');
+                                 gridOptions.bootgrid("reload");
+-                            }, true);
++                                $("#failedSave, #Error").hide();
++                                $("#successfulSave").stop(true, true).show().delay(5000).fadeOut("slow");
++                            }, true, subscriberSaveFailed);
+                         } else {
+                             console.log("[grid] action set missing")
+                         }
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserController.php
+@@ -332,7 +332,7 @@
+         $this->request = new \OPNsense\Mvc\Request();
+         $userDetails = $this->request->getPost("user");
+         if (!$this->request->isPost() || !is_string($userDetails['profile'] ?? null) || $userDetails['profile'] === '') {
+-            return ['result' => 'failed'];
++            return ['result' => 'failed', 'message' => 'Select at least one subscriber profile'];
+         }
+         $selected_profile_uuid = explode(",", $userDetails['profile']);
+         $numberOfProfiles = count($selected_profile_uuid);
+@@ -342,7 +342,7 @@
+         foreach ($selected_profile_uuid as $p_uuid) {
+             $profile = $profileClass->getProfileAction($p_uuid);
+             if (empty($profile['profile']['apn'])) {
+-                return ['result' => 'failed'];
++                return ['result' => 'failed', 'message' => 'Selected profile no longer exists'];
+             }
+             $index += 1;
+             $userDetails['sst'] = $profile['profile']['sst'];
+--- a/opnsense/scripts/opncell/saveUsers.py
++++ b/opnsense/scripts/opncell/saveUsers.py
+@@ -7,7 +7,7 @@
+ import subprocess
+ import sys
+ 
+-from subscriber_identity import default_slice_selector, identity_fields, load_payload, pcc_rule_overrides, policy_fields, session_address_overrides, session_fields
++from subscriber_identity import default_slice_selector, identity_fields, load_payload, mongosh_failure, pcc_rule_overrides, policy_fields, session_address_overrides, session_fields
+ 
+ 
+ def int32(value):
+@@ -135,9 +135,12 @@
+             session._id = new ObjectId();
+         }
+     }
+-    print(subscribers.insertOne(subscriber).acknowledged ? 'Success' : 'Failed');
++    print(subscribers.insertOne(subscriber).acknowledged ? 'Success' : 'MongoDB did not acknowledge the subscriber insert');
+ } catch (error) {
+-    print(error.code === 11000 ? 'Duplicate' : 'Failed');
++    print(error.code === 11000 ? 'Duplicate'
++        : error.code === 13 ? 'MongoDB denied access to the subscriber database.'
++        : error.code === 121 ? 'MongoDB rejected the subscriber because it does not match the database validation rules.'
++        : 'MongoDB rejected the subscriber insert. Check the MongoDB log.');
+ }
+ """
+ 
+@@ -149,14 +152,24 @@
+         uri = os.environ.get("DB_URI") or "mongodb://127.0.0.1:27017/open5gs"
+         command = "const subscriber = EJSON.parse(" + json.dumps(json.dumps(subscriber)) + ", {relaxed: false});\n" + INSERT
+         mongosh = shutil.which("mongosh")
++        if not mongosh and not shutil.which("npx"):
++            print(json.dumps("MongoDB Shell (mongosh) is required for subscriber management"))
++            return
+         shell = [mongosh] if mongosh else ["npx", "mongosh"]
+-        output = subprocess.check_output(
+-            shell + ["--quiet", uri, "--eval", command], text=True, stderr=subprocess.DEVNULL
+-        ).splitlines()
+-        result = output[-1].strip() if output else "Failed"
+-        print(json.dumps(result if result in ("Success", "Duplicate") else "Failed"))
+-    except (IndexError, KeyError, TypeError, ValueError, OSError, subprocess.CalledProcessError):
+-        print(json.dumps("Failed"))
++        output = subprocess.run(
++            shell + ["--quiet", uri, "--eval", command],
++            capture_output=True, text=True, check=False,
++        )
++        lines = output.stdout.strip().splitlines()
++        if output.returncode != 0 or not lines:
++            print(json.dumps(mongosh_failure(output.stderr + output.stdout)))
++            return
++        print(json.dumps(lines[-1].strip()))
++    except (IndexError, KeyError, TypeError, ValueError) as error:
++        print(json.dumps("Invalid subscriber data: " + str(error)))
++    except OSError:
++        print(json.dumps("Could not execute MongoDB Shell. Check its installation and permissions."))
++
+ 
+ 
+ if __name__ == "__main__":
+--- a/opnsense/scripts/opncell/updateSubscriberProfiles.py
++++ b/opnsense/scripts/opncell/updateSubscriberProfiles.py
+@@ -6,7 +6,7 @@
+ import subprocess
+ import sys
+ 
+-from subscriber_identity import default_slice_selector, identity_fields, load_payload, pcc_rule_overrides, policy_fields, session_address_overrides, session_fields
++from subscriber_identity import default_slice_selector, identity_fields, load_payload, mongosh_failure, pcc_rule_overrides, policy_fields, session_address_overrides, session_fields
+ 
+ 
+ # Keep Open5GS runtime authentication state outside the edit snapshot and update.
+@@ -263,7 +263,9 @@
+ } catch (error) {
+     print(JSON.stringify({result: "failed", message: error.code === 11000
+         ? "The requested IMSI already exists"
+-        : "Subscriber update failed"}));
++        : error.code === 13 ? "MongoDB denied access to the subscriber database."
++        : error.code === 121 ? "MongoDB rejected the subscriber because it does not match the database validation rules."
++        : "MongoDB rejected the subscriber update. Check the MongoDB log."}));
+ }
+ """
+ 
+@@ -296,15 +298,24 @@
+         uri = os.environ.get("DB_URI") or "mongodb://127.0.0.1:27017/open5gs"
+         command = "const input = " + json.dumps(payload) + ";\n" + UPDATE
+         mongosh = shutil.which("mongosh")
++        if not mongosh and not shutil.which("npx"):
++            print(json.dumps({"result": "failed", "message": "MongoDB Shell (mongosh) is required for subscriber management"}))
++            return
+         shell = [mongosh] if mongosh else ["npx", "mongosh"]
+         output = subprocess.run(
+             shell + ["--quiet", uri, "--eval", command],
+             capture_output=True, text=True, check=False,
+         )
+-        result = json.loads(output.stdout.strip().splitlines()[-1])
++        lines = output.stdout.strip().splitlines()
++        if not lines:
++            print(json.dumps({"result": "failed", "message": mongosh_failure(output.stderr)}))
++            return
++        result = json.loads(lines[-1])
+         print(json.dumps(result))
+-    except (IndexError, ValueError, OSError):
+-        print(json.dumps({"result": "failed", "message": "Subscriber update failed"}))
++    except (IndexError, ValueError):
++        print(json.dumps({"result": "failed", "message": "MongoDB Shell returned an invalid response. Reload the subscriber before retrying."}))
++    except OSError:
++        print(json.dumps({"result": "failed", "message": "Could not execute MongoDB Shell. Check its installation and permissions."}))
+ 
+ 
+ if __name__ == "__main__":
+--- a/opnsense/scripts/opncell/subscriber_identity.py
++++ b/opnsense/scripts/opncell/subscriber_identity.py
+@@ -224,3 +224,17 @@
+         if len(payload) > 49152:
+             raise ValueError("Subscriber payload is too large")
+         return json.loads(payload)
++
++
++def mongosh_failure(output):
++    """Return a useful error without exposing database URIs or subscriber secrets."""
++    error = output.lower()
++    if "authentication failed" in error or "auth failed" in error:
++        return "MongoDB authentication failed. Check the database credentials."
++    if "not authorized" in error or "unauthorized" in error:
++        return "MongoDB denied access to the subscriber database."
++    if any(term in error for term in ("econnrefused", "server selection", "serverselection", "enotfound", "etimedout")):
++        return "Could not connect to MongoDB. Check its service and connection settings."
++    if "document failed validation" in error:
++        return "MongoDB rejected the subscriber because it does not match the database validation rules."
++    return "MongoDB Shell did not confirm the save. Check the subscriber list before retrying."

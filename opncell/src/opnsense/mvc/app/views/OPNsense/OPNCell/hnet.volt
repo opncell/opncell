@@ -6,10 +6,8 @@
             <div class="row __mt">
                 <div class="col-md-12 __ml">
                     <b class="__mb">5G SA requires Home Network (Hnet) configuration in the UDM yml, for SUCI concealment.</b>
-                    <p>Once the key-pair is generated, the private key is stored in <code>/usr/ports/open5gs/install/etc/open5gs/hnet/</code>.<br>
-                        Use the public key when creating the SIM profile.<br>
-                        These values will be ignored if the UE uses the null (0) protection scheme.</p>
-                    <p> Both the HEX and PEM versions of the public key will be availed in the filepath you provide. </p>
+                    <p>{{ lang._('UDM records the private key path in its configuration. The generation result shows the exact paths for the private key and both public key files.') }}</p>
+                    <p>{{ lang._('Use the public key when creating the SIM profile. The null protection scheme does not use these keys.') }}</p>
                 </div>
             </div>
 
@@ -72,6 +70,11 @@
                         &nbsp;&nbsp;<div class="well well-sm" id="hnet_result_path"></div>
                     </div>
 
+                    <div class="form-group">
+                        &nbsp;&nbsp;<label>{{ lang._('Public Key Path (HEX)') }}</label>
+                        &nbsp;&nbsp;<div class="well well-sm" id="hnet_result_hex_path"></div>
+                    </div>
+
                     <!-- Public Key HEX -->
                     <div class="form-group">
                        &nbsp;&nbsp; <label>Public Key (HEX)</label>
@@ -119,12 +122,14 @@
                     <i class="fa fa-cog fa-spin"></i>
                 </div>
             `);
-                    ajaxCall("/api/opncell/service/reconfigureAct/" + network, {}, function () {
-                        $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
-                        updateServiceControlUI("opncell");
-                        $("#grid-other-configs").bootgrid("reload");
+                    ajaxCall("/api/opncell/service/reconfigureAct/" + network, {}, function (result) {
                         dialogRef.close();
-                        console.log(localStorage.getItem('networkName'));
+                        if (result.result !== "applied") {
+                            BootstrapDialog.alert(result.message || "{{ lang._('Could not apply 5G SA configuration') }}");
+                            return;
+                        }
+                        localStorage.setItem('networkName', network);
+                        window.location.href = "/ui/opncell/general#other-configs";
                     });
                 }
             });
@@ -145,7 +150,6 @@
                     btnCancelLabel: 'No',
                     callback: function (result) {
                         if (result) {
-                            localStorage.setItem('networkName', newNetwork);
                             activateNetwork(newNetwork);
                         } else {
                             // Revert selection
@@ -225,6 +229,7 @@
                             $("#hnetResultModal").modal("show");
 
                             $("#hnet_result_path").text(payload.public_key_path);
+                            $("#hnet_result_hex_path").text(payload.public_key_hex_path);
                             $("#hnet_result_priv_path").text(payload.private_key_path);
                             $("#hnet_result_hex").text(payload.public_key_hex);
                             $("#hnet_id").text(payload.id);
@@ -266,7 +271,6 @@
                         btnCancelLabel: 'No',
                         callback: function (result) {
                             if (result) {
-                                localStorage.setItem('networkName', newNetwork);
                                 activateNetwork(newNetwork);
                             } else {
                                 // Revert selection

@@ -43,8 +43,8 @@
                 <button class="btn btn-primary" id="saveAct_networks" type="button" style="display:none;">
                     <b>{{ lang._('Services') }}</b> <i id="saveAct_networks_progress"></i>
                 </button>
-                <button class="btn btn-primary" id="saveAct_configs" type="button">
-                    <b>{{ lang._('Save') }}</b> <i id="saveAct_configs_progress"></i>
+                <button class="btn btn-primary" id="applyAct_configs" type="button" disabled>
+                    <b>{{ lang._('Apply') }}</b> <i id="applyAct_configs_progress"></i>
                 </button>
             </div>
         </div>
@@ -89,28 +89,47 @@
 <script>
     $(document).ready(function () {
         let currentNetwork = "";
+        let selectedNetwork = "";
+        const networkModes = ['enablefour', 'enablefiveSA', 'enablefiveNSA', 'enableupf'];
+
+        function loadNetworkSelection() {
+            return $.getJSON("/api/opncell/general/get").done(function (data) {
+                const flags = data.general || {};
+                const enabled = networkModes.filter(mode => String(flags[mode]) === "1");
+                currentNetwork = enabled.length === 1 ? enabled[0] : "";
+                if (currentNetwork) {
+                    localStorage.setItem('networkName', currentNetwork);
+                } else {
+                    localStorage.removeItem('networkName');
+                }
+                showNetworkSelection(currentNetwork);
+            });
+        }
 
         mapDataToFormUI({'frm_general_settings': "/api/opncell/general/get"}).done(function (data) {
             formatTokenizersUI();
             $('.selectpicker').selectpicker('refresh');
 
-            currentNetwork = localStorage.getItem('networkName') || "";
-            console.log(`The current network is: ${currentNetwork}`);
-            initNetworkSelection();
-            updateUI();
+            loadNetworkSelection();
         });
 
-        // Network selection logic
-        function initNetworkSelection() {
+        $('#networkForm input[name="network"]').on('change', function () {
+            if (this.checked) {
+                selectedNetwork = this.value;
+                ShowHideConfigFields(selectedNetwork);
+                $("#applyAct_configs").prop('disabled', false);
+            }
+        });
 
-            $('#networkForm label.btn').on('click', function () {
-                const selectedNetwork = $(this).find('input[name="network"]').val();
-                console.log(`The selected network is: ${selectedNetwork}`);
-                confirmNetworkChange(selectedNetwork);
-            });
+        function showNetworkSelection(network) {
+            selectedNetwork = network;
+            selectNetworkRadio(network);
+            ShowHideConfigFields(network);
+            $("#applyAct_configs").prop('disabled', !network);
         }
+
         function confirmNetworkChange(newNetwork) {
-            const previousNetwork = localStorage.getItem('networkName') || currentNetwork;
+            const previousNetwork = currentNetwork;
 
             // Special case: 5G SA requires Hnet configuration first (lives on the Users page)
             if (newNetwork === 'enablefiveSA' && previousNetwork !== 'enablefiveSA') {
@@ -122,12 +141,9 @@
         }
 
         function proceedWithNetworkChange(newNetwork, previousNetwork) {
-            const isSameNetwork = previousNetwork === newNetwork;
-            console.log(isSameNetwork);
-
-            const message = isSameNetwork
-                ? 'Re-loading the same network! This will restart all services. Proceed?'
-                : 'You are about to change networks! Proceed?';
+            const targetLabel = $('#networkForm input[value="' + newNetwork + '"]').closest('label').text().trim();
+            const message = "{{ lang._('Apply the selected topology and restart Open5GS services?') }}" +
+                " (" + targetLabel + ")";
 
             BootstrapDialog.confirm({
                 title: 'Confirm Network Change',
@@ -137,51 +153,46 @@
                 btnCancelLabel: 'No',
                 callback: function (result) {
                     if (result) {
-                        localStorage.setItem('networkName', newNetwork);
-                        saveConfigurations(newNetwork);
+                        applyConfigurations(newNetwork);
                     } else {
                         // Revert selection
-                        selectNetworkRadio(previousNetwork);
+                        showNetworkSelection(previousNetwork);
                     }
                 }
             });
         }
 
         function selectNetworkRadio(network) {
-            $('input[name="network"]').closest('label').removeClass('active');
+            $('input[name="network"]').prop('checked', false).closest('label').removeClass('active');
             $('input[name="network"][value="' + network + '"]').prop('checked', true)
                 .closest('label').addClass('active');
         }
 
-        function saveConfigurations(network = null) {
-            const targetNetwork = network || localStorage.getItem('networkName') || currentNetwork;
-            if (!targetNetwork) return;
+        function applyConfigurations(targetNetwork) {
 
-            BootstrapDialog.show({
-                type: BootstrapDialog.TYPE_INFO,
-                title: "{{ lang._('Activating Network') }}",
-                closable: true,
-                onshow: function (dialogRef) {
-                    dialogRef.getModalBody().html(`
-                    <div style="padding: 15px;">
-                        {{ lang._('Network set-up in progress, please wait ...') }}
-                        <i class="fa fa-cog fa-spin"></i>
-                    </div>
-                `);
-
-                    saveFormToEndpoint("/api/opncell/service/set/" + targetNetwork, 'frm_general_settings', function (data) {
-                        $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
-                        console.log(data);
-
-                        ajaxCall("/api/opncell/service/reconfigureAct/" + targetNetwork, {}, function (data, status) {
-                            $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
-                            console.log(data);
-                            updateServiceControlUI('opncell');
-                            $("#grid-other-configs").bootgrid('reload');
-                            dialogRef.close();
-                        });
-                    });
+            saveFormToEndpoint("/api/opncell/service/set/" + targetNetwork, 'frm_general_settings', function (data) {
+                if (data.result !== "saved") {
+                    if (data.message) {
+                        BootstrapDialog.alert(data.message);
+                    }
+                    return;
                 }
+
+                $("#applyAct_configs").prop('disabled', true);
+                $("#applyAct_configs_progress").addClass("fa fa-spinner fa-pulse");
+                ajaxCall("/api/opncell/service/reconfigureAct/" + targetNetwork, {}, function (result) {
+                    $("#applyAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
+                    $("#applyAct_configs").prop('disabled', false);
+                    updateServiceControlUI('opncell');
+                    $("#grid-other-configs").bootgrid('reload');
+                    if (result.result === "applied") {
+                        loadNetworkSelection();
+                        $('#configTab a').tab('show');
+                    } else {
+                        showNetworkSelection(currentNetwork);
+                        BootstrapDialog.alert(result.message || "{{ lang._('Could not apply network configuration') }}");
+                    }
+                });
             });
         }
 
@@ -191,17 +202,31 @@
                 'general.configs', 'general.plmnid_mcc', 'general.plmnid_mnc', 'general.tac',
                 'general.networkname', 'general.sst', 'general.ue', 'general.peer',
                 'general.dns', 'general.ca', 'general.enablemetrics',
-                'general.metricsaddress', 'general.metricsport','general.enablefour','general.enableupf','general.enablefiveNSA','general.enablefiveSA'
+                'general.metricsaddress', 'general.metricsport'
             ];
 
             // Hide all by default
             allRows.forEach(row => $(`tr[id="row_${row}"]`).addClass('hidden'));
 
+            const usesEpc = network === 'enablefour' || network === 'enablefiveNSA';
+            $('[id="row_general.sgwu_gtpu"]').toggleClass('hidden', !usesEpc);
+            const usesSa = network === 'enablefiveSA';
+            $('[id="row_general.upf_gtpu"]').toggleClass('hidden', !usesSa && network !== 'enableupf');
+            $('[id="row_general.sst"]').toggleClass('hidden', !usesSa);
+            $('[id="row_general.s1ap"]').toggleClass('hidden', !usesEpc && !usesSa);
+            const signalingLabels = {
+                enablefour: "{{ lang._('S1 Bind Address') }}",
+                enablefiveSA: "{{ lang._('N2 Bind Address') }}",
+                enablefiveNSA: "{{ lang._('S1 Bind Address') }}"
+            };
+            const signalingLabel = signalingLabels[network] || "{{ lang._('S1 Bind Address') }}";
+            $('[id="control_label_general.s1ap"] > b').text(signalingLabel);
+            $('[id="general.s1ap"]').attr('aria-label', signalingLabel);
             if (!network) return;
 
             // Show common fields
             const commonFields = ['general.configs', 'general.plmnid_mcc', 'general.plmnid_mnc', 'general.tac',
-                'general.networkname', 'general.sst', 'general.ue', 'general.peer',
+                'general.networkname', 'general.ue', 'general.peer',
                 'general.dns', 'general.ca'];
             commonFields.forEach(row => $(`tr[id="row_${row}"]`).removeClass('hidden'));
 
@@ -214,21 +239,17 @@
                 });
             }
 
-            $("#saveAct_configs").show();
         }
 
 
-        function updateUI() {
-            const storedNetwork = localStorage.getItem('networkName');
-            if (storedNetwork) {
-                selectNetworkRadio(storedNetwork);
-                ShowHideConfigFields(storedNetwork);
-            } else if (currentNetwork) {
-                ShowHideConfigFields(currentNetwork);
+        ShowHideConfigFields(currentNetwork);
+        $("#applyAct_configs").on('click', function () {
+            if (selectedNetwork) {
+                confirmNetworkChange(selectedNetwork);
             }
-        }
+        });
 
-        const noEditServices = ['sgwcd', 'pcrfd', 'mongod', 'hssd'];
+        const noEditServices = ['open5gs-sgwcd', 'open5gs-pcrfd', 'mongod', 'open5gs-hssd'];
 
         let gridOtherConfigs = $("#grid-other-configs").UIBootgrid({
             ajax: true,
@@ -237,7 +258,7 @@
             rowCount: [10, 25, 50, 100, 500, 1000],
             toggle:false,
             footer:false,
-            search: '/api/opncell/general/startedServices/' +  (localStorage.getItem('networkName') || currentNetwork || "undefined"),
+            search: '/api/opncell/general/startedServices',
             options: {
                 formatters: {
                     "commands": function (column, row) {
@@ -261,13 +282,13 @@
 
                         } else if (isStopped || isDisabled ) {
                             if (canEdit) {
-                                return "<button type=\"button\" title=\"{{ lang._('Running') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                return "<button type=\"button\" title=\"{{ lang._('Start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
                                     "<button type=\"button\" title=\"{{ lang._('Stop') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
                                     "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>" +
                                     "<button type=\"button\" title=\"{{ lang._('Edit Config') }}\" class=\"btn btn-xs btn-default command-editConfig\" data-row-pid=\"" + row.PID + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-pencil fa-fw\"></span></button>";
 
                             } else {
-                                return "<button type=\"button\" title=\"{{ lang._('Running') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
+                                return "<button type=\"button\" title=\"{{ lang._('Start service') }}\" class=\"btn btn-xs btn-default label label-opnsense label-opnsense-sm label-danger command-start\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-play fa-fw\"></span></button> " +
                                     "<button type=\"button\" title=\"{{ lang._('Stop') }}\" class=\"btn btn-xs btn-default command-stop\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-stop fa-fw\"></span></button>" +
                                     "<button type=\"button\" title=\"{{ lang._('Log file') }}\" class=\"btn btn-xs btn-default command-logfile\" data-row-id=\"" + row.uuid + "\" data-row-service=\"" + row.serviceName + "\"><span class=\"fa fa-eye fa-fw\"></span></button>";
                             }
@@ -305,9 +326,8 @@
 
             // Log
             $(this).find(".command-logfile").off('click').on('click', function () {
-                let serviceName = $(this).data("row-service");
-                let strippedServiceName = serviceName.slice(0,-1)    //remove the trailing 'd' [mmed -> mme]
-                window.location.href="/ui/diagnostics/log/opncell/"+strippedServiceName
+                const serviceName = $(this).data("row-service");
+                window.location.href = "/ui/opncell/log/index/" + encodeURIComponent(serviceName);
             });
 
             // Edit Config
@@ -332,13 +352,12 @@
                         // console.log(status)
                         console.log(data)
 
-                        if (data.response  !== 'OK') {
-                            console.log(data.response);
-                            dialog.getModalBody().html(`<div style="padding:15px;">Failed to ${action}... <i class="fa fa-exclamation-circle"></i></div>`);
-
-                            setTimeout(function () {
-                                dialog.close();
-                            }, 4000);
+                        if (status !== 'success' || !data || data.response !== 'OK') {
+                            const message = data && data.message ||
+                                "{{ lang._('The service operation was not confirmed. Check its diagnostic log.') }}";
+                            dialog.getModalBody().empty().append($("<div>").css("padding", "15px").text(message));
+                        } else {
+                            dialog.close();
                         }
 
                         $("#grid-other-configs").bootgrid('reload');
@@ -355,13 +374,14 @@
 
             $("#btn_DialogServiceConfig_save").off('click').on('click', function () {
                 const address = $("#addr").val();
-                const params_array = [service,pid,address];
-                console.log(params_array);
-                ajaxCall(url = "/api/opncell/general/editServerConfig/" + params_array , sendData = {}, callback = function (data, status) {
-                   console.log(status);
-                   console.log(data);
+                const params = [service, pid, address].map(encodeURIComponent).join(",");
+                ajaxCall("/api/opncell/general/editServerConfig/" + params, {}, function (data) {
+                    if (data.result !== "saved") {
+                        BootstrapDialog.alert(data.message || "{{ lang._('Could not save the service configuration') }}");
+                        return;
+                    }
                     $('#DialogServiceConfig').modal('hide');
-                    gridOtherConfigs.bootgrid('reload')
+                    gridOtherConfigs.bootgrid('reload');
                 });
 
             });

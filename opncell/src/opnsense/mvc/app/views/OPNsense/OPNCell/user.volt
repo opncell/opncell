@@ -105,7 +105,7 @@ POSSIBILITY OF SUCH DAMAGE.
                 {{ lang._('A db Error occured. Check if the db is up and running, then try again.') }}<br>
             </div>
             <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
-                {{ lang._('Subscriber added.') }}<br>
+                {{ lang._('Subscriber saved.') }}<br>
             </div>
         </div>
         <div class="col-md-12 __mt">
@@ -129,8 +129,8 @@ POSSIBILITY OF SUCH DAMAGE.
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
             <thead>
             <tr>
-                <th data-column-id="imsi" data-type="string" data-visible="true" >{{ lang._('IMSI') }}</th>
-                <th data-column-id="profile" data-type="string" data-visible="true" >{{ lang._('Profile') }}</th>
+                <th data-column-id="imsi" data-type="string" data-visible="true" data-sortable="true" data-order="asc">{{ lang._('IMSI') }}</th>
+                <th data-column-id="profile" data-type="string" data-visible="true" data-sortable="true">{{ lang._('Profile') }}</th>
                 <th data-column-id="commands" data-width="7em" data-formatter="commands" >{{
                     lang._('Commands') }}
                 </th>
@@ -192,10 +192,8 @@ POSSIBILITY OF SUCH DAMAGE.
             <div class="row __mt">
                 <div class="col-md-12 __ml">
                     <b class="__mb">5G SA requires Home Network (Hnet) configuration in the UDM yml, for SUCI concealment.</b>
-                    <p>Once the key-pair is generated, the private key is stored in <code>/usr/ports/open5gs/install/etc/open5gs/hnet/</code>.<br>
-                        Use the public key when creating the SIM profile.<br>
-                        These values will be ignored if the UE uses the null (0) protection scheme.</p>
-                    <p> Both the HEX and PEM versions of the public key will be availed in the filepath you provide. </p>
+                    <p>{{ lang._('UDM records the private key path in its configuration. The generation result shows the exact paths for the private key and both public key files.') }}</p>
+                    <p>{{ lang._('Use the public key when creating the SIM profile. The null protection scheme does not use these keys.') }}</p>
                 </div>
             </div>
             {{ partial("layout_partials/base_form", ['fields': hnetForm, 'id': 'frm_hnet_settings']) }}
@@ -245,6 +243,11 @@ POSSIBILITY OF SUCH DAMAGE.
                     <div class="form-group">
                         &nbsp;&nbsp;<label>Public Key Path (PEM)</label>
                         &nbsp;&nbsp;<div class="well well-sm" id="hnet_result_path"></div>
+                    </div>
+
+                    <div class="form-group">
+                        &nbsp;&nbsp;<label>{{ lang._('Public Key Path (HEX)') }}</label>
+                        &nbsp;&nbsp;<div class="well well-sm" id="hnet_result_hex_path"></div>
                     </div>
 
                     <div class="row __mt">
@@ -338,12 +341,14 @@ POSSIBILITY OF SUCH DAMAGE.
                 $("#saveBulkAct_users_progress").removeClass("fa fa-spinner fa-pulse");
                 $("#file_uploaded").attr("style", "display:none");
                 $("#no_file").attr("style", "display:none");
-                if(data.length > 0 ){
-                    $("#duplicates").attr("style", "display:block");
-                    fadeOut("#duplicates")
+                if (data.result !== "processed") {
+                    BootstrapDialog.alert(data.message || "{{ lang._('Bulk insert failed') }}");
                 } else {
-                    $("#success").attr("style", "display:block");
-                    fadeOut("#success")
+                    BootstrapDialog.alert(
+                        "{{ lang._('Inserted') }}: " + data.inserted +
+                        " | {{ lang._('Duplicates skipped') }}: " + data.duplicates.length +
+                        " | {{ lang._('Failed records') }}: " + (data.failed.join(", ") || "0")
+                    );
                 }
 
 
@@ -359,6 +364,23 @@ POSSIBILITY OF SUCH DAMAGE.
             $("#saveAct_profile_progress").removeClass("fa fa-spinner fa-pulse");
         }, true);
 
+    }
+
+    function subscriberSaveFailed(data) {
+        $("#successfulSave").stop(true, true).hide();
+        let message = data && data.message;
+        if (data && data.validations) {
+            message = Object.values(data.validations).flat().join("\n");
+        }
+        if (!message && data && typeof data.result === "string" &&
+                !["failed", "Failed"].includes(data.result)) {
+            message = data.result;
+        }
+        BootstrapDialog.alert({
+            type: BootstrapDialog.TYPE_DANGER,
+            title: "{{ lang._('Subscriber save failed') }}",
+            message: $("<div>").text(message || "{{ lang._('The server did not confirm the save. Check the subscriber list before retrying.') }}")
+        });
     }
 
     function fadeOut(strings) {
@@ -389,7 +411,6 @@ POSSIBILITY OF SUCH DAMAGE.
                 processData: false, // Don't process the data
                 contentType: false, // Don't set content type (let jQuery decide)
                 success: function (response) {
-                    console.log('Response from server:', response);
                     if(response.result === 'failed'){
 
                         $("#no_file").attr("style", "display:block");
@@ -533,22 +554,15 @@ POSSIBILITY OF SUCH DAMAGE.
                     $("#btn_" + 'DialogAddUsers' + "_save").unbind('click').click(function () {
                         saveFormToEndpoint(url = "/api/opncell/user/addSub",
                             formid = 'frm_' + 'DialogAddUsers', callback_ok = function (data) {
-                                console.log(data.result)
-                                console.log(data)
-                                $("#" + 'DialogAddUsers').modal('hide');
-                               gridOptions.bootgrid("reload");
-                                if (data.result === "failed") {
-                                    $("#failedSave").attr("style", "display:block");
-                                    fadeOut("#failedSave")
-                                } else if(data.result === "saved"  || data.result === "Success" ) {
-                                    $("#successfulSave").attr("style", "display:block");
-                                    fadeOut("#successfulSave")
-                                } else {
-                                    $("#Error").text("The following DB error occured: " + data.result)
-                                        .attr("style", "display:block");
-                                    fadeOut("#Error")
+                                if (!["saved", "Success", "success"].includes(data.result)) {
+                                    subscriberSaveFailed(data);
+                                    return;
                                 }
-                            }, true);
+                                $("#DialogAddUsers").modal('hide');
+                                gridOptions.bootgrid("reload");
+                                $("#failedSave, #Error").hide();
+                                $("#successfulSave").stop(true, true).show().delay(5000).fadeOut("slow");
+                            }, true, subscriberSaveFailed);
                     });
                 }
                 else {
@@ -556,38 +570,34 @@ POSSIBILITY OF SUCH DAMAGE.
                 }
             });
 
-            // delete user
-            $(this).find(".command-delete").on("click", function (e) {
-                if (gridParams['del'] !== undefined) {
-                    var uuid = $(this).data("row-id");
-                    let imsi = $(this).data("row-imsi");
-                    stdDialogConfirm("{{ lang._('Confirm Subscriber Removal') }}", "{{ lang._('Do you want to remove the subscriber') }}" + "{{ lang._('""')}}" + imsi + "{{ lang._('"
-                    "')}}" + "{{ lang._(' ? ')}}", "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", function (data, status) {
-                        $("#deleting").attr("style", "display:block");
-                        fadeOut("#deleting")
+            $(this).find(".command-delete").on("click", function () {
+                const imsi = $(this).data("row-imsi");
+                stdDialogConfirm(
+                    "{{ lang._('Confirm Subscriber Removal') }}",
+                    "{{ lang._('Remove subscriber') }} " + imsi + "?",
+                    "{{ lang._('Yes') }}",
+                    "{{ lang._('Cancel') }}",
+                    function () {
+                        $("#successfulDelete, #failedDelete").stop(true, true).hide();
+                        $("#deleting").show();
                         $("#deleting_progress").addClass("fa fa-spinner fa-pulse");
-                        ajaxCall(url = "/api/opncell/user/deleteSubFromDB/"  + imsi, sendData = {}, callback = function (data, status) {
-                            if (data.result === "failed"){
-                                $("#deleting").attr("style", "display:none");
-                                $("#failedDelete").attr("style", "display:block");
-                                fadeOut("#failedDelete")
-
+                        ajaxCall("/api/opncell/user/deleteSubFromDB/" + encodeURIComponent(imsi), {}, function (data, status) {
+                            $("#deleting").hide();
+                            $("#deleting_progress").removeClass("fa fa-spinner fa-pulse");
+                            if (status === "success" && data && data.result === "deleted") {
+                                $("#successfulDelete").show().delay(5000).fadeOut("slow");
                             } else {
-                                $("#deleting").attr("style", "display:none");
-                                $("#successfulDelete").attr("style", "display:block");
-                                fadeOut("#successfulDelete")
+                                BootstrapDialog.alert({
+                                    type: BootstrapDialog.TYPE_DANGER,
+                                    title: "{{ lang._('Subscriber deletion failed') }}",
+                                    message: $("<div>").text(data && data.message ||
+                                        "{{ lang._('Deletion was not confirmed. Refresh the subscriber list before retrying.') }}")
+                                });
                             }
-                            console.log(data.result)
-                            updateServiceControlUI('opncell');
-                           gridOptions.bootgrid('reload');
-                            $("#successfulDelete").attr("style", "display:none");
-                            $("#failedDelete").attr("style", "display:none");
+                            gridOptions.bootgrid('reload');
                         });
                     }
-                )
-                } else {
-                    console.log("[grid] action del missing")
-                }
+                );
             });
 
            //Attach/replace/change a profile to existing user
@@ -603,28 +613,22 @@ POSSIBILITY OF SUCH DAMAGE.
                         formatTokenizersUI();
                         $('.selectpicker').selectpicker('refresh');
                         // clear validation errors (if any)
-                        clearFormValidation('frm_' + 'DialogUsers');
+                        clearFormValidation('frm_DialogUsers');
+                        $('#DialogUsers').modal({backdrop: 'static', keyboard: false});
                     });
-                    updateServiceControlUI('opncell')
-                    // show dialog for pipe edit
-                    $('#' + 'DialogUsers').modal({backdrop: 'static', keyboard: false});
-                    // define save action
-                    $("#btn_" + 'DialogUsers' + "_save").unbind('click').click(function () {
-                        $("#btn_" + 'DialogUsers' + "_save").append('<i id="saveBulkAct_users_progress"></i>').addClass("fa fa-spinner")
+                    // Save the profile selection for this subscriber.
+                    $("#btn_DialogUsers_save").off('click').on('click', function () {
                         if (gridParams['set'] !== undefined) {
-                            saveFormToEndpoint(url = "/api/opncell/user/setSub/" + imsi, formid = 'frm_' + 'DialogUsers', callback_ok = function (data) {
-                                $("#" + 'DialogUsers').modal('hide');
+                            saveFormToEndpoint("/api/opncell/user/setSub/" + imsi, 'frm_DialogUsers', function (data) {
+                                if (data.result !== "success") {
+                                    subscriberSaveFailed(data);
+                                    return;
+                                }
+                                $("#DialogUsers").modal('hide');
                                 gridOptions.bootgrid("reload");
-                                console.log(data)
-                                $("#btn_" + 'DialogUsers' + "_save").append('<i id="saveBulkAct_users_progress"></i>').removeClass("fa fa-spinner")
-                                // $("#saveAct_configs_progress").addClass("fa fa-spinner fa-pulse");
-                                ajaxCall(url = "/api/opncell/service/reconfigureAct/" + network, sendData = {}, callback = function (data, status) {
-                                    updateServiceControlUI('opncell');
-
-                                    // $("#saveAct_configs_progress").removeClass("fa fa-spinner fa-pulse");
-
-                                });
-                            }, true);
+                                $("#failedSave, #Error").hide();
+                                $("#successfulSave").stop(true, true).show().delay(5000).fadeOut("slow");
+                            }, true, subscriberSaveFailed);
                         } else {
                             console.log("[grid] action set missing")
                         }
@@ -635,33 +639,50 @@ POSSIBILITY OF SUCH DAMAGE.
             });
 
             $(this).find("*[data-action=deleteSelected]").on('click', function () {
-
-                console.log("clicked");
-                if (gridParams['del'] !== undefined) {
-                    stdDialogConfirm('{{ lang._("Confirm User removal") }}', '{{ lang._("Do you want to remove the selected users ? ") }}', '{{ lang._("Yes") }}', '{{ lang._("Cancel") }}', function () {
-                            var rows = gridOptions.bootgrid('getSelectedRows');
-                            console.log(rows);
-                            if (rows !== undefined) {
-                                let imsi = $(this).data("row-imsi");
-                                let uuid = $(this).data("row-uuid");
-                                var deferreds = [];
-                                $.each(rows, function (key, uuid) {
-                                    deferreds.push(ajaxCall(url = '/api/opncell/user/deleteSub/' + uuid, sendData = {}, null));
-                                });
-                                // refresh after load
-                                $.when.apply(null, deferreds).done(function () {
-                                    std_bootgrid_reload(gridOptions);
-
-                                });
-                            } else {
-                                console.log("undefined")
-                            }
-                        }
-                    )
-
-                } else {
-                    console.log("[grid] action del missing")
+                const selected = gridOptions.bootgrid('getSelectedRows').map(String);
+                const subscribers = gridOptions.bootgrid('getCurrentRows')
+                    .filter(row => selected.includes(String(row.uuid)));
+                if (!subscribers.length) {
+                    BootstrapDialog.alert("{{ lang._('Select at least one subscriber to delete.') }}");
+                    return;
                 }
+                stdDialogConfirm(
+                    "{{ lang._('Confirm Subscriber Removal') }}",
+                    "{{ lang._('Remove the selected subscribers?') }}",
+                    "{{ lang._('Yes') }}",
+                    "{{ lang._('Cancel') }}",
+                    function () {
+                        $("#successfulDelete, #failedDelete").stop(true, true).hide();
+                        $("#deleting").show();
+                        let remaining = subscribers.length;
+                        let deleted = 0;
+                        const failures = [];
+                        subscribers.forEach(function (subscriber) {
+                            ajaxCall("/api/opncell/user/deleteSubFromDB/" + encodeURIComponent(subscriber.imsi),
+                                {}, function (data, status) {
+                                    if (status === "success" && data && data.result === "deleted") {
+                                        deleted += 1;
+                                    } else {
+                                        const reason = data && data.message ||
+                                            "{{ lang._('Deletion was not confirmed. Refresh the subscriber list before retrying.') }}";
+                                        failures.push(subscriber.imsi + " — " + reason);
+                                    }
+                                    remaining -= 1;
+                                    if (remaining === 0) {
+                                        $("#deleting").hide();
+                                        gridOptions.bootgrid("reload");
+                                        const message = "{{ lang._('Subscribers deleted') }}: " + deleted +
+                                            (failures.length ? "\n" + failures.join("\n") : "");
+                                        BootstrapDialog.alert({
+                                            type: failures.length ? BootstrapDialog.TYPE_DANGER : BootstrapDialog.TYPE_SUCCESS,
+                                            title: "{{ lang._('Subscriber deletion results') }}",
+                                            message: $("<div>").css("white-space", "pre-wrap").text(message)
+                                        });
+                                    }
+                                });
+                        });
+                    }
+                );
             });
 
         });
@@ -860,9 +881,14 @@ POSSIBILITY OF SUCH DAMAGE.
                         <i class="fa fa-cog fa-spin"></i>
                     </div>
                 `);
-                    ajaxCall("/api/opncell/service/reconfigureAct/" + network, {}, function () {
-                        updateServiceControlUI("opncell");
+                    ajaxCall("/api/opncell/service/reconfigureAct/" + network, {}, function (result) {
                         dialogRef.close();
+                        if (result.result !== "applied") {
+                            BootstrapDialog.alert(result.message || "{{ lang._('Could not apply 5G SA configuration') }}");
+                            return;
+                        }
+                        localStorage.setItem('networkName', network);
+                        window.location.href = "/ui/opncell/general#other-configs";
                     });
                 }
             });
@@ -880,7 +906,6 @@ POSSIBILITY OF SUCH DAMAGE.
                     btnCancelLabel: 'No',
                     callback: function (result) {
                         if (result) {
-                            localStorage.setItem('networkName', 'enablefiveSA');
                             activateNetwork('enablefiveSA');
                         }
                     }
@@ -926,6 +951,7 @@ POSSIBILITY OF SUCH DAMAGE.
                         // fill result modal
                         if (payload.result === "ok") {
                             $("#hnet_result_path").text(payload.public_key_path);
+                            $("#hnet_result_hex_path").text(payload.public_key_hex_path);
                             $("#hnet_result_priv_path").text(payload.private_key_path);
                             $("#hnet_result_hex").text(payload.public_key_hex);
                             $("#hnet_result_pem").text(payload.public_key_pem);
@@ -1018,7 +1044,6 @@ POSSIBILITY OF SUCH DAMAGE.
                 callback: function (result) {
                     if (result) {
                         $("#hnetListModal").modal("hide");
-                        localStorage.setItem('networkName', 'enablefiveSA');
                         activateNetwork('enablefiveSA');
                     }
                 }
@@ -1044,7 +1069,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 </script>
 {# include dialogs #}
-{{ partial("layout_partials/base_dialog",['fields':formDialogEditUser,'id':'DialogUsers','label':lang._('Change user Profile:'),'hasSaveBtn':'true'])}}
+{{ partial("layout_partials/base_dialog",['fields':formDialogAddUser,'id':'DialogUsers','label':lang._('Edit User:'),'hasSaveBtn':'true'])}}
 {{ partial("layout_partials/base_dialog",['fields':formDialogAddUser,'id':'DialogAddUsers','label':lang._('Add Subscriber:'),'hasSaveBtn':'true'])}}
 {{ partial("layout_partials/base_dialog",['fields':formDialogEditProfile,'id':'DialogProfile','label':lang._('Edit Profile Details:'),'hasSaveBtn':'true'])}}
 {{ partial("layout_partials/base_dialog_processing") }}

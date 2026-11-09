@@ -1,0 +1,3 @@
+if [ -x /usr/local/sbin/configctl ]; then
+    /usr/local/sbin/configctl template reload "%%ARG%%"
+fi

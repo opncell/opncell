@@ -1,4 +1,6 @@
-{% if helpers.exists('OPNsense.opncell.general.enablefiveSA') and OPNsense.opncell.general.enablefiveSA == '1' %}
+{% set cellular = (OPNsense | default({})).get('opncell') or {} %}
+{% set general = cellular.get('general') or {} %}
+{% if general.get('enablefiveSA') == '1' %}
 epcbsfd_enable="YES"
 epcbsfd_setup="/usr/local/opnsense/scripts/opncell/epcbsf_setup.sh"
 {% else %}

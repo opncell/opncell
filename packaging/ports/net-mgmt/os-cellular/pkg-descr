@@ -1,0 +1,4 @@
+OPNcell integration package for OPNsense.
+
+Provides the OPNsense management layer for Open5GS and depends on
+Open5GS and MongoDB 8 runtime packages.

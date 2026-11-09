@@ -32,8 +32,8 @@ namespace OPNsense\OPNCell\Api;
 
 use OPNsense\Base\BaseModel;
 use OPNsense\Base\UserException;
+use OPNsense\OPNCell\ServiceNames;
 use OPNsense\Core\Backend;
-use OPNsense\Core\Config;
 
 
 use OPNsense\Mvc\Request;
@@ -76,50 +76,24 @@ class GeneralController extends ApiMutableModelControllerBase
         }
         return $result;
     }
-    /**
-     * @throws \Exception
-     */
-    public function setNetwork($network): array
-    {
-        $result = array("result" => "failed");
-        $mdlGeneral = new General();
-        $this->request = new Request();
-        $mdlGeneral->setNodes($this->request->getPost("general"));
-        $mdlGeneral->setNodes(["enablefour" => "0"]);
-        $mdlGeneral->setNodes(["enablefiveSA" => "0"]);
-        $mdlGeneral->setNodes(["enablefiveNSA" => "0"]);
-        $mdlGeneral->setNodes(["enableupf" => "0"]);
-        $mdlGeneral->setNodes([$network => "1"]);
-        $valMsgs = $mdlGeneral->performValidation();
-        foreach ($valMsgs as $field => $msg) {
-            if (!array_key_exists("validations", $result)) {
-                $result["validations"] = array();
-            }
-            $result["validations"]["general." . $msg->getField()] = $msg->getMessage();
-        }
-        //serialize model to config and save
-        if ($valMsgs->count() == 0) {
-            $mdlGeneral->serializeToConfig();
-            Config::getInstance()->save();
-            $result["result"] = "saved";
-        }
-        return $result;
-    }
     public function statusAction($serviceName)
     {
+        $topic = ServiceNames::topic($serviceName);
+        if ($topic === null) {
+            return 'unknown';
+        }
         $backend = new Backend();
         $model = new Opncell();
         try {
-            $response = $backend->configdRun($serviceName ." " . "status");
-            $mynode = "enable".$serviceName;
-            $node = str_replace('"', '', $mynode);
-            if (strpos($response, "not running") > 0) {
-                if ($serviceName == 'mongod') {
+            $response = (string)$backend->configdRun($topic . ' status');
+            $node = 'enable' . $topic;
+            if (strpos($response, "not running") !== false) {
+                if ($topic === 'mongod') {
                     $status = "stopped";
                 } else {
                     $status = ($model->$node->__toString() == 1) ? "stopped" : "disabled";
                 }
-            } elseif (strpos($response, "is running") > 0) {
+            } elseif (strpos($response, "is running") !== false) {
                 $status = "running";
             } else {
                 $status = "unknown";
@@ -132,39 +106,28 @@ class GeneralController extends ApiMutableModelControllerBase
 
     public function editServerConfigAction($params)
     {
-        $result = array();
+        if (!(new Request())->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        $parts = explode(',', $params);
+        $topic = ServiceNames::topic($parts[0]);
+        if (count($parts) !== 3 || $topic === null) {
+            return ['result' => 'failed', 'message' => 'Invalid cellular service'];
+        }
         $backend = new Backend();
-        $parts = explode(",", $params);
-        $net['server'] = $parts[0];
-        $net['pid'] = $parts[1];
-        $net['ip'] = $parts[2];
+        $net = ['server' => $topic, 'pid' => $parts[1], 'ip' => $parts[2]];
         $val = json_encode($net);
-        $backend->configdpRun("opncell editServerConf", array($val));
-        //Restart that service
-        $backend->configdRun($net['server'] . ' '. 'stop');
-        $backend->configdRun($net['server'] . ' '. 'start');
+        $response = $backend->configdpRun('opncell editServerConf', [$val]);
+        $result = json_decode((string)$response, true);
+        if (($result['result'] ?? '') !== 'saved') {
+            return $result ?? ['result' => 'failed', 'message' => 'Could not save the service configuration'];
+        }
+        $backend->configdRun($topic . ' stop');
+        if ($backend->configdRun($topic . ' start') !== 'OK') {
+            return ['result' => 'failed', 'message' => 'Address saved, but the service failed to start'];
+        }
+        return $result;
     }
-
-    private array $processDescriptions = [
-        'mme' => 'Mobility Management Entity ',
-        'hss' => 'Home Subscriber System ',
-        'pcrf' => 'Policy and Charging Rules Function',
-        'sgwu' => 'Serving Gateway User Plane',
-        'ausf' => 'Authentication Server Function',
-        'amf' => 'Access and Mobility Function',
-        'udm' => 'Unified Data Management',
-        'smf' => 'Session Management Function',
-        'pcf' => 'Policy and Charging Function',
-        'nssf' => 'Network Slice Selection Function',
-        'sgwc' => 'Serving Gateway Control Plane',
-        'upf' => 'User Plane Function',
-        'nrf' => 'Network Repository Function',
-        'scp' => 'Service Communication Proxy',
-        'bsf' => 'Binding Support Function',
-        'mongo' => 'Mongo DB',
-        'udr' => 'Unified Data Repository',
-        'SEPP' => 'Security Edge Protection Proxy'
-    ];
 
     private array $bindAddress = [
         'hssd' => '127.0.0.8',
@@ -187,28 +150,30 @@ class GeneralController extends ApiMutableModelControllerBase
 
         if ($data != null) {
             foreach ($data as $index => $process) {
-                $item = $this->formatProcessData($index, $process);
-                $result[] = $item;
+                $topic = ServiceNames::topic($process['Name'] . 'd');
+                if ($topic !== null) {
+                    $result[] = $this->formatProcessData($index, $process, $topic);
+                }
             }
         }
 
         return $result;
     }
 
-    private function formatProcessData($index, $process): array
+    private function formatProcessData($index, $process, string $topic): array
     {
         $item = [];
         $item['uuid'] = $index;
-        $serviceName = $process['Name'] . "d";
+        $serviceName = ServiceNames::canonical($topic);
         $item['status'] = $this->statusAction($serviceName);
         $item['serviceName'] = $serviceName;
-        $item['name'] = $this->processDescriptions[$process['Name']] . " - (" . $process['Name'] . ")";
+        $item['name'] = $serviceName;
         $item['PID'] = $process['PID'];
 
-        if (isset($this->bindAddress[$serviceName])) {
-            $item['mme_add'] = $this->bindAddress[$serviceName];
+        if (isset($this->bindAddress[$topic])) {
+            $item['mme_add'] = $this->bindAddress[$topic];
         } else {
-            foreach ($process['config'] as $configKey => $configValue) {
+            foreach ($process['config'] ?? [] as $configKey => $configValue) {
                 $this->extractProcessConfig($item, $configKey, $configValue);
             }
         }
@@ -236,10 +201,17 @@ class GeneralController extends ApiMutableModelControllerBase
         }
     }
 
-    public function startedServicesAction($network): array
+    public function startedServicesAction($network = null): array
     {
-//        $this->sessionClose(); # no longer needed or supported RPH 2026-01-24
-        $result = $this->getProcessNamesAction($network);
+        if ($network === null) {
+            $settings = (new General())->getNodes();
+            $enabled = array_filter(
+                ['enablefour', 'enablefiveSA', 'enablefiveNSA', 'enableupf'],
+                static fn ($mode) => (string)($settings[$mode] ?? '') === '1'
+            );
+            $network = count($enabled) === 1 ? reset($enabled) : null;
+        }
+        $result = $network === null ? [] : $this->getProcessNamesAction($network);
         $this->request = new Request();
         $itemsPerPage = $this->request->getPost('rowCount', 'int', 9999);
         $currentPage = $this->request->getPost('current', 'int', 1);

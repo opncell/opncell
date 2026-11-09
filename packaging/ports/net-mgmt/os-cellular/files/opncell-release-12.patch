@@ -1,0 +1,96 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -21,18 +21,22 @@
+         const toggle = $("#opncell_log_refresh_toggle");
+         let timer = null;
+ 
+-        $("#opncell_log_refresh").prependTo("#grid-log-header .actionBar .actions");
+-
+-        const bar = $("#grid-log-header .actionBar");
+-        const details = $('<div class="opncell-log-details"></div>').css({
+-            display: "flex", clear: "both", width: "100%", gap: "16px",
+-            alignItems: "center", flexWrap: "wrap", paddingTop: "8px"
+-        });
+-        bar.css({display: "flex", flexWrap: "wrap", alignItems: "center"});
+-        details.append($("#opncell_log_path"));
++        const bar = $("#grid-log-header .actionBar").addClass("opncell-log-toolbar");
++        const top = $('<div class="opncell-log-top"></div>');
++        const buttons = $('<div class="opncell-log-buttons"></div>');
++        const details = $('<div class="opncell-log-details"></div>');
++        top.append(bar.find(".search").first().detach());
++        const severity = $("#severity_filter");
++        top.append(severity.closest(".bootstrap-select").length ? severity.closest(".bootstrap-select").detach() : severity.detach());
++        buttons.append($("#opncell_log_refresh").detach());
++        buttons.append(bar.find(".actions").first().detach());
++        buttons.append($("#command-wrapper").detach());
++        top.append(buttons);
++        details.append($("#opncell_log_path").detach());
+         const timeframe = $("#validFrom_filter");
+-        details.append(timeframe.closest(".bootstrap-select").length ? timeframe.closest(".bootstrap-select") : timeframe);
+-        bar.append(details);
++        details.append(timeframe.closest(".bootstrap-select").length ? timeframe.closest(".bootstrap-select").detach() : timeframe.detach());
++        $("#filter_container").remove();
++        bar.append(top, details);
+         // Replace the core handlers: direct daemon files must not be unlinked.
+         $("#flushlog").off("click").on("click", function (event) {
+             event.preventDefault();
+@@ -89,3 +93,59 @@
+         });
+     });
+ </script>
++
++<style>
++#grid-log-header .opncell-log-toolbar {
++    display: flex;
++    flex-direction: column;
++    align-items: stretch;
++    gap: 12px;
++    text-align: left;
++}
++.opncell-log-top {
++    display: flex;
++    flex-wrap: wrap;
++    align-items: center;
++    gap: 8px;
++}
++#grid-log-header .opncell-log-top .search {
++    float: none;
++    flex: 1 1 260px;
++    min-width: 180px;
++    max-width: 380px;
++    margin: 0;
++}
++.opncell-log-buttons {
++    display: flex;
++    flex-wrap: wrap;
++    align-items: center;
++    gap: 8px;
++}
++#grid-log-header .opncell-log-buttons .actions,
++#grid-log-header .opncell-log-buttons #command-wrapper {
++    float: none;
++    display: inline-flex;
++    flex-wrap: nowrap;
++    width: auto;
++    margin: 0;
++}
++.opncell-log-details {
++    display: flex;
++    flex-wrap: wrap;
++    align-items: center;
++    gap: 12px;
++}
++#opncell_log_path {
++    flex: 0 1 380px;
++    min-width: 0;
++    margin: 0;
++    padding: 0 !important;
++}
++@media (max-width: 640px) {
++    #grid-log-header .opncell-log-top .search {
++        flex-basis: 100%;
++        max-width: none;
++    }
++    #opncell_log_path { flex-basis: 100%; }
++}
++</style>

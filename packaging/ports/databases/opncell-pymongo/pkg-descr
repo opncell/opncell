@@ -1,0 +1,4 @@
+Unmodified PyMongo Python modules in a private OPNcell directory, using the
+upstream pure-Python fallback and the appliance's existing Python 3.13.
+Intended for local-IP subscriber reads. No shared command-line programs,
+site-package replacements, native extensions, or DNS/TLS extras are installed.

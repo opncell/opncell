@@ -63,6 +63,10 @@ class HnetController extends ApiMutableModelControllerBase
 
    public function addAction(): array
      {
+         if (!(new Request())->isPost()) {
+             return ["result" => "failed", "message" => "POST required"];
+         }
+
        $result = array("result" => "failed");
 
                $mdlHnet = new Hnet();
@@ -91,6 +95,10 @@ class HnetController extends ApiMutableModelControllerBase
 
    public function generateAction(): array
      {
+         if (!(new Request())->isPost()) {
+             return ["result" => "failed", "message" => "POST required"];
+         }
+
          $backend = new Backend();
 
          $mdlHnet = new Hnet();
@@ -133,13 +141,6 @@ private function prepareHnetForKeyGeneration($hnetData)
     }
 
    $pubkeyPath = rtrim($hnetData['filepath'], '/').'/hnet_pubkey_';
-
-    // Ensure directory exists
-    $dir = dirname($pubkeyPath);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-
 
     return [ 'id'   => (int)$hnetData['id'],
         'scheme'      => $scheme,

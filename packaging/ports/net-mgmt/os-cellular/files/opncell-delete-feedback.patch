@@ -1,0 +1,220 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
+@@ -581,13 +581,18 @@
+                         $("#successfulDelete, #failedDelete").stop(true, true).hide();
+                         $("#deleting").show();
+                         $("#deleting_progress").addClass("fa fa-spinner fa-pulse");
+-                        ajaxCall("/api/opncell/user/deleteSubFromDB/" + encodeURIComponent(imsi), {}, function (data) {
++                        ajaxCall("/api/opncell/user/deleteSubFromDB/" + encodeURIComponent(imsi), {}, function (data, status) {
+                             $("#deleting").hide();
+                             $("#deleting_progress").removeClass("fa fa-spinner fa-pulse");
+-                            if (data.result === "deleted") {
++                            if (status === "success" && data && data.result === "deleted") {
+                                 $("#successfulDelete").show().delay(5000).fadeOut("slow");
+                             } else {
+-                                $("#failedDelete").show().delay(5000).fadeOut("slow");
++                                BootstrapDialog.alert({
++                                    type: BootstrapDialog.TYPE_DANGER,
++                                    title: "{{ lang._('Subscriber deletion failed') }}",
++                                    message: $("<div>").text(data && data.message ||
++                                        "{{ lang._('Deletion was not confirmed. Refresh the subscriber list before retrying.') }}")
++                                });
+                             }
+                             gridOptions.bootgrid('reload');
+                         });
+@@ -634,33 +639,50 @@
+             });
+ 
+             $(this).find("*[data-action=deleteSelected]").on('click', function () {
+-
+-                console.log("clicked");
+-                if (gridParams['del'] !== undefined) {
+-                    stdDialogConfirm('{{ lang._("Confirm User removal") }}', '{{ lang._("Do you want to remove the selected users ? ") }}', '{{ lang._("Yes") }}', '{{ lang._("Cancel") }}', function () {
+-                            var rows = gridOptions.bootgrid('getSelectedRows');
+-                            console.log(rows);
+-                            if (rows !== undefined) {
+-                                let imsi = $(this).data("row-imsi");
+-                                let uuid = $(this).data("row-uuid");
+-                                var deferreds = [];
+-                                $.each(rows, function (key, uuid) {
+-                                    deferreds.push(ajaxCall(url = '/api/opncell/user/deleteSub/' + uuid, sendData = {}, null));
++                const selected = gridOptions.bootgrid('getSelectedRows').map(String);
++                const subscribers = gridOptions.bootgrid('getCurrentRows')
++                    .filter(row => selected.includes(String(row.uuid)));
++                if (!subscribers.length) {
++                    BootstrapDialog.alert("{{ lang._('Select at least one subscriber to delete.') }}");
++                    return;
++                }
++                stdDialogConfirm(
++                    "{{ lang._('Confirm Subscriber Removal') }}",
++                    "{{ lang._('Remove the selected subscribers?') }}",
++                    "{{ lang._('Yes') }}",
++                    "{{ lang._('Cancel') }}",
++                    function () {
++                        $("#successfulDelete, #failedDelete").stop(true, true).hide();
++                        $("#deleting").show();
++                        let remaining = subscribers.length;
++                        let deleted = 0;
++                        const failures = [];
++                        subscribers.forEach(function (subscriber) {
++                            ajaxCall("/api/opncell/user/deleteSubFromDB/" + encodeURIComponent(subscriber.imsi),
++                                {}, function (data, status) {
++                                    if (status === "success" && data && data.result === "deleted") {
++                                        deleted += 1;
++                                    } else {
++                                        const reason = data && data.message ||
++                                            "{{ lang._('Deletion was not confirmed. Refresh the subscriber list before retrying.') }}";
++                                        failures.push(subscriber.imsi + " — " + reason);
++                                    }
++                                    remaining -= 1;
++                                    if (remaining === 0) {
++                                        $("#deleting").hide();
++                                        gridOptions.bootgrid("reload");
++                                        const message = "{{ lang._('Subscribers deleted') }}: " + deleted +
++                                            (failures.length ? "\n" + failures.join("\n") : "");
++                                        BootstrapDialog.alert({
++                                            type: failures.length ? BootstrapDialog.TYPE_DANGER : BootstrapDialog.TYPE_SUCCESS,
++                                            title: "{{ lang._('Subscriber deletion results') }}",
++                                            message: $("<div>").css("white-space", "pre-wrap").text(message)
++                                        });
++                                    }
+                                 });
+-                                // refresh after load
+-                                $.when.apply(null, deferreds).done(function () {
+-                                    std_bootgrid_reload(gridOptions);
+-
+-                                });
+-                            } else {
+-                                console.log("undefined")
+-                            }
+-                        }
+-                    )
+-
+-                } else {
+-                    console.log("[grid] action del missing")
+-                }
++                        });
++                    }
++                );
+             });
+ 
+         });
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/UserController.php
+@@ -267,13 +267,22 @@
+     public function deleteSubFromDBAction($imsi): array
+     {
+         if (!(new \OPNsense\Mvc\Request())->isPost() || !preg_match('/^[0-9]{5,16}$/D', $imsi)) {
+-            return ['result' => 'failed'];
++            return ['result' => 'failed', 'message' => 'Invalid subscriber deletion request'];
+         }
+ 
+         $repository = new UserRepository(new Backend());
+         $result = $repository->deleteUser($imsi);
+-        if ($result !== 'deleted') {
+-            return ['result' => $result === 'not found' ? 'not found' : 'failed'];
++        if (is_array($result)) {
++            if (($result['result'] ?? '') !== 'deleted') {
++                return $result;
++            }
++        } elseif ($result !== 'deleted') {
++            return [
++                'result' => $result === 'not found' ? 'not found' : 'failed',
++                'message' => $result === 'not found'
++                    ? 'Subscriber was not found in MongoDB. Refresh the subscriber list.'
++                    : 'Deletion was not confirmed. Refresh the subscriber list before retrying.',
++            ];
+         }
+ 
+         $users = $this->getModelNodes()['users']['user'] ?? [];
+--- a/opnsense/scripts/opncell/deleteUser.py
++++ b/opnsense/scripts/opncell/deleteUser.py
+@@ -1,30 +1,58 @@
+ #!/usr/local/bin/python3
+ 
+ import json
++import os
+ import re
++import shutil
+ import subprocess
+ import sys
+ 
++from subscriber_identity import mongosh_failure
++
+ 
+ def main():
+-    result = "failed"
+     try:
+         data = json.loads(sys.argv[1])
+         if isinstance(data, list) and len(data) == 1:
+             data = data[0]
+         imsi = data["imsi"]
+-        if re.fullmatch(r"[0-9]{5,15}", imsi):
+-            output = subprocess.check_output(
+-                ["/usr/local/opnsense/scripts/opncell/opncell_db.sh", "remove", imsi],
+-                text=True,
+-            ).strip()
+-            if output == "1":
+-                result = "deleted"
+-            elif output == "0":
+-                result = "not found"
+-    except (IndexError, KeyError, TypeError, ValueError, OSError, subprocess.CalledProcessError):
+-        pass
+-    print(json.dumps(result))
++        if not isinstance(imsi, str) or not re.fullmatch(r"[0-9]{5,16}", imsi):
++            print(json.dumps({"result": "failed", "message": "Invalid subscriber IMSI"}))
++            return
++        mongosh = shutil.which("mongosh")
++        if not mongosh:
++            print(json.dumps({"result": "failed", "message": "MongoDB Shell (mongosh) is required for subscriber management"}))
++            return
++        command = """
++try {
++    const result = db.subscribers.deleteOne({imsi: IMSI});
++    if (!result.acknowledged) {
++        print(JSON.stringify({result: "failed", message: "MongoDB did not acknowledge the deletion"}));
++    } else if (result.deletedCount === 1) {
++        print(JSON.stringify({result: "deleted"}));
++    } else {
++        print(JSON.stringify({result: "not found", message: "Subscriber was not found in MongoDB. Refresh the subscriber list."}));
++    }
++} catch (error) {
++    print(JSON.stringify({result: "failed", message: error.code === 13
++        ? "MongoDB denied permission to delete subscribers."
++        : "MongoDB rejected the deletion. Check the MongoDB log."}));
++}
++"""
++        uri = os.environ.get("DB_URI") or "mongodb://127.0.0.1:27017/open5gs"
++        output = subprocess.run(
++            [mongosh, "--quiet", uri, "--eval", "const IMSI = " + json.dumps(imsi) + ";\n" + command],
++            capture_output=True, text=True, check=False,
++        )
++        lines = output.stdout.strip().splitlines()
++        if not lines:
++            print(json.dumps({"result": "failed", "message": mongosh_failure(output.stderr, operation="delete")}))
++            return
++        print(json.dumps(json.loads(lines[-1])))
++    except (IndexError, KeyError, TypeError, ValueError):
++        print(json.dumps({"result": "failed", "message": "Deletion was not confirmed. Refresh the subscriber list before retrying."}))
++    except OSError:
++        print(json.dumps({"result": "failed", "message": "Could not execute MongoDB Shell. Check its installation and permissions."}))
+ 
+ 
+ if __name__ == "__main__":
+--- a/opnsense/scripts/opncell/subscriber_identity.py
++++ b/opnsense/scripts/opncell/subscriber_identity.py
+@@ -226,7 +226,7 @@
+         return json.loads(payload)
+ 
+ 
+-def mongosh_failure(output):
++def mongosh_failure(output, *, operation="save"):
+     """Return a useful error without exposing database URIs or subscriber secrets."""
+     error = output.lower()
+     if "authentication failed" in error or "auth failed" in error:
+@@ -237,4 +237,4 @@
+         return "Could not connect to MongoDB. Check its service and connection settings."
+     if "document failed validation" in error:
+         return "MongoDB rejected the subscriber because it does not match the database validation rules."
+-    return "MongoDB Shell did not confirm the save. Check the subscriber list before retrying."
++    return f"MongoDB Shell did not confirm the {operation}. Check the subscriber list before retrying."
