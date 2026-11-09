@@ -1,6 +1,6 @@
 PORTNAME=       os-cellular
 PORTVERSION=    26.7.2
-PORTREVISION=   20
+PORTREVISION=   21
 CATEGORIES=     net-mgmt
 
 MAINTAINER=     support@ds.co.ug
@@ -52,6 +52,7 @@ post-extract:
 	${PATCH} -V none -d ${WRKSRC}/src -p1 < ${FILESDIR}/opncell-release-16.patch
 	${PATCH} -V none -d ${WRKSRC}/src -p1 < ${FILESDIR}/opncell-release-19.patch
 	${PATCH} -V none -d ${WRKSRC}/src -p1 < ${FILESDIR}/opncell-release-20.patch
+	${PATCH} -V none -d ${WRKSRC}/src -p1 < ${FILESDIR}/opncell-release-21.patch
 	${SED} -i "" -e 's|npx mongosh|${PREFIX}/bin/mongosh|g' ${WRKSRC}/src/opnsense/scripts/opncell/opncell_db.sh
 
 

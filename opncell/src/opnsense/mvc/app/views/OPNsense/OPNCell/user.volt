@@ -62,6 +62,7 @@ POSSIBILITY OF SUCH DAMAGE.
             <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">
                 <h3 style="margin: 0;">{{ lang._('Below is a template for what the expected import file SHOULD look like:') }}</h3>
                 <a class="btn btn-default" href="/api/opncell/user/template"><i class="fa fa-download"></i> {{ lang._('Download template') }}</a>
+                <a class="btn btn-default" href="/api/opncell/user/export"><i class="fa fa-download"></i> {{ lang._('Export subscribers') }}</a>
             </div>
             <p>{{ lang._('CSV example: commas separate fields. Leave optional fields empty. Enter OP or OPc, not both. Preserve leading zeros in IMSI and key values. Values containing commas, such as JSON settings, must be enclosed in double quotes; double quotes inside a value must be doubled.') }}</p>
             <pre style="overflow-x: auto; white-space: pre;">imsi,ki,opc,op,amf,msisdn,profiles,ue_ambr_downlink,ue_ambr_downlink_unit,ue_ambr_uplink,ue_ambr_uplink_unit,subscriber_status,operator_determined_barring,default_slice,session_addresses,pcc_rules
