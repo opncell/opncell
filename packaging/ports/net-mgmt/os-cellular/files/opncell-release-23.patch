@@ -1,0 +1,34 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
+@@ -1,18 +1,3 @@
+-<style>
+-    #grid-user-list-header .actionBar {
+-        display: flex;
+-        align-items: center;
+-        justify-content: flex-end;
+-        flex-wrap: wrap;
+-        gap: 8px;
+-    }
+-    #grid-user-list-header .actionBar > .search,
+-    #grid-user-list-header .actionBar > .actions {
+-        float: none;
+-        margin: 0;
+-    }
+-    #subscriber-export { flex: 0 0 auto; }
+-</style>
+ {#
+ 
+ Copyright (C) 2026 Digital Solutions
+@@ -532,9 +517,9 @@
+          * copy actions for selected items from opnsense_bootgrid_plugin.js User Edition
+          */
+         function placeSubscriberExport() {
+-            const search = $("#grid-user-list-header .search").first();
+-            if (search.length) {
+-                $("#subscriber-export").insertBefore(search).show();
++            const actions = $("#grid-user-list-header .actions").first();
++            if (actions.length) {
++                $("#subscriber-export").appendTo(actions).show();
+             }
+         }
+         placeSubscriberExport();
