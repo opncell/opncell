@@ -1,0 +1,10 @@
+{
+  "staged_url": "http://repo.opncell.io/releases/26.7.2_27/repo",
+  "http_files_verified": 117,
+  "abi14_preserved": true,
+  "cpu_routes": [
+    "noavx",
+    "avx2"
+  ],
+  "public_activated": false
+}

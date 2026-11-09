@@ -1,0 +1,23 @@
+{
+  "avx": {
+    "version": "8.0.34_1",
+    "binary_sha256": "9beee20223b5f9aaa5d8a08f5c2ac22ddb610ee0c8e8af748bdedd7e2564399b",
+    "cpu_profile": "avx",
+    "package_sha256": "979998024cc113ecb656f7bd848ebd3855044c7151a827e6d602b4335a479164",
+    "status": "preflight-passed",
+    "repository": "OPNcell",
+    "persistent_configuration_changed": false,
+    "packages_installed": false
+  },
+  "noavx": {
+    "version": "8.0.34_3",
+    "binary_sha256": "52f7e538e906469f5fc3eed3ae23faa6c8da598b09cfe34c5fa1c583ef5251ff",
+    "cpu_profile": "noavx",
+    "package_sha256": "58702bf6382c03478800c265cea34d7ceb76a977eb8ecf997f1d0e01e78d4797",
+    "status": "preflight-passed",
+    "repository": "OPNcell",
+    "persistent_configuration_changed": false,
+    "packages_installed": false
+  },
+  "abi14": "os-cellular-25.8.12_2 FreeBSD:14:amd64"
+}
