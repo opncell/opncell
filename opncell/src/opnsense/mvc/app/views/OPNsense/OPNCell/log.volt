@@ -31,7 +31,6 @@ $.ajaxPrefilter(function (options) {
     options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
 });
 </script>
-<p><a href="/ui/opncell/log">{{ lang._('Active daemon logs') }}</a></p>
 {{ partial("OPNsense/Diagnostics/log") }}
 
 <div id="opncell_log_refresh" class="btn-group">

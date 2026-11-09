@@ -36,7 +36,7 @@ namespace {
         return $controller;
     }
     $c=controller(); $c->indexAction();
-    if ($c->view->template !== 'OPNsense/OPNCell/diagnostics') throw new RuntimeException('Active log landing page missing');
+    if ($c->response->location !== '/ui/opncell/log/index/mme') throw new RuntimeException('Direct active log redirect missing');
     $c=controller(); $c->indexAction('open5gs-mmed');
     if ($c->view->template !== 'OPNsense/OPNCell/log' || $c->view->opncell_log_path !== '/var/log/opncell/mme.log') throw new RuntimeException('Active log did not open');
     $c=controller(); $c->indexAction('open5gs-amfd');

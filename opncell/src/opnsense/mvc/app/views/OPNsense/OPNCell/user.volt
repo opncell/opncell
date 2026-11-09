@@ -58,27 +58,15 @@ POSSIBILITY OF SUCH DAMAGE.
     </div>
     <div id="bulkinsert" class="tab-pane fade in">
         <div class="col-md-12">
-            <h3>{{ lang._('- For bulk insertion of users, use file upload. Allowed file formats are .inc or .csv
-                file. Below is a template for what an expected file SHOULD look like')}}<br/></h3>
-            <h3>{{ lang._('-  Below is a template for what the expected file SHOULD look like')}}<br/></h3>
-
-            <table class="table table-condensed table-bordered">
-                <thead>
-                <tr>
-                    <th>imsi</th>
-                    <th>ki</th>
-                    <th>opc</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>9997080930195106</td>
-                    <td>1c59cca0c8b14605944fe3d6c1037b85</td>
-                    <td>789403E75282063E5B3C52FE823077C919</td>
-                </tr>
-                </tbody>
-            </table>
-            <br>
+            <p>{{ lang._('Upload a .csv or .inc file to add subscribers in bulk. Download the empty CSV template, keep the header row, and enter one subscriber per row.') }}</p>
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">
+                <h3 style="margin: 0;">{{ lang._('Below is a template for what the expected import file SHOULD look like:') }}</h3>
+                <a class="btn btn-default" href="/api/opncell/user/template"><i class="fa fa-download"></i> {{ lang._('Download template') }}</a>
+            </div>
+            <p>{{ lang._('CSV example: commas separate fields. Leave optional fields empty. Enter OP or OPc, not both. Preserve leading zeros in IMSI and key values. Values containing commas, such as JSON settings, must be enclosed in double quotes; double quotes inside a value must be doubled.') }}</p>
+            <pre style="overflow-x: auto; white-space: pre;">imsi,ki,opc,op,amf,msisdn,profiles,ue_ambr_downlink,ue_ambr_downlink_unit,ue_ambr_uplink,ue_ambr_uplink_unit,subscriber_status,operator_determined_barring,default_slice,session_addresses,pcc_rules
+001010000000001,00112233445566778899aabbccddeeff,ffeeddccbbaa99887766554433221100,,,,,,,,,,,,,</pre>
+            <p>{{ lang._('Export subscribers downloads these fields for existing subscribers. Profiles are matched by slice and APN; matching profiles must exist on this appliance. Leave profiles empty to use the profiles selected below. Other optional columns use their defaults when empty.') }}</p>
             <form method="post" id="uploadForm" enctype="multipart/form-data">
                 <input type="file" name="file" id="fileInput">
                 <br>
@@ -125,6 +113,7 @@ POSSIBILITY OF SUCH DAMAGE.
         <!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
         <!--        </button>-->
 
+        <p><a class="btn btn-default" href="/api/opncell/user/export"><i class="fa fa-download"></i> {{ lang._('Export subscribers') }}</a></p>
         <table id="grid-user-list" class="table table-condensed table-hover table-striped table-responsive"
                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
             <thead>
@@ -347,7 +336,7 @@ POSSIBILITY OF SUCH DAMAGE.
                     BootstrapDialog.alert(
                         "{{ lang._('Inserted') }}: " + data.inserted +
                         " | {{ lang._('Duplicates skipped') }}: " + data.duplicates.length +
-                        " | {{ lang._('Failed records') }}: " + (data.failed.join(", ") || "0")
+                        " | {{ lang._('Failed records') }}: " + (data.failed.join(", ") || "0") + ((data.errors || []).length ? " | " + data.errors.join("; ") : "")
                     );
                 }
 

@@ -6,20 +6,28 @@ class LogController extends \OPNsense\Diagnostics\LogController
 {
     public function indexAction($scope = '')
     {
-        if ($scope === '') {
-            $this->renderPage('opncell', '');
-            $this->view->pick('OPNsense/OPNCell/diagnostics');
-            return;
-        }
-        $scope = ServiceNames::logScope($scope);
-        if ($scope === null) {
-            return $this->response->setStatusCode(404, 'Not Found');
+        if ($scope !== '') {
+            $scope = ServiceNames::logScope($scope);
+            if ($scope === null) {
+                return $this->response->setStatusCode(404, 'Not Found');
+            }
         }
 
         $backend = new \OPNsense\Core\Backend();
         $active = json_decode($backend->configdpRun('opncell activeLogs', []), true);
         if (!is_array($active) || ($active['status'] ?? '') !== 'ok') {
             return $this->response->setStatusCode(503, 'Unable to inspect active daemons');
+        }
+        if ($scope === '') {
+            $scopes = array_column($active['rows'] ?? [], 'scope');
+            foreach (array_merge(['amf', 'mme'], $scopes) as $candidate) {
+                if (is_string($candidate) && ServiceNames::logScope($candidate) !== null && in_array($candidate, $scopes, true)) {
+                    return $this->response->redirect('/ui/opncell/log/index/' . $candidate);
+                }
+            }
+            $this->renderPage('opncell', '');
+            $this->view->pick('OPNsense/OPNCell/diagnostics');
+            return;
         }
         if (!in_array($scope, array_column($active['rows'], 'scope'), true)) {
             return $this->response->redirect('/ui/opncell/log');

@@ -61,6 +61,33 @@ class UserController extends ApiMutableModelControllerBase
     public \OPNsense\Mvc\Request $request;
 
 
+    public function templateAction()
+    {
+        if (!$this->request->isGet()) {
+            return $this->response->setStatusCode(405, 'Method Not Allowed');
+        }
+        $this->response->setHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->response->setHeader('Content-Disposition', 'attachment; filename="subscribers-template.csv"');
+        $this->response->setHeader('Cache-Control', 'no-store');
+        return $this->response->setContent(\OPNsense\OPNCell\SubscriberCsv::encode());
+    }
+
+    public function exportAction()
+    {
+        if (!$this->request->isGet()) {
+            return $this->response->setStatusCode(405, 'Method Not Allowed');
+        }
+        $data = json_decode((new Backend())->configdpRun('opncell exportSubscribers', []), true);
+        if (!is_array($data) || ($data['status'] ?? '') !== 'ok' || !is_array($data['rows'] ?? null)) {
+            return $this->response->setStatusCode(503, 'Unable to export subscribers');
+        }
+        $csv = \OPNsense\OPNCell\SubscriberCsv::encode($data['rows']);
+        $this->response->setHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->response->setHeader('Content-Disposition', 'attachment; filename="subscribers.csv"');
+        $this->response->setHeader('Cache-Control', 'no-store');
+        return $this->response->setContent($csv);
+    }
+
     public function multipartValues($value, $key): array
     {
         $apn = [];

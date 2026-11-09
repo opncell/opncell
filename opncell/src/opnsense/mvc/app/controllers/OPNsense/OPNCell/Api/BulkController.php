@@ -99,25 +99,56 @@ class BulkController extends ApiMutableModelControllerBase
             return ['result' => 'failed'];
         }
         $userRepository = new UserRepository($backend);
-        session_start();
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
         $duplicates = [];
         $failed = [];
         $inserted = 0;
+        $errors = [];
         $profile = $this->getAction($uuid);
         $selected_profile_uuid = $this->multipart($profile['bulk']['profile']);
-        $numberOfProfiles = count($selected_profile_uuid);
         $profileClass = new ProfileController();
         $userClass = new UserController();
+        $profileMap = [];
+        foreach ((new \OPNsense\OPNCell\Profile())->profiles->profile->iterateItems() as $id => $node) {
+            $p = $profileClass->getProfileAction($id)['profile'];
+            $selector = (string)(int)$p['sst'] . (!empty($p['sd']) ? ':' . strtolower($p['sd']) : '') . '/' . $p['apn'];
+            $profileMap[$selector][] = $id;
+        }
 
         if (isset($_SESSION['fileValues'])) {
             $outputKeyValue = $_SESSION['fileValues'];
             foreach ($outputKeyValue as $indexInFile => $item) {
                 $userDetails = array_intersect_key($item, array_flip(['imsi', 'ki', 'opc', 'op', 'amf', 'msisdn',
                     'ue_ambr_downlink', 'ue_ambr_downlink_unit', 'ue_ambr_uplink', 'ue_ambr_uplink_unit', 'subscriber_status', 'operator_determined_barring', 'default_slice', 'session_addresses', 'pcc_rules']));
+                try {
+                    $rowProfiles = $selected_profile_uuid;
+                    if (isset($item['profiles']) && trim($item['profiles']) !== '') {
+                        $selectors = json_decode($item['profiles'], true, 32, JSON_THROW_ON_ERROR);
+                        if (!is_array($selectors) || !array_is_list($selectors) || !$selectors) {
+                            throw new \RuntimeException('Profiles must be a nonempty JSON list of SST[:SD]/APN selectors');
+                        }
+                        $rowProfiles = [];
+                        foreach ($selectors as $selector) {
+                            if (!is_string($selector) || count($profileMap[$selector] ?? []) !== 1) {
+                                throw new \RuntimeException('Missing or ambiguous profile for exported slice/APN');
+                            }
+                            $rowProfiles[] = $profileMap[$selector][0];
+                        }
+                    }
+                    if (!$rowProfiles) {
+                        throw new \RuntimeException('At least one profile is required');
+                    }
+                } catch (\JsonException | \RuntimeException $error) {
+                    $failed[] = $indexInFile + 1;
+                    $errors[] = 'Record ' . ($indexInFile + 1) . ': ' . $error->getMessage();
+                    continue;
+                }
                 $index = 0;
-                $sub_user = ['count' => $numberOfProfiles];
+                $sub_user = ['count' => count($rowProfiles)];
 
-                foreach ($selected_profile_uuid as $p_uuid) {
+                foreach ($rowProfiles as $p_uuid) {
                     $profile = $profileClass->getProfileAction($p_uuid);
                     if (empty($profile['profile']['apn'])) {
                         return ['result' => 'failed', 'message' => 'Selected profile no longer exists'];
@@ -139,6 +170,7 @@ class BulkController extends ApiMutableModelControllerBase
                     $inserted++;
                 } else {
                     $failed[] = $indexInFile + 1;
+                    $errors[] = 'Record ' . ($indexInFile + 1) . ': ' . (is_string($data) ? $data : 'Subscriber validation or save failed');
                 }
             }
         }
@@ -146,6 +178,6 @@ class BulkController extends ApiMutableModelControllerBase
             return ['result' => 'failed', 'message' => 'Upload a subscriber file first'];
         }
 
-        return ['result' => 'processed', 'inserted' => $inserted, 'duplicates' => $duplicates, 'failed' => $failed];
+        return ['result' => 'processed', 'inserted' => $inserted, 'duplicates' => $duplicates, 'failed' => $failed, 'errors' => $errors];
     }
 }

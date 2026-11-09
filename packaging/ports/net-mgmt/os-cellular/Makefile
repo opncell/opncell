@@ -59,7 +59,7 @@ do-install:
 	${MAKE} -C ${WRKSRC} DESTDIR=${STAGEDIR} LOCALBASE=${PREFIX} \
 	    PLUGIN_ABI=26.7 PLUGIN_VERSION=${PORTVERSION} PLUGIN_REVISION=${PORTREVISION} install
 	${SED} -i "" -e '1s|.*|\#!${PREFIX}/bin/python3.13|' ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/query_log.py
-	${CHMOD} 555 ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/active_logs.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/verify_boot.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/clear_log.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/query_log.py
+	${CHMOD} 555 ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/export_subscribers.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/active_logs.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/verify_boot.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/clear_log.py ${STAGEDIR}${PREFIX}/opnsense/scripts/opncell/query_log.py
 	${MKDIR} ${STAGEDIR}${PREFIX}/share/opncell/installer
 	${INSTALL_SCRIPT} ${FILESDIR}/installer/*.py ${STAGEDIR}${PREFIX}/share/opncell/installer/
 	${SED} -i "" -e '1s|.*|\#!${PYTHON_CMD}|' ${STAGEDIR}${PREFIX}/share/opncell/installer/*.py

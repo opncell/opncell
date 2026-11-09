@@ -15,7 +15,7 @@
                     </template>
                 </Model>
                 <Multiple>Y</Multiple>
-                <Required>Y</Required>
+                <Required>N</Required>
             </profile>
         </bulk>
         </bulks>
