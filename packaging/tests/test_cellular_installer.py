@@ -1,4 +1,6 @@
 import argparse
+import contextlib
+import io
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -133,6 +135,19 @@ class InstallerTests(unittest.TestCase):
              patch.object(i.migration, 'digest', return_value='unexpected'):
             with self.assertRaisesRegex(i.migration.MigrationError, 'binary differs'):
                 i.install_candidate('OPNcell', None, candidate)
+
+    def test_cpu_info_reports_flavor_without_running_commands_or_writing(self):
+        self.args.repository_base_url = 'https://example.test/repo'
+        for profile, label in [('avx', 'AVX2'), ('noavx', 'NOAVX')]:
+            output = io.StringIO()
+            with patch.object(i, 'detected_cpu_profile', return_value=profile), \
+                 patch.object(i, 'run', side_effect=AssertionError('CPU check must not query packages')), \
+                 patch.object(i.subprocess, 'run', side_effect=AssertionError('CPU check must not execute programs')), \
+                 patch.object(i.Path, 'write_text', side_effect=AssertionError('CPU check must not write files')), \
+                 contextlib.redirect_stdout(output):
+                self.assertEqual(i.cpu_info(self.args), profile)
+            self.assertIn('Selected MongoDB flavor: ' + label, output.getvalue())
+            self.assertIn('no catalog query, download or installation', output.getvalue())
 
     def test_cpu_failure_happens_before_package_deletion(self):
         with patch.object(i.os, "geteuid", return_value=0), \

@@ -85,6 +85,20 @@ def repository_config(name, url):
     return json.dumps({name: {'url': url, 'enabled': True, 'priority': 200}}, indent=2) + '\n'
 
 
+def cpu_info(args):
+    repo, profile = select_repository(args)
+    flavor = 'AVX2 (AVX2, FMA and F16C required)' if profile == 'avx' else 'NOAVX (AVX not required)'
+    print('Selected MongoDB flavor: ' + flavor, flush=True)
+    base_url = getattr(args, 'repository_base_url', None)
+    if base_url:
+        suffix = '-avx2' if profile == 'avx' else ''
+        print('Selected repository URL: ' + base_url.rstrip('/') + '/${ABI}' + suffix, flush=True)
+    else:
+        print('Selected repository: ' + repo, flush=True)
+    print('CPU check complete; no catalog query, download or installation performed.', flush=True)
+    return profile
+
+
 def candidate_repository(args, recovery):
     name, profile = select_repository(args)
     base_url = getattr(args, 'repository_base_url', None)
@@ -93,6 +107,7 @@ def candidate_repository(args, recovery):
     suffix = '-avx2' if profile == 'avx' else ''
     url = base_url.rstrip('/') + '/${ABI}' + suffix
     contents = repository_config(name, url)
+    print('Selected repository URL: ' + url)
     directory = recovery / 'candidate-repos'
     directory.mkdir(mode=0o700)
     (directory / 'OPNcell.conf').write_text(contents)
@@ -146,6 +161,8 @@ def candidate_policy(profile, version, options, digest):
 
 def preflight_binary(repo, directory, profile="noavx", repos_dir=None):
     """Fetch and execute the candidate before removing any installed package."""
+    print('Checking MongoDB ' + ('AVX2' if profile == 'avx' else 'NOAVX') +
+          ' package: catalog lookup and download may take time...', flush=True)
     run(pkg_command(repos_dir, "fetch", "-y", "-r", repo, "-o", str(directory), "mongodb80"))
     packages = list(directory.rglob("mongodb80-*.pkg"))
     require(len(packages) == 1, "Cannot identify the candidate MongoDB package")
@@ -157,18 +174,26 @@ def preflight_binary(repo, directory, profile="noavx", repos_dir=None):
     require(run(["pkg-static", "version", "-t", version, minimum]).strip() in ("=", ">"),
             "Repository has no suitable MongoDB candidate (requires " + minimum + " or newer)")
     require(version.startswith("8.0."), "Installer supports MongoDB 8.0.x only")
-    # Inspect member names rather than extracting arbitrary archive paths.
-    members = run(["tar", "-tf", str(package)]).splitlines()
+    flavor = 'AVX2 (requires AVX2, FMA and F16C)' if profile == 'avx' else 'NOAVX (AVX not required)'
+    print('Selected MongoDB package: mongodb80-' + version, flush=True)
+    print('Selected MongoDB flavor: ' + flavor, flush=True)
+    if profile == 'avx' and 'NOAVX=on' in options:
+        print('Official package has an incorrect NOAVX label; exact tested SHA256 verified for AVX2 use.')
+    # Read the package manifest instead of decompressing the whole archive twice.
+    print("Reading executable path from package manifest...", flush=True)
+    members = run(["pkg-static", "query", "-F", str(package), "%Fp"]).splitlines()
     candidates = [name for name in members if name.lstrip("/") == "usr/local/bin/mongod"]
     require(len(candidates) == 1, "MongoDB executable missing from package")
     binary = directory / "mongod-probe"
+    print("Extracting MongoDB for CPU compatibility testing...", flush=True)
     with binary.open("wb") as out:
         result = subprocess.run(["tar", "-xOf", str(package), candidates[0]], stdout=out,
                                 stderr=subprocess.DEVNULL)
     require(result.returncode == 0, "Cannot extract MongoDB CPU probe")
     binary.chmod(0o700)
+    print("Running MongoDB CPU compatibility test...", flush=True)
     run([str(binary), "--version"])
-    print("SUCCESS: candidate MongoDB runs on this CPU")
+    print("SUCCESS: mongodb80-" + version + " [" + ("AVX2" if profile == "avx" else "NOAVX") + "] runs on this CPU")
     return {"version": version, "binary_sha256": migration.digest(binary), "cpu_profile": profile, "package_sha256": package_digest}
 
 
@@ -302,12 +327,14 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--migration-bundle")
     p.add_argument("--target-dbpath", default="/var/db/opncell-mongodb80")
-    p.add_argument("--recovery-dir", required=True, help="New private directory for configuration backup and report")
+    p.add_argument("--recovery-dir", help="New private directory for configuration backup and report")
     p.add_argument("--repository", default="OPNcell", help="Repository name for the selected catalog")
     p.add_argument("--repository-base-url", default="http://repo.opncell.io/OPNcell-repo",
         help="CPU catalog base URL; use an empty string for manually configured named repositories")
     p.add_argument("--repos-dir", default="/usr/local/etc/pkg/repos", help="Where successful installs persist OPNcell.conf")
-    p.add_argument("--preflight-only", action="store_true", help="Test CPU selection and candidate binary without installing")
+    modes = p.add_mutually_exclusive_group()
+    modes.add_argument("--preflight-only", action="store_true", help="Download and execute the candidate without installing")
+    modes.add_argument("--cpu-info", action="store_true", help="Instant CPU/flavor check; no catalog query or download")
     p.add_argument("--avx-repository", help="Full-stack repository with a tested AVX2 MongoDB build")
     p.add_argument("--noavx-repository", help="Full-stack NOAVX repository (defaults to --repository)")
     p.add_argument("--shell", default="/usr/local/bin/mongosh")
@@ -316,6 +343,11 @@ def main():
     p.add_argument("--legacy-prefix", help="Original Open5GS install prefix, including a mounted snapshot path")
     p.add_argument("--config-defaults", default=str(Path(__file__).resolve().parent.parent / 'defaults'))
     args = p.parse_args()
+    if args.cpu_info:
+        cpu_info(args)
+        return
+    if not args.recovery_dir:
+        p.error('--recovery-dir is required for installation or full preflight')
     preflight_only(args) if args.preflight_only else install(args)
 
 

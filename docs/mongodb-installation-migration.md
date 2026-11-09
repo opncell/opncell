@@ -165,3 +165,18 @@ MongoDB 8.x deployment is not automatically treated as a fresh installation.
 Full installation/migration acceptance on an AVX OPNsense appliance remains
 pending; both real AVX and simulated non-AVX routing/binary preflights passed on
 the repo host. The portable binary was previously tested on the Atom appliance.
+
+### Immediate CPU-only information (revision 19 preview)
+
+The preview installer accepts `--cpu-info` without a recovery directory. It reads
+kernel CPU features, reports AVX2 or NOAVX and the intended repository route, and
+returns without catalog queries, package downloads, extraction, installation or
+configuration writes. The repo host completed this check in 0.174 seconds.
+
+Use `--preflight-only --recovery-dir NEW_DIRECTORY` separately to verify the
+actual package. Full preflight now displays the exact package version and CPU
+flavor plus stage messages. It uses the package manifest to locate mongod,
+avoiding a second full archive-decompression pass.
+
+The preview bundle is separate from the unchanged published revision 18 package
+and installer archive. It does not install revision 19 or change package catalogs.

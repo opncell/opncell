@@ -1,6 +1,6 @@
 PORTNAME=       os-cellular
 PORTVERSION=    26.7.2
-PORTREVISION=   18
+PORTREVISION=   19
 CATEGORIES=     net-mgmt
 
 MAINTAINER=     support@ds.co.ug
