@@ -6,6 +6,7 @@ This installer does not perform the OPNsense major upgrade.
 """
 import argparse
 import importlib.util
+import json
 import os
 import re
 from pathlib import Path
@@ -55,12 +56,19 @@ def cpu_profile(architecture, boot_messages):
     return 'avx' if required <= flags else 'noavx'
 
 
-def select_repository(args):
+def detected_cpu_profile():
     try:
         messages = Path('/var/run/dmesg.boot').read_text()
     except OSError:
         messages = ''
-    profile = cpu_profile(os.uname().machine, messages)
+    return cpu_profile(os.uname().machine, messages)
+
+
+def select_repository(args):
+    profile = detected_cpu_profile()
+    if getattr(args, 'repository_base_url', None):
+        print('Automatically selecting ' + profile.upper() + ' repository for this CPU')
+        return args.repository, profile
     avx_repo = getattr(args, 'avx_repository', None)
     baseline_repo = getattr(args, 'noavx_repository', None) or args.repository
     if profile == 'avx' and avx_repo:
@@ -69,6 +77,55 @@ def select_repository(args):
     reason = 'optimized repository not configured' if profile == 'avx' else 'AVX2 requirements not confirmed'
     print('Selecting compatible NOAVX MongoDB repository (' + reason + '): ' + baseline_repo)
     return baseline_repo, 'noavx'
+
+
+def repository_config(name, url):
+    require(re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]*', name) is not None, 'Invalid repository name')
+    require(url.startswith(('https://', 'http://', 'file:///')), 'Use an HTTP(S) or absolute file repository URL')
+    return json.dumps({name: {'url': url, 'enabled': True, 'priority': 200}}, indent=2) + '\n'
+
+
+def candidate_repository(args, recovery):
+    name, profile = select_repository(args)
+    base_url = getattr(args, 'repository_base_url', None)
+    if not base_url:
+        return name, profile, None, None
+    suffix = '-avx2' if profile == 'avx' else ''
+    url = base_url.rstrip('/') + '/${ABI}' + suffix
+    contents = repository_config(name, url)
+    directory = recovery / 'candidate-repos'
+    directory.mkdir(mode=0o700)
+    (directory / 'OPNcell.conf').write_text(contents)
+    return name, profile, directory, contents
+
+
+def pkg_command(repos_dir, *arguments):
+    prefix = ['pkg-static']
+    if repos_dir is not None:
+        prefix += ['-o', 'REPOS_DIR=' + str(repos_dir)]
+    return prefix + list(arguments)
+
+
+def persist_repository(args, recovery, contents):
+    if contents is None:
+        return
+    directory = Path(getattr(args, 'repos_dir', '/usr/local/etc/pkg/repos'))
+    destination = directory / 'OPNcell.conf'
+    require(not destination.is_symlink(), 'Repository configuration is a symlink; review it before replacement')
+    directory.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        require(destination.is_file(), 'Repository configuration is not a regular file')
+        shutil.copy2(destination, recovery / 'OPNcell.conf.before-cpu-selection')
+    with tempfile.NamedTemporaryFile(mode='w', prefix='.OPNcell-', dir=directory, delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(contents)
+            stream.flush()
+            os.fsync(stream.fileno())
+            temporary.chmod(0o644)
+            os.replace(temporary, destination)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 # This official artifact advertises NOAVX but executes AVX instructions.
@@ -87,9 +144,9 @@ def candidate_policy(profile, version, options, digest):
     return '8.0.34_1' if tested_avx else '8.0.34_3'
 
 
-def preflight_binary(repo, directory, profile="noavx"):
+def preflight_binary(repo, directory, profile="noavx", repos_dir=None):
     """Fetch and execute the candidate before removing any installed package."""
-    run(["pkg-static", "fetch", "-y", "-r", repo, "-o", str(directory), "mongodb80"])
+    run(pkg_command(repos_dir, "fetch", "-y", "-r", repo, "-o", str(directory), "mongodb80"))
     packages = list(directory.rglob("mongodb80-*.pkg"))
     require(len(packages) == 1, "Cannot identify the candidate MongoDB package")
     package = packages[0]
@@ -113,6 +170,22 @@ def preflight_binary(repo, directory, profile="noavx"):
     run([str(binary), "--version"])
     print("SUCCESS: candidate MongoDB runs on this CPU")
     return {"version": version, "binary_sha256": migration.digest(binary), "cpu_profile": profile, "package_sha256": package_digest}
+
+
+def install_candidate(selected_repo, repos_dir, candidate):
+    candidate_version = candidate['version']
+    run(pkg_command(repos_dir, "install", "-y", "-r", selected_repo,
+         "os-cellular", "open5gs", "mongodb80", "opncell-mongosh"))
+    # Switching CPU variants can lower the FreeBSD port revision while keeping
+    # the same MongoDB upstream version. Force only the exact tested MongoDB.
+    if migration.digest(Path("/usr/local/bin/mongod")) != candidate["binary_sha256"]:
+        run(pkg_command(repos_dir, "install", "-y", "-f", "-r", selected_repo, "mongodb80-" + candidate_version))
+    # Catch a repository change between probe and installation.
+    require(run(["pkg-static", "query", "%v", "mongodb80"]).strip() == candidate_version,
+            "Installed MongoDB differs from the CPU-tested candidate; leave services stopped")
+    require(migration.digest(Path('/usr/local/bin/mongod')) == candidate['binary_sha256'],
+            "Installed MongoDB binary differs from the CPU-tested candidate; leave services stopped")
+    run(["/usr/local/bin/mongod", "--version"])
 
 
 def install(args):
@@ -149,8 +222,8 @@ def install(args):
     recovery = Path(args.recovery_dir).resolve()
     recovery.mkdir(mode=0o700, parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="cpu-probe-", dir=recovery) as directory:
-        selected_repo, profile = select_repository(args)
-        candidate = preflight_binary(selected_repo, Path(directory), profile)
+        selected_repo, profile, repos_dir, repo_contents = candidate_repository(args, recovery)
+        candidate = preflight_binary(selected_repo, Path(directory), profile, repos_dir)
         candidate_version = candidate['version']
     if bundle and (bundle / 'preserved-configs').is_dir():
         shutil.copytree(bundle / 'preserved-configs', recovery / 'preserved-configs')
@@ -166,14 +239,7 @@ def install(args):
     run(["sysrc", "mongod_enable=NO"] + [f"epc{d}d_enable=NO" for d in DAEMONS])
     if old.returncode == 0:
         run(["pkg-static", "delete", "-y", "mongodb50"])
-    run(["pkg-static", "install", "-y", "-r", selected_repo,
-         "os-cellular", "open5gs", "mongodb80", "opncell-mongosh"])
-    # Catch a repository change between probe and installation.
-    require(run(["pkg-static", "query", "%v", "mongodb80"]).strip() == candidate_version,
-            "Installed MongoDB differs from the CPU-tested candidate; leave services stopped")
-    require(migration.digest(Path('/usr/local/bin/mongod')) == candidate['binary_sha256'],
-            "Installed MongoDB binary differs from the CPU-tested candidate; leave services stopped")
-    run(["/usr/local/bin/mongod", "--version"])
+    install_candidate(selected_repo, repos_dir, candidate)
     processes = subprocess.run(["pgrep", "-lx", "open5gs-.*|mongod"], capture_output=True)
     require(processes.returncode == 1, "Package scripts started a daemon; stop it before configuring the fresh database")
     configuration.repair(recovery, args.config_defaults, fresh=not bool(bundle))
@@ -205,15 +271,30 @@ def install(args):
         info = migration.inventory(check)
         require(info["version"].startswith("8.0.") and Path(info["path"]).resolve() == target,
                 "Fresh MongoDB instance did not pass verification")
+    persist_repository(args, recovery, repo_contents)
     run(["sysrc", "mongod_enable=YES"])
     migration.atomic_json(recovery / "installation.json", {
         "status": "verified", "mongodb_package": candidate_version,
         "cpu_profile": profile, "repository": selected_repo,
+        "persistent_cpu_route": repo_contents is not None,
         "mongodb_binary_sha256": candidate['binary_sha256'],
         "mongodb_package_sha256": candidate['package_sha256'],
         "target_dbpath": str(target), "migration_bundle": str(bundle) if bundle else None,
         "cellular_services_enabled": False})
     print("SUCCESS: MongoDB is ready. Apply a topology to enable cellular services.")
+
+
+def preflight_only(args):
+    require(run(['freebsd-version', '-u']).startswith('15.'), 'Preflight requires FreeBSD 15')
+    recovery = Path(args.recovery_dir).resolve()
+    recovery.mkdir(mode=0o700, parents=True, exist_ok=False)
+    repo, profile, repos_dir, contents = candidate_repository(args, recovery)
+    with tempfile.TemporaryDirectory(prefix='cpu-probe-', dir=recovery) as temporary:
+        result = preflight_binary(repo, Path(temporary), profile, repos_dir)
+    result.update({'status': 'preflight-passed', 'repository': repo,
+                   'persistent_configuration_changed': False, 'packages_installed': False})
+    migration.atomic_json(recovery / 'preflight.json', result)
+    print('SUCCESS: CPU package preflight passed; no packages or service configuration changed.')
 
 
 def main():
@@ -222,7 +303,11 @@ def main():
     p.add_argument("--migration-bundle")
     p.add_argument("--target-dbpath", default="/var/db/opncell-mongodb80")
     p.add_argument("--recovery-dir", required=True, help="New private directory for configuration backup and report")
-    p.add_argument("--repository", default="OPNcell", help="Default full-stack NOAVX repository")
+    p.add_argument("--repository", default="OPNcell", help="Repository name for the selected catalog")
+    p.add_argument("--repository-base-url", default="http://repo.opncell.io/OPNcell-repo",
+        help="CPU catalog base URL; use an empty string for manually configured named repositories")
+    p.add_argument("--repos-dir", default="/usr/local/etc/pkg/repos", help="Where successful installs persist OPNcell.conf")
+    p.add_argument("--preflight-only", action="store_true", help="Test CPU selection and candidate binary without installing")
     p.add_argument("--avx-repository", help="Full-stack repository with a tested AVX2 MongoDB build")
     p.add_argument("--noavx-repository", help="Full-stack NOAVX repository (defaults to --repository)")
     p.add_argument("--shell", default="/usr/local/bin/mongosh")
@@ -230,7 +315,8 @@ def main():
     p.add_argument("--mongoimport", default="mongoimport")
     p.add_argument("--legacy-prefix", help="Original Open5GS install prefix, including a mounted snapshot path")
     p.add_argument("--config-defaults", default=str(Path(__file__).resolve().parent.parent / 'defaults'))
-    install(p.parse_args())
+    args = p.parse_args()
+    preflight_only(args) if args.preflight_only else install(args)
 
 
 if __name__ == "__main__":

@@ -123,26 +123,46 @@ is retained because mongoexport alone is not a complete deployment backup.
 
 ## CPU-specific MongoDB selection
 
-The updated installer source supports `--avx-repository OPNcellAVX` and
-`--noavx-repository OPNcellNOAVX` (the latter defaults to `--repository`). These
-must be full-stack repositories with identical plugin dependencies and the
-appropriate MongoDB variant. Keep variants in separate repository directories:
-their package name is the same, and mixing catalogs cannot reliably select a CPU
-variant. Do not configure the AVX repository until its binary has been built and
-validated.
+Revision 26.7.2_18 selects CPU-specific catalogs automatically. The default base
+URL is `http://repo.opncell.io/OPNcell-repo`; supply `--repository-base-url` to test
+a private staged release instead. On FreeBSD 15, the portable URL ends with
+`${ABI}` and the AVX2 URL with `${ABI}-avx2`. The shared plugin package permits
+both MongoDB port revisions; the portable catalog and installer policy still
+require the tested NOAVX `_3` binary.
 
 The optimized path requires kernel-reported AVX, AVX2, XSAVE, OSXSAVE, FMA and
-F16C on amd64. AVX alone is insufficient for the bundled SpiderMonkey AVX2 build.
-An unreadable or inconclusive boot feature report selects NOAVX. An eligible CPU
-without a configured optimized repository also selects NOAVX and reports why.
+F16C on amd64. AVX alone is insufficient. An unreadable or inconclusive feature
+report selects NOAVX. Before removing packages, the installer checks package
+options and executes the extracted candidate. The official `_1` AVX package
+has incorrect NOAVX metadata; only its exact tested checksum receives an
+exception, only on the AVX path. Every other candidate uses the normal checks.
 
-Before removing old packages, the installer verifies the selected package's
-NOAVX option and executes its extracted binary. After installation it checks both
-version and binary SHA256 against the tested candidate, preventing a different
-CPU variant with an identical version from silently replacing it. The selected
-profile, repository and digest are recorded in installation.json. This is a
-compatibility check, not a throughput benchmark or a guarantee that every
-MongoDB code path has executed.
+After installation the binary digest must match the tested candidate. If
+switching CPU variants requires a lower package revision, only the exact tested
+MongoDB package is force-installed. This does not bypass the digest check.
+The selected catalog is written atomically to OPNcell.conf only after database
+restore/verification succeeds. Its previous contents are preserved in the
+recovery directory. OPNsense.conf is untouched. Subsequent package upgrades
+therefore continue using the selected CPU catalog.
 
-The deployed 26.7.2_16 package predates this source change. The current tested
-MongoDB release remains the NOAVX 8.0.34_3 build. The official AVX-capable 8.0.34_1 artifact has now passed isolated database and restart testing on the Broadwell repo host. The private 26.7.2_17 AVX test catalog and packaged installer preflight have also passed. They are not published; see releases/26.7.2_17-avx-test.md for the exact checksum exception and limitations.
+Use preflight mode before installing:
+
+```sh
+python3 install-cellular.py --preflight-only --recovery-dir /root/cellular-cpu-preflight
+```
+
+Preflight writes a report in a new recovery directory, but does not install
+packages, change service configuration, or persist a repository selection.
+For a private staged release, add `--repository-base-url URL`. The public URL
+must not be used until the revision 18 CPU routes are activated.
+
+Advanced users with manually configured repository names can use
+`--repository-base-url '' --avx-repository NAME --noavx-repository NAME`; those
+existing named-repository configurations are not rewritten by the installer.
+
+MongoDB 5.x migration remains part of the install flow from a prepared canonical
+export and cold backup. Backup/export preparation is still separate. An existing
+MongoDB 8.x deployment is not automatically treated as a fresh installation.
+Full installation/migration acceptance on an AVX OPNsense appliance remains
+pending; both real AVX and simulated non-AVX routing/binary preflights passed on
+the repo host. The portable binary was previously tested on the Atom appliance.

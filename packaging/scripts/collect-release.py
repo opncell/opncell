@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 PINS = {
-    "os-cellular": ("26.7.2_8", "6dcd2b0c708762b7dce55c0c72c0e0d171a69f82960f21deb970633149dacd80"),
+    "os-cellular": ("26.7.2_18", "b1c7de598f07c4b88fb13dc6cb57bd37b5c5c07c72d8c4377e8647205bd74e5a"),
     "open5gs": ("2.8.0_1", "99dd644f47608e2187702ba98a8f67fea72433bd62ec85484f69b1c4420ffc40"),
     "mongodb80": ("8.0.34_3", "58702bf6382c03478800c265cea34d7ceb76a977eb8ecf997f1d0e01e78d4797"),
     "opncell-mongosh": ("2.14.0", None),
@@ -20,6 +20,7 @@ PINS = {
 # with one from a different distribution just to satisfy the private read helper.
 PLATFORM_REQUIRES = {"python313": "3.13"}
 SEARCH = [
+    "/usr/home/codex/opncell-release/26.7.2_18/cpu-catalogs/noavx/All",
     "/usr/home/codex/opncell-release/26.7.2_6/packages",
     "/tmp/opncell-26.7-runtime", "/tmp/opncell-26.7-packages",
     "/tmp/opncell-mongosh-fetch", "/tmp/opncell-python-fetch",

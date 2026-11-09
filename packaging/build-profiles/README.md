@@ -1,3 +1,7 @@
+Revision 18 uses one shared plugin in both CPU catalogs; its portable catalog
+and installer policy pin the NOAVX build. The AVX-only plugin patch below is
+historical for revision 17 and is not needed for revision 18.
+
 # CPU-specific test builds
 
 The main MongoDB port recipe builds portable NOAVX 8.0.34_3. The main os-cellular recipe retains that minimum dependency.

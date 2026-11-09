@@ -1,6 +1,6 @@
 # OPNcell packaging
 
-The current appliance-tested plugin is **26.7.2_6** for OPNsense 26.7.8_2 on FreeBSD 15.1 amd64.
+The current appliance-tested plugin is **26.7.2_16**. Revision **26.7.2_18** is the private CPU-routing candidate for OPNsense 26.7 on FreeBSD 15 amd64. See [release status](../docs/releases/STATUS.md).
 
 The candidate installer entry point is `scripts/install-cellular.py`, with
 `scripts/migrate-mongodb.py` beside it. Its optional `--migration-bundle` restores
@@ -31,3 +31,17 @@ A missing dependency stops collection before the repository is assembled. Fetch 
 The validated scope covers upgrades and local provisioning/service behavior. A full fresh installation still requires configuration sample and certificate provisioning acceptance. The sample-staging helper is prepared for a future Open5GS port build. It is not part of the tested Open5GS 2.8.0_1 binary.
 
 Use a fresh destination for another release. Keep generated packages and working files outside Git.
+
+## CPU catalog assembly and staging
+
+`assemble-cpu-repositories.py` builds separate AVX2 and NOAVX catalogs from the
+same plugin and dependency packages. It checks the two validated MongoDB package
+hashes and retains the working FreeBSD 14 catalog route. It never activates the
+public repository. `stage-public-repository.py` requires an empty release
+directory, copies both catalogs, and verifies public HTTP file hashes and ABI
+routes. Activating the live symlink remains a separate final step.
+
+The port declares shared minimum dependency versions itself; builds no longer
+need an external ACTUAL-PACKAGE-DEPENDS override. This allows the same plugin
+artifact in both CPU catalogs without using the build host's MongoDB revision as
+a universal minimum. CPU selection and binary validation remain installer policy.

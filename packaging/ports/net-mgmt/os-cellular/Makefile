@@ -1,6 +1,6 @@
 PORTNAME=       os-cellular
 PORTVERSION=    26.7.2
-PORTREVISION=   17
+PORTREVISION=   18
 CATEGORIES=     net-mgmt
 
 MAINTAINER=     support@ds.co.ug
@@ -21,10 +21,11 @@ EXTRACT_DEPENDS=  git:devel/git
 RUN_DEPENDS=    opncell-pymongo>=4.18.2:databases/opncell-pymongo \
                 bash:shells/bash \
                 open5gs>=2.8.0_1:net/opncell-open5gs \
-                mongodb80>=8.0.34_3:databases/mongodb80 \
+                mongodb80>=8.0.34_1:databases/mongodb80 \
                 opncell-mongosh>=2.14.0:databases/opncell-mongosh \
                 ${PYTHON_PKGNAMEPREFIX}pyyaml>0:devel/py-pyyaml@${PY_FLAVOR} \
                 ${PYTHON_PKGNAMEPREFIX}ujson>0:devel/py-ujson@${PY_FLAVOR}
+ACTUAL-PACKAGE-DEPENDS= ${SH} ${FILESDIR}/package-dependencies.sh
 NO_BUILD=       yes
 NO_ARCH=        yes
 

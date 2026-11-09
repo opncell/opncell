@@ -69,6 +69,71 @@ class InstallerTests(unittest.TestCase):
                 i.candidate_policy('avx', version, ['NOAVX=on'], checksum)
         self.assertEqual(i.candidate_policy('avx', '8.0.34_4', ['NOAVX=off'], 'other'), '8.0.34_3')
 
+    def test_automatic_cpu_urls(self):
+        self.args.repository_base_url = 'file:///private/cpu-catalogs/'
+        for profile, suffix in [('avx', '-avx2'), ('noavx', '')]:
+            recovery = Path(self.tmp.name) / profile
+            recovery.mkdir()
+            with patch.object(i, 'detected_cpu_profile', return_value=profile):
+                name, selected, directory, contents = i.candidate_repository(self.args, recovery)
+            self.assertEqual(selected, profile)
+            config = i.json.loads(contents)
+            self.assertEqual(config[name]['url'], 'file:///private/cpu-catalogs/${ABI}' + suffix)
+            self.assertEqual((directory / 'OPNcell.conf').read_text(), contents)
+
+    def test_persistent_route_preserves_old_config_and_other_repositories(self):
+        root = Path(self.tmp.name)
+        self.args.repos_dir = str(root / 'repos')
+        directory = Path(self.args.repos_dir)
+        directory.mkdir()
+        (directory / 'OPNcell.conf').write_text('old config')
+        (directory / 'OPNsense.conf').write_text('platform config')
+        recovery = root / 'preserved'
+        recovery.mkdir()
+        config = i.repository_config('OPNcell', 'https://example.test/${ABI}-avx2')
+        i.persist_repository(self.args, recovery, config)
+        self.assertEqual((directory / 'OPNcell.conf').read_text(), config)
+        self.assertEqual((recovery / 'OPNcell.conf.before-cpu-selection').read_text(), 'old config')
+        self.assertEqual((directory / 'OPNsense.conf').read_text(), 'platform config')
+
+    def test_preflight_only_never_installs_or_persists_configuration(self):
+        self.args.repository_base_url = 'file:///private/cpu-catalogs'
+        self.args.repos_dir = str(Path(self.tmp.name) / 'live-repos')
+        candidate = {'version':'8.0.34_1', 'cpu_profile':'avx', 'package_sha256':'test', 'binary_sha256':'test'}
+        with patch.object(i, 'run', return_value='15.1-RELEASE') as run, \
+             patch.object(i, 'detected_cpu_profile', return_value='avx'), \
+             patch.object(i, 'preflight_binary', return_value=candidate):
+            i.preflight_only(self.args)
+        self.assertFalse(Path(self.args.repos_dir).exists())
+        self.assertFalse(any('install' in call.args[0] or 'delete' in call.args[0] for call in run.call_args_list))
+        report = i.json.loads((Path(self.args.recovery_dir) / 'preflight.json').read_text())
+        self.assertFalse(report['packages_installed'])
+        self.assertFalse(report['persistent_configuration_changed'])
+
+    def test_cpu_variant_switch_forces_only_exact_tested_mongodb(self):
+        candidate = {'version':'8.0.34_1', 'binary_sha256':'tested'}
+        with patch.object(i, 'run', return_value='8.0.34_1') as run, \
+             patch.object(i.migration, 'digest', side_effect=['portable', 'tested']):
+            i.install_candidate('OPNcell', Path('/private/repos'), candidate)
+        forced = [call.args[0] for call in run.call_args_list if '-f' in call.args[0]]
+        self.assertEqual(len(forced), 1)
+        self.assertEqual(forced[0][-1], 'mongodb80-8.0.34_1')
+        self.assertIn('REPOS_DIR=/private/repos', forced[0])
+
+    def test_matching_binary_skips_forced_variant_replacement(self):
+        candidate = {'version':'8.0.34_3', 'binary_sha256':'tested'}
+        with patch.object(i, 'run', return_value='8.0.34_3') as run, \
+             patch.object(i.migration, 'digest', return_value='tested'):
+            i.install_candidate('OPNcell', None, candidate)
+        self.assertFalse(any('-f' in call.args[0] for call in run.call_args_list))
+
+    def test_wrong_installed_binary_is_rejected_after_replacement(self):
+        candidate = {'version':'8.0.34_1', 'binary_sha256':'tested'}
+        with patch.object(i, 'run', return_value='8.0.34_1'), \
+             patch.object(i.migration, 'digest', return_value='unexpected'):
+            with self.assertRaisesRegex(i.migration.MigrationError, 'binary differs'):
+                i.install_candidate('OPNcell', None, candidate)
+
     def test_cpu_failure_happens_before_package_deletion(self):
         with patch.object(i.os, "geteuid", return_value=0), \
              patch.object(i, "run", return_value="15.1-RELEASE\n") as run, \
