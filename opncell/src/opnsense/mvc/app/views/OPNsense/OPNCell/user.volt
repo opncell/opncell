@@ -86,7 +86,6 @@ POSSIBILITY OF SUCH DAMAGE.
     </div>
 
     <div id="user-list" class="tab-pane fade in">
-        <div class="col-md-12 __mt">
             <div id="failedSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
                 {{ lang._('Subscriber not added') }}<br>
             </div>
@@ -96,20 +95,18 @@ POSSIBILITY OF SUCH DAMAGE.
             <div id="successfulSave" class="alert alert-dismissible alert-info" style="display: none" role="alert">
                 {{ lang._('Subscriber saved.') }}<br>
             </div>
-        </div>
-        <div class="col-md-12 __mt">
+
             <div  id="failedDelete" class="alert alert-dismissible alert-info" style="display: none" role="alert">
                 {{ lang._('Subscriber not deleted.') }}
             </div>
             <div id="successfulDelete" class="alert alert-dismissible alert-info" style="display: none" role="alert">
                 {{ lang._('Subscriber deleted successfully') }}
             </div>
-        </div>
-        <div class="col-md-3 __mt">
+
             <div id="deleting" class="alert alert-dismissible alert-danger" style="display: none" role="alert">
                 {{ lang._('Deleting.......') }}
             </div>
-        </div>
+
         <!--        <button class="btn btn-danger" style="display: none;  float: left; margin-right: 78px;text-align: center" id="deleting" type="button">-->
         <!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
         <!--        </button>-->

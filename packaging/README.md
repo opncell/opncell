@@ -1,6 +1,6 @@
 # OPNcell packaging
 
-The current appliance-tested plugin is **26.7.2_16**. Revision **26.7.2_18** is the published CPU-routing release for OPNsense 26.7 on FreeBSD 15 amd64. See [release status](../docs/releases/STATUS.md).
+The current appliance-tested plugin is **26.7.2_26**. **26.7.2_27** freezes that functionality with the Subscriber List spacing correction for two-host installation acceptance. Revision **26.7.2_18** remains the published CPU-routing release for OPNsense 26.7 on FreeBSD 15 amd64. See [release status](../docs/releases/STATUS.md).
 
 The candidate installer entry point is `scripts/install-cellular.py`, with
 `scripts/migrate-mongodb.py` beside it. Its optional `--migration-bundle` restores

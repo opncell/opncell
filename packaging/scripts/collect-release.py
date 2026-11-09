@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 PINS = {
-    "os-cellular": ("26.7.2_18", "b1c7de598f07c4b88fb13dc6cb57bd37b5c5c07c72d8c4377e8647205bd74e5a"),
+    "os-cellular": ("26.7.2_27", "d93dc8cf38ae5b5cde26a268c228e37bde521c05e4986b9b8b380a914c1ff04f"),
     "open5gs": ("2.8.0_1", "99dd644f47608e2187702ba98a8f67fea72433bd62ec85484f69b1c4420ffc40"),
     "mongodb80": ("8.0.34_3", "58702bf6382c03478800c265cea34d7ceb76a977eb8ecf997f1d0e01e78d4797"),
     "opncell-mongosh": ("2.14.0", None),
@@ -119,7 +119,7 @@ def main():
         pending_names.extend(selected[name][1].get("deps", {}))
     selected = {name: selected[name] for name in reachable}
     report = {
-        "release": "26.7.2_8",
+        "release": PINS["os-cellular"][0],
         "platform_requires": PLATFORM_REQUIRES,
         "packages": {name: {"version": data["version"], "source": str(path)}
                      for name, (path, data) in sorted(selected.items())},

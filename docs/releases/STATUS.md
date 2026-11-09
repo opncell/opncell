@@ -1,5 +1,9 @@
 # Release status
 
+- 26.7.2_26: OPNcell-c acceptance confirmed for fast subscriber edits, integral policy display and successful saves.
+- 26.7.2_27: frozen acceptance build with the Subscriber List top spacing aligned to Profile List. Fresh FreeBSD 15 hosts 10.11.0.55 and 10.11.0.56 are the next installation/upgrade targets; SSH access setup and testing remain pending. Changes after this freeze require a new revision.
+
+
 - 26.7.2_16: installed and tested on OPNcell-c. Diagnostics layout, hourly filter and Clear were confirmed; Download appears to work. Hourly log rotation still requires verification.
 - 26.7.2_19: private Diagnostics candidate with running-daemon list, independent All row/timeframe selectors and CPU-info messaging; appliance acceptance pending.
 - 26.7.2_18: public dual CPU catalogs activated on 2026-11-09. HTTP checks and stable-URL CPU preflights passed; full installer acceptance remains pending. See 26.7.2_18.md.
