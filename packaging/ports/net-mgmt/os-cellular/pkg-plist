@@ -169,3 +169,5 @@ opnsense/scripts/opncell/clear_log.py
 opnsense/scripts/opncell/log_source.py
 opnsense/scripts/opncell/query_log.py
 opnsense/scripts/opncell/cleanup_log_links.py
+opnsense/scripts/opncell/active_logs.py
+opnsense/mvc/app/views/OPNsense/OPNCell/diagnostics.volt

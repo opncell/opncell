@@ -1,8 +1,18 @@
 <script>
+// Extend only the Cellular log grid; keep the platform partial unchanged.
+const opncellOriginalLogGrid = $.fn.UIBootgrid;
+$.fn.UIBootgrid = function (settings) {
+    if (this.is('#grid-log') && settings && settings.search === '/api/diagnostics/log/opncell/{{scope}}') {
+        settings.options = settings.options || {};
+        settings.options.rowCount = [50, 100, 200, 500, 1000, 5000, -1];
+    }
+    return opncellOriginalLogGrid.apply(this, arguments);
+};
 // Register before the platform partial creates its grid and initial request.
 $(function () {
     // Add before the platform grid restores its saved timeframe selection.
     const timeframe = $("#validFrom_filter");
+    timeframe.find('option[value="all"]').text("{{ lang._('All') }}");
     if (!timeframe.find('option[value="hour"]').length) {
         timeframe.prepend($('<option value="hour"></option>').text("{{ lang._('Last hour') }}"));
     }
@@ -21,6 +31,7 @@ $.ajaxPrefilter(function (options) {
     options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
 });
 </script>
+<p><a href="/ui/opncell/log">{{ lang._('Active daemon logs') }}</a></p>
 {{ partial("OPNsense/Diagnostics/log") }}
 
 <div id="opncell_log_refresh" class="btn-group">

@@ -1,0 +1,254 @@
+--- /dev/null
++++ b/opnsense/scripts/opncell/active_logs.py
+@@ -0,0 +1,35 @@
++#!/usr/local/bin/python3
++"""List real, non-zombie cellular processes without matching grep arguments."""
++import json
++from pathlib import Path
++import subprocess
++import sys
++from log_source import SCOPES
++
++
++def active_logs(processes=None):
++    if processes is None:
++        processes = subprocess.check_output(['/bin/ps', 'axww', '-o', 'pid=,stat=,comm='], text=True)
++    names = {('mongod' if scope == 'mongod' else 'open5gs-' + scope + 'd'): scope for scope in SCOPES}
++    found = {}
++    for line in processes.splitlines():
++        fields = line.strip().split(None, 2)
++        if len(fields) != 3 or not fields[0].isdigit() or int(fields[0]) <= 0:
++            continue
++        if fields[1].startswith(('Z', 'X')):
++            continue
++        name = Path(fields[2]).name
++        if name not in names:
++            continue
++        scope = names[name]
++        row = found.setdefault(scope, {'name': name, 'scope': scope, 'pids': []})
++        row['pids'].append(int(fields[0]))
++    return sorted(found.values(), key=lambda row: row['name'])
++
++
++if __name__ == '__main__':
++    try:
++        print(json.dumps({'status': 'ok', 'rows': active_logs()}))
++    except (OSError, subprocess.CalledProcessError) as error:
++        print(json.dumps({'status': 'failed', 'message': 'Cannot inspect active cellular daemons'}))
++        sys.exit(1)
+--- a/opnsense/service/conf/actions.d/actions_opncell.conf
++++ b/opnsense/service/conf/actions.d/actions_opncell.conf
+@@ -120,3 +120,8 @@
+ parameters:--limit 0 --offset 0 --filter %s --module opncell --filename %s --severity %s --valid_from %s --output text
+ type:stream_output
+ message: Downloading cellular log
++
++[activeLogs]
++command:/usr/local/opnsense/scripts/opncell/active_logs.py
++type:script_output
++message: Listing active cellular diagnostic logs
+--- a/opnsense/mvc/app/models/OPNsense/OPNCell/Menu/Menu.xml
++++ b/opnsense/mvc/app/models/OPNsense/OPNCell/Menu/Menu.xml
+@@ -4,24 +4,6 @@
+ <!--      <Hnet cssClass="fa fa-sitemap" url="/ui/opncell/hnet" />-->
+       <Users cssClass="fa fa-users fa-fw" url = "/ui/opncell/user"/>
+ 
+-      <FourG VisibleName="Diagnostics" cssClass="fa fa-medkit" order="55">
+-          <MMELogs VisibleName="open5gs-mmed" url="/ui/opncell/log/index/open5gs-mmed" />
+-          <UPFLogs VisibleName="open5gs-upfd" url="/ui/opncell/log/index/open5gs-upfd" />
+-          <SMFLogs VisibleName="open5gs-smfd" url="/ui/opncell/log/index/open5gs-smfd" />
+-          <SGWCLogs VisibleName="open5gs-sgwcd" url="/ui/opncell/log/index/open5gs-sgwcd"/>
+-          <SGWULogs VisibleName="open5gs-sgwud" url="/ui/opncell/log/index/open5gs-sgwud" />
+-          <HSSLogs VisibleName="open5gs-hssd" url="/ui/opncell/log/index/open5gs-hssd" />
+-          <PCRFLogs VisibleName="open5gs-pcrfd" url="/ui/opncell/log/index/open5gs-pcrfd" />
+-          <AMFLogs VisibleName="open5gs-amfd" url="/ui/opncell/log/index/open5gs-amfd"/>
+-          <SCPLogs VisibleName="open5gs-scpd" url="/ui/opncell/log/index/open5gs-scpd" />
+-          <AUSF VisibleName="open5gs-ausfd" url="/ui/opncell/log/index/open5gs-ausfd" />
+-          <BSF VisibleName="open5gs-bsfd" url="/ui/opncell/log/index/open5gs-bsfd" />
+-          <NRFLogs VisibleName="open5gs-nrfd" url="/ui/opncell/log/index/open5gs-nrfd" />
+-          <UDRLogs VisibleName="open5gs-udrd" url="/ui/opncell/log/index/open5gs-udrd" />
+-          <UDMLogs VisibleName="open5gs-udmd" url="/ui/opncell/log/index/open5gs-udmd" />
+-          <PCFLogs VisibleName="open5gs-pcfd" url="/ui/opncell/log/index/open5gs-pcfd" />
+-          <NSSF VisibleName="open5gs-nssfd" url="/ui/opncell/log/index/open5gs-nssfd" />
+-          <Mongo VisibleName="mongod" url="/ui/opncell/log/index/mongod" />
+-      </FourG>
++      <FourG VisibleName="Diagnostics" cssClass="fa fa-medkit" order="55" url="/ui/opncell/log" />
+   </Cellular>
+ </menu>
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/LogController.php
+@@ -6,11 +6,24 @@
+ {
+     public function indexAction($scope = '')
+     {
++        if ($scope === '') {
++            $this->renderPage('opncell', '');
++            $this->view->pick('OPNsense/OPNCell/diagnostics');
++            return;
++        }
+         $scope = ServiceNames::logScope($scope);
+         if ($scope === null) {
+             return $this->response->setStatusCode(404, 'Not Found');
+         }
+ 
++        $backend = new \OPNsense\Core\Backend();
++        $active = json_decode($backend->configdpRun('opncell activeLogs', []), true);
++        if (!is_array($active) || ($active['status'] ?? '') !== 'ok') {
++            return $this->response->setStatusCode(503, 'Unable to inspect active daemons');
++        }
++        if (!in_array($scope, array_column($active['rows'], 'scope'), true)) {
++            return $this->response->redirect('/ui/opncell/log');
++        }
+         $this->renderPage('opncell', $scope);
+         $source = json_decode((new \OPNsense\Core\Backend())->configdpRun('opncell logSource', [$scope]), true);
+         $this->view->opncell_log_path = $source['path'] ?? gettext('Log destination unavailable');
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
+@@ -8,11 +8,38 @@
+ 
+ class LogController extends ApiControllerBase
+ {
++    private function activeSnapshot(): ?array
++    {
++        $result = json_decode((new Backend())->configdpRun('opncell activeLogs', []), true);
++        return is_array($result) && ($result['status'] ?? '') === 'ok' && is_array($result['rows'] ?? null)
++            ? $result['rows'] : null;
++    }
++
++    public function activeAction()
++    {
++        if (!$this->request->isGet()) {
++            return $this->response->setStatusCode(405, 'Method Not Allowed');
++        }
++        $rows = $this->activeSnapshot();
++        return $rows === null ? ['status' => 'failed', 'message' => gettext('Unable to inspect active daemons.')]
++            : ['status' => 'ok', 'rows' => $rows];
++    }
++
+     public function queryAction($scope = '', $action = '')
+     {
+         $scope = ServiceNames::logScope($scope);
+         if ($scope === null) {
+             return $this->response->setStatusCode(404, 'Not Found');
++        }
++        $active = $this->activeSnapshot();
++        if ($active === null) {
++            return $this->response->setStatusCode(503, 'Unable to inspect active daemons');
++        }
++        if (!in_array($scope, array_column($active, 'scope'), true)) {
++            if ($action === 'export') {
++                return $this->response->setStatusCode(409, 'Daemon is not running');
++            }
++            return ['rows' => [], 'total' => 0, 'rowCount' => 0, 'current' => 1, 'active' => false];
+         }
+         $search = $this->request->get('searchPhrase', 'string', '');
+         $severity = $this->request->get('severity', null, '');
+@@ -32,11 +59,13 @@
+         if (!$this->request->isPost()) {
+             return $this->response->setStatusCode(405, 'Method Not Allowed');
+         }
+-        $limit = max(1, min(9999, (int)$this->request->getPost('rowCount', 'int', 50)));
++        $requested = (int)$this->request->getPost('rowCount', 'int', 50);
++        // -1 is the explicit All selection; zero means unlimited to queryLog.
++        $limit = $requested === -1 ? 0 : max(1, min(9999, $requested));
+         $page = max(1, (int)$this->request->getPost('current', 'int', 1));
+         $backend = new Backend();
+         $result = json_decode($backend->configdpRun('opncell queryLog', [
+-            $limit, ($page - 1) * $limit, $search, $scope, $severity, $since
++            $limit, $limit === 0 ? 0 : ($page - 1) * $limit, $search, $scope, $severity, $since
+         ]), true);
+         if (!is_array($result) || !isset($result['rows'])) {
+             return $this->response->setStatusCode(500, 'Unable to read log');
+@@ -56,6 +85,10 @@
+         if ($scope === null) {
+             return $this->response->setStatusCode(404, 'Not Found');
+         }
++        $active = $this->activeSnapshot();
++        if ($active === null || !in_array($scope, array_column($active, 'scope'), true)) {
++            return ['status' => 'failed', 'message' => gettext('This daemon is not running.')];
++        }
+         $result = json_decode((new Backend())->configdpRun('opncell clearLog', [$scope]), true);
+         return is_array($result) ? $result : [
+             'status' => 'failed', 'message' => gettext('Unable to clear the log file.')
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -1,8 +1,18 @@
+ <script>
++// Extend only the Cellular log grid; keep the platform partial unchanged.
++const opncellOriginalLogGrid = $.fn.UIBootgrid;
++$.fn.UIBootgrid = function (settings) {
++    if (this.is('#grid-log') && settings && settings.search === '/api/diagnostics/log/opncell/{{scope}}') {
++        settings.options = settings.options || {};
++        settings.options.rowCount = [50, 100, 200, 500, 1000, 5000, -1];
++    }
++    return opncellOriginalLogGrid.apply(this, arguments);
++};
+ // Register before the platform partial creates its grid and initial request.
+ $(function () {
+     // Add before the platform grid restores its saved timeframe selection.
+     const timeframe = $("#validFrom_filter");
++    timeframe.find('option[value="all"]').text("{{ lang._('All') }}");
+     if (!timeframe.find('option[value="hour"]').length) {
+         timeframe.prepend($('<option value="hour"></option>').text("{{ lang._('Last hour') }}"));
+     }
+@@ -21,6 +31,7 @@
+     options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
+ });
+ </script>
++<p><a href="/ui/opncell/log">{{ lang._('Active daemon logs') }}</a></p>
+ {{ partial("OPNsense/Diagnostics/log") }}
+ 
+ <div id="opncell_log_refresh" class="btn-group">
+--- /dev/null
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/diagnostics.volt
+@@ -0,0 +1,50 @@
++<div class="content-box" style="padding: 15px;">
++    <div class="clearfix" style="margin-bottom: 12px;">
++        <button id="refresh-active-logs" class="btn btn-default pull-right" type="button">
++            <span class="fa fa-refresh" aria-hidden="true"></span> {{ lang._('Refresh') }}
++        </button>
++        <h3 style="margin-top: 6px;">{{ lang._('Active daemon logs') }}</h3>
++    </div>
++    <p>{{ lang._('Diagnostic logs are available for currently running cellular daemons.') }}</p>
++    <div id="active-logs-error" class="alert alert-danger" role="alert" style="display: none;"></div>
++    <table class="table table-condensed table-striped">
++        <thead><tr><th>{{ lang._('Daemon') }}</th><th>{{ lang._('PID') }}</th><th>{{ lang._('Log') }}</th></tr></thead>
++        <tbody id="active-logs-rows"></tbody>
++    </table>
++</div>
++<script>
++$(function () {
++    let busy = false;
++    function refresh() {
++        if (busy || document.hidden) { return; }
++        busy = true;
++        $.ajax({url: '/api/opncell/log/active', dataType: 'json'}).done(function (result) {
++            if (!result || result.status !== 'ok' || !Array.isArray(result.rows)) {
++                $('#active-logs-error').text("{{ lang._('Unable to inspect active daemons.') }}").show();
++                return;
++            }
++            $('#active-logs-error').hide();
++            const body = $('#active-logs-rows').empty();
++            result.rows.forEach(function (row) {
++                const tr = $('<tr></tr>');
++                tr.append($('<td></td>').text(row.name));
++                tr.append($('<td></td>').text(row.pids.join(', ')));
++                const link = $('<a class="btn btn-default btn-xs"></a>')
++                    .attr('href', '/ui/opncell/log/index/' + encodeURIComponent(row.name))
++                    .text("{{ lang._('View log') }}");
++                tr.append($('<td></td>').append(link));
++                body.append(tr);
++            });
++            if (result.rows.length === 0) {
++                body.append($('<tr></tr>').append($('<td colspan="3"></td>').text("{{ lang._('No cellular daemons are currently running.') }}")));
++            }
++        }).fail(function () {
++            $('#active-logs-error').text("{{ lang._('Unable to inspect active daemons.') }}").show();
++        }).always(function () { busy = false; });
++    }
++    $('#refresh-active-logs').on('click', refresh);
++    $(document).on('visibilitychange', refresh);
++    window.setInterval(refresh, 10000);
++    refresh();
++});
++</script>
