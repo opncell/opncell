@@ -35,6 +35,12 @@ const token = require("crypto").createHash("sha256").update(EJSON.stringify(subs
 function sortedSnapshot(value) {
     if (Array.isArray(value)) return value.map(sortedSnapshot);
     if (value !== null && typeof value === "object") {
+        const keys = Object.keys(value);
+        if (keys.length === 1 && ["$numberInt", "$numberLong", "$numberDouble"].includes(keys[0])) {
+            let number = value[keys[0]];
+            if (/^-?[0-9]+(?:[.]0+)?$/.test(number)) number = BigInt(number.split(".")[0]).toString();
+            return {"$opncellNumber": number};
+        }
         return Object.fromEntries(Object.keys(value).sort().map(key => [key, sortedSnapshot(value[key])]));
     }
     return value;

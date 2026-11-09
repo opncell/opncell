@@ -14,8 +14,21 @@ PROJECTION = {'slice': 1, 'imsi': 1, 'msisdn': 1, 'ambr': 1, 'subscriber_status'
 
 def snapshot_token(doc):
     from bson.json_util import dumps, CANONICAL_JSON_OPTIONS
-    encoded = dumps(doc, json_options=CANONICAL_JSON_OPTIONS, sort_keys=True,
-                    separators=(',', ':'), ensure_ascii=False)
+    def normalize(value):
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if isinstance(value, dict):
+            if len(value) == 1 and next(iter(value)) in ('$numberInt', '$numberLong', '$numberDouble'):
+                number = next(iter(value.values()))
+                if re.fullmatch(r'-?[0-9]+(?:[.]0+)?', number):
+                    number = str(int(number.split('.')[0]))
+                return {'$opncellNumber': number}
+            return {key: normalize(item) for key, item in value.items()}
+        return value
+    # Shell reads can promote BSON doubles to JS integers. Compare numeric values,
+    # while the atomic write filter still protects the original snapshot.
+    canonical = json.loads(dumps(doc, json_options=CANONICAL_JSON_OPTIONS))
+    encoded = json.dumps(normalize(canonical), sort_keys=True, separators=(',', ':'), ensure_ascii=False)
     return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
 
 

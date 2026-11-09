@@ -9,12 +9,24 @@ FIELDS = ('imsi', 'ki', 'opc', 'op', 'amf', 'msisdn', 'profiles',
           'subscriber_status', 'operator_determined_barring', 'default_slice', 'session_addresses', 'pcc_rules')
 
 
+def integer_text(value):
+    # Legacy documents can store integer policy values as BSON doubles.
+    # Preserve nonintegral values so normal validation rejects them.
+    if value is None:
+        return ''
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
 def provisioning_rules(value):
     # MongoDB adds nested object IDs; they are not provisioning inputs.
     if isinstance(value, dict):
         return {key: provisioning_rules(item) for key, item in value.items() if key != '_id'}
     if isinstance(value, list):
         return [provisioning_rules(item) for item in value]
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
     return value
 
 
@@ -26,13 +38,13 @@ def export_row(doc):
     row['msisdn'] = ','.join(doc.get('msisdn', []))
     for direction in ('downlink', 'uplink'):
         rate = doc.get('ambr', {}).get(direction, {})
-        row['ue_ambr_' + direction] = str(rate.get('value', ''))
-        row['ue_ambr_' + direction + '_unit'] = str(rate.get('unit', ''))
+        row['ue_ambr_' + direction] = integer_text(rate.get('value'))
+        row['ue_ambr_' + direction + '_unit'] = integer_text(rate.get('unit'))
     for field in ('subscriber_status', 'operator_determined_barring'):
-        row[field] = str(doc.get(field, ''))
+        row[field] = integer_text(doc.get(field))
     profiles, addresses, rules, defaults = [], {}, {}, []
     for slice_ in doc.get('slice', []):
-        selector = str(slice_['sst']) + (':' + slice_['sd'].lower() if slice_.get('sd') else '')
+        selector = integer_text(slice_['sst']) + (':' + slice_['sd'].lower() if slice_.get('sd') else '')
         if slice_.get('default_indicator'):
             defaults.append(selector)
         for session in slice_.get('session', []):

@@ -1,0 +1,86 @@
+--- a/opnsense/scripts/opncell/export_subscribers.py
++++ b/opnsense/scripts/opncell/export_subscribers.py
+@@ -9,12 +9,24 @@
+           'subscriber_status', 'operator_determined_barring', 'default_slice', 'session_addresses', 'pcc_rules')
+ 
+ 
++def integer_text(value):
++    # Legacy documents can store integer policy values as BSON doubles.
++    # Preserve nonintegral values so normal validation rejects them.
++    if value is None:
++        return ''
++    if isinstance(value, float) and value.is_integer():
++        return str(int(value))
++    return str(value)
++
++
+ def provisioning_rules(value):
+     # MongoDB adds nested object IDs; they are not provisioning inputs.
+     if isinstance(value, dict):
+         return {key: provisioning_rules(item) for key, item in value.items() if key != '_id'}
+     if isinstance(value, list):
+         return [provisioning_rules(item) for item in value]
++    if isinstance(value, float) and value.is_integer():
++        return int(value)
+     return value
+ 
+ 
+@@ -26,13 +38,13 @@
+     row['msisdn'] = ','.join(doc.get('msisdn', []))
+     for direction in ('downlink', 'uplink'):
+         rate = doc.get('ambr', {}).get(direction, {})
+-        row['ue_ambr_' + direction] = str(rate.get('value', ''))
+-        row['ue_ambr_' + direction + '_unit'] = str(rate.get('unit', ''))
++        row['ue_ambr_' + direction] = integer_text(rate.get('value'))
++        row['ue_ambr_' + direction + '_unit'] = integer_text(rate.get('unit'))
+     for field in ('subscriber_status', 'operator_determined_barring'):
+-        row[field] = str(doc.get(field, ''))
++        row[field] = integer_text(doc.get(field))
+     profiles, addresses, rules, defaults = [], {}, {}, []
+     for slice_ in doc.get('slice', []):
+-        selector = str(slice_['sst']) + (':' + slice_['sd'].lower() if slice_.get('sd') else '')
++        selector = integer_text(slice_['sst']) + (':' + slice_['sd'].lower() if slice_.get('sd') else '')
+         if slice_.get('default_indicator'):
+             defaults.append(selector)
+         for session in slice_.get('session', []):
+--- a/opnsense/scripts/opncell/read_subscriber.py
++++ b/opnsense/scripts/opncell/read_subscriber.py
+@@ -14,8 +14,21 @@
+ 
+ def snapshot_token(doc):
+     from bson.json_util import dumps, CANONICAL_JSON_OPTIONS
+-    encoded = dumps(doc, json_options=CANONICAL_JSON_OPTIONS, sort_keys=True,
+-                    separators=(',', ':'), ensure_ascii=False)
++    def normalize(value):
++        if isinstance(value, list):
++            return [normalize(item) for item in value]
++        if isinstance(value, dict):
++            if len(value) == 1 and next(iter(value)) in ('$numberInt', '$numberLong', '$numberDouble'):
++                number = next(iter(value.values()))
++                if re.fullmatch(r'-?[0-9]+(?:[.]0+)?', number):
++                    number = str(int(number.split('.')[0]))
++                return {'$opncellNumber': number}
++            return {key: normalize(item) for key, item in value.items()}
++        return value
++    # Shell reads can promote BSON doubles to JS integers. Compare numeric values,
++    # while the atomic write filter still protects the original snapshot.
++    canonical = json.loads(dumps(doc, json_options=CANONICAL_JSON_OPTIONS))
++    encoded = json.dumps(normalize(canonical), sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+     return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
+ 
+ 
+--- a/opnsense/scripts/opncell/updateSubscriberProfiles.py
++++ b/opnsense/scripts/opncell/updateSubscriberProfiles.py
+@@ -35,6 +35,12 @@
+ function sortedSnapshot(value) {
+     if (Array.isArray(value)) return value.map(sortedSnapshot);
+     if (value !== null && typeof value === "object") {
++        const keys = Object.keys(value);
++        if (keys.length === 1 && ["$numberInt", "$numberLong", "$numberDouble"].includes(keys[0])) {
++            let number = value[keys[0]];
++            if (/^-?[0-9]+(?:[.]0+)?$/.test(number)) number = BigInt(number.split(".")[0]).toString();
++            return {"$opncellNumber": number};
++        }
+         return Object.fromEntries(Object.keys(value).sort().map(key => [key, sortedSnapshot(value[key])]));
+     }
+     return value;

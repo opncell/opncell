@@ -48,6 +48,31 @@ class SubscriberExportTests(unittest.TestCase):
         self.assertNotIn('sqn', exported)
         self.assertEqual(row['imsi'], fields['imsi'])
 
+    def test_legacy_integral_doubles_use_integer_form_values(self):
+        doc = {'imsi': '001010000000001', 'subscriber_status': 0.0,
+               'operator_determined_barring': 0.0,
+               'ambr': {'downlink': {'value': 1000000000.0, 'unit': 0.0},
+                        'uplink': {'value': 1000000000.0, 'unit': 0.0}},
+               'slice': [{'sst': 1.0, 'default_indicator': True, 'session': [{'name': 'internet'}]}]}
+        row = exporter.export_row(doc)
+        self.assertEqual(row['subscriber_status'], '0')
+        self.assertEqual(row['operator_determined_barring'], '0')
+        self.assertEqual(row['ue_ambr_downlink'], '1000000000')
+        self.assertEqual(row['ue_ambr_downlink_unit'], '0')
+        self.assertEqual(row['default_slice'], '1')
+        self.assertEqual(json.loads(row['profiles']), ['1/internet'])
+        from subscriber_identity import policy_fields
+        self.assertEqual(policy_fields(row)['subscriber_status'], 0)
+        self.assertEqual(doc['subscriber_status'], 0.0)
+        self.assertIsInstance(doc['subscriber_status'], float)
+
+    def test_fractional_policy_value_is_not_rounded(self):
+        from subscriber_identity import policy_fields
+        row = exporter.export_row({'imsi': '001010000000001', 'subscriber_status': 0.5})
+        with self.assertRaises(ValueError): policy_fields(row)
+        self.assertEqual(exporter.provisioning_rules({'qos': {'index': 9.0, 'bad': 1.5}}),
+                         {'qos': {'index': 9, 'bad': 1.5}})
+
     def test_nested_ids_not_exported_as_pcc_inputs(self):
         self.assertEqual(exporter.provisioning_rules([{'_id': object(), 'qos': {'_id': object(), 'index': 9}}]),
                          [{'qos': {'index': 9}}])
