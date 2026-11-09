@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[2] / 'opncell/src/opnsense/scripts/opncell/active_logs.py'
 sys.path.insert(0, str(SCRIPT.parent))
@@ -34,3 +35,9 @@ class ActiveLogsTests(unittest.TestCase):
         rows = module.active_logs('101 S open5gs-mmed\n102 S open5gs-sgwud\n')
         self.assertNotIn('amf', [row['scope'] for row in rows])
         self.assertNotIn('mongod', [row['scope'] for row in rows])
+
+    def test_freebsd_column_arguments_are_separate(self):
+        with patch.object(module.subprocess, 'check_output', return_value='101 Is /usr/local/bin/open5gs-mmed\n') as ps:
+            rows = module.active_logs()
+        self.assertEqual(ps.call_args.args[0], ['/bin/ps', 'axww', '-o', 'pid=', '-o', 'stat=', '-o', 'comm='])
+        self.assertEqual(rows[0]['scope'], 'mme')

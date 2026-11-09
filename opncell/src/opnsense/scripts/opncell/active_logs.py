@@ -9,7 +9,7 @@ from log_source import SCOPES
 
 def active_logs(processes=None):
     if processes is None:
-        processes = subprocess.check_output(['/bin/ps', 'axww', '-o', 'pid=,stat=,comm='], text=True)
+        processes = subprocess.check_output(['/bin/ps', 'axww', '-o', 'pid=', '-o', 'stat=', '-o', 'comm='], text=True)
     names = {('mongod' if scope == 'mongod' else 'open5gs-' + scope + 'd'): scope for scope in SCOPES}
     found = {}
     for line in processes.splitlines():
