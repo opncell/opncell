@@ -1,7 +1,7 @@
 # Release status
 
 - 26.7.2_26: OPNcell-c acceptance confirmed for fast subscriber edits, integral policy display and successful saves.
-- 26.7.2_27: frozen acceptance build with the Subscriber List top spacing aligned to Profile List. OPNcell-c (10.11.0.52) is the existing tested installation and will receive the package upgrade; 10.11.0.55 and 10.11.0.56 are fresh FreeBSD 15 installation targets. SSH access setup and acceptance remain pending. Changes after this freeze require a new revision. The versioned HTTP staging URL passed 117 file-hash checks, both CPU-route binary preflights passed on the build host (NOAVX route selection simulated), and the preserved ABI14 catalog parsed with 86 packages. The public live link remains revision 18.
+- 26.7.2_27: frozen under Git tag release-26.7.2_27. Three existing FreeBSD 15 installations upgraded successfully directly from the versioned HTTP repository. Backend checks passed for data consistency, editing, export, active diagnostics, package integrity and boot settings. Host-specific evidence remains private. Public staging passed 117 HTTP hash checks and both CPU-route preflights. Live activation, GUI spacing confirmation and reboot testing remain separate. Changes after the freeze require a new revision.
 
 
 - 26.7.2_16: installed and tested on OPNcell-c. Diagnostics layout, hourly filter and Clear were confirmed; Download appears to work. Hourly log rotation still requires verification.
