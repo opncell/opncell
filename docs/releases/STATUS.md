@@ -1,7 +1,7 @@
 # Release status
 
 - 26.7.2_26: OPNcell-c acceptance confirmed for fast subscriber edits, integral policy display and successful saves.
-- 26.7.2_27: frozen acceptance build with the Subscriber List top spacing aligned to Profile List. Fresh FreeBSD 15 hosts 10.11.0.55 and 10.11.0.56 are the next installation/upgrade targets; SSH access setup and testing remain pending. Changes after this freeze require a new revision.
+- 26.7.2_27: frozen acceptance build with the Subscriber List top spacing aligned to Profile List. OPNcell-c (10.11.0.52) is the existing tested installation and will receive the package upgrade; 10.11.0.55 and 10.11.0.56 are fresh FreeBSD 15 installation targets. SSH access setup and acceptance remain pending. Changes after this freeze require a new revision.
 
 
 - 26.7.2_16: installed and tested on OPNcell-c. Diagnostics layout, hourly filter and Clear were confirmed; Download appears to work. Hourly log rotation still requires verification.
