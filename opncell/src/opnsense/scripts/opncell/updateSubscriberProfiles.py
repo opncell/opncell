@@ -32,6 +32,16 @@ const firstSession = sessions[0];
 const ue = (firstSession && firstSession.ue) || {};
 const ip = ue.ipv4 || ue.addr || "";
 const token = require("crypto").createHash("sha256").update(EJSON.stringify(subscriber)).digest("hex");
+function sortedSnapshot(value) {
+    if (Array.isArray(value)) return value.map(sortedSnapshot);
+    if (value !== null && typeof value === "object") {
+        return Object.fromEntries(Object.keys(value).sort().map(key => [key, sortedSnapshot(value[key])]));
+    }
+    return value;
+}
+const canonicalToken = require("crypto").createHash("sha256").update(
+    JSON.stringify(sortedSnapshot(EJSON.serialize(subscriber, {relaxed: false})))
+).digest("hex");
 if (input.read) {
     print(JSON.stringify({
         result: "success",
@@ -51,7 +61,7 @@ if (input.read) {
     }));
     quit(0);
 }
-if (input.token && input.token !== token) {
+if (input.token && input.token !== token && input.token !== canonicalToken) {
     print(JSON.stringify({result: "failed", message: "Subscriber changed during edit. Reload and try again."}));
     quit(1);
 }

@@ -41,7 +41,11 @@ class UserRepository
 
     public function getSubscriberForEdit(string $imsi): array
     {
-        return $this->editSubscriber(['imsi' => $imsi, 'read' => true]);
+        if (!preg_match('/^[0-9]{5,16}$/D', $imsi)) {
+            return ['result' => 'failed', 'message' => 'Invalid IMSI'];
+        }
+        $response = json_decode((string)$this->backend->configdpRun('opncell readSubscriber', [$imsi]), true);
+        return is_array($response) ? $response : ['result' => 'failed', 'message' => 'Could not load subscriber'];
     }
 
     public function editSubscriber(array $details): array
