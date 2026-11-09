@@ -1,0 +1,10 @@
+--- a/opnsense/mvc/app/models/OPNsense/OPNCell/Menu/Menu.xml
++++ b/opnsense/mvc/app/models/OPNsense/OPNCell/Menu/Menu.xml
+@@ -4,6 +4,6 @@
+ <!--      <Hnet cssClass="fa fa-sitemap" url="/ui/opncell/hnet" />-->
+       <Users cssClass="fa fa-users fa-fw" url = "/ui/opncell/user"/>
+ 
+-      <FourG VisibleName="Diagnostics" cssClass="fa fa-medkit" order="55" url="/ui/opncell/log" />
++      <FourG VisibleName="Diagnostics" cssClass="fa fa-medkit" order="55" />
+   </Cellular>
+ </menu>

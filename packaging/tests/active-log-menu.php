@@ -16,6 +16,8 @@ namespace OPNsense\Core {
 namespace {
     require __DIR__.'/../../opncell/src/opnsense/mvc/app/models/OPNsense/OPNCell/ServiceNames.php';
     require __DIR__.'/../../opncell/src/opnsense/mvc/app/models/OPNsense/OPNCell/Menu/Menu.php';
+    $xml = simplexml_load_file(__DIR__.'/../../opncell/src/opnsense/mvc/app/models/OPNsense/OPNCell/Menu/Menu.xml');
+    if ((string)$xml->Cellular->FourG['url'] !== '') throw new RuntimeException('Diagnostics parent URL hides daemon submenu');
     $menu = new OPNsense\OPNCell\Menu\Menu(); $menu->collect();
     if (count($menu->items) !== 2 || array_column($menu->items, 'url') !== [
         '/ui/opncell/log/index/open5gs-mmed', '/ui/opncell/log/index/mongod'
