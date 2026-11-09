@@ -1,0 +1,46 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
+@@ -1,3 +1,18 @@
++<style>
++    #grid-user-list-header .actionBar {
++        display: flex;
++        align-items: center;
++        justify-content: flex-end;
++        flex-wrap: wrap;
++        gap: 8px;
++    }
++    #grid-user-list-header .actionBar > .search,
++    #grid-user-list-header .actionBar > .actions {
++        float: none;
++        margin: 0;
++    }
++    #subscriber-export { flex: 0 0 auto; }
++</style>
+ {#
+ 
+ Copyright (C) 2026 Digital Solutions
+@@ -114,7 +129,7 @@
+         <!--            <b>{{ lang._('Deleting....') }}</b> <i id="deleting_progress"></i>-->
+         <!--        </button>-->
+ 
+-        <p><a class="btn btn-default" href="/api/opncell/user/export"><i class="fa fa-download"></i> {{ lang._('Export subscribers') }}</a></p>
++        <a id="subscriber-export" class="btn btn-default" href="/api/opncell/user/export" style="display: none;" title="{{ lang._('Export subscribers') }}" aria-label="{{ lang._('Export subscribers') }}"><i class="fa fa-download" aria-hidden="true"></i></a>
+         <table id="grid-user-list" class="table table-condensed table-hover table-striped table-responsive"
+                data-editDialog="DialogUsers" data-addDialog="DialogAddUsers">
+             <thead>
+@@ -516,7 +531,15 @@
+         /**
+          * copy actions for selected items from opnsense_bootgrid_plugin.js User Edition
+          */
++        function placeSubscriberExport() {
++            const search = $("#grid-user-list-header .search").first();
++            if (search.length) {
++                $("#subscriber-export").insertBefore(search).show();
++            }
++        }
++        placeSubscriberExport();
+         gridOptions.on("loaded.rs.jquery.bootgrid", function (e) {
++            placeSubscriberExport();
+ 
+             $(this).find(".command-add").off('click');
+             $(this).find(".command-edit").off('click');
