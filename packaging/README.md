@@ -1,6 +1,6 @@
 # OPNcell packaging
 
-The current appliance-tested plugin is **26.7.2_16**. Revision **26.7.2_18** is the private CPU-routing candidate for OPNsense 26.7 on FreeBSD 15 amd64. See [release status](../docs/releases/STATUS.md).
+The current appliance-tested plugin is **26.7.2_16**. Revision **26.7.2_18** is the published CPU-routing release for OPNsense 26.7 on FreeBSD 15 amd64. See [release status](../docs/releases/STATUS.md).
 
 The candidate installer entry point is `scripts/install-cellular.py`, with
 `scripts/migrate-mongodb.py` beside it. Its optional `--migration-bundle` restores
@@ -8,7 +8,7 @@ MongoDB 5 application records into a fresh MongoDB 8.0 directory and verifies th
 before enabling database startup. Prepare the bundle before replacing MongoDB 5.
 See [the migration procedure](../docs/mongodb-installation-migration.md) for scope,
 required tools, supported collection/index definitions, and pending appliance tests.
-This candidate has not replaced the published package installation procedure.
+CPU-aware installation is published, while full installer/migration acceptance remains pending; ordinary pkg installation does not perform CPU detection.
 
 | Directory | Contents |
 |---|---|

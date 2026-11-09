@@ -153,8 +153,7 @@ python3 install-cellular.py --preflight-only --recovery-dir /root/cellular-cpu-p
 
 Preflight writes a report in a new recovery directory, but does not install
 packages, change service configuration, or persist a repository selection.
-For a private staged release, add `--repository-base-url URL`. The public URL
-must not be used until the revision 18 CPU routes are activated.
+For a private staged release, add `--repository-base-url URL`. The revision 18 CPU routes are public and passed stable-URL preflight checks on 2026-11-09.
 
 Advanced users with manually configured repository names can use
 `--repository-base-url '' --avx-repository NAME --noavx-repository NAME`; those
