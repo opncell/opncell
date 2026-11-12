@@ -1,0 +1,111 @@
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -28,9 +28,18 @@
+     const cellularLog = options.url.indexOf('/api/diagnostics/log/opncell/') !== -1;
+     if (cellularLog && $("#validFrom_filter").val() === "hour") {
+         // The platform request handler only knows day/week/month.
+-        const params = new URLSearchParams(options.data || "");
+-        params.set("validFrom", Math.floor(Date.now() / 1000) - 3600);
+-        options.data = params.toString();
++        const cutoff = Math.floor(Date.now() / 1000) - 3600;
++        const isJson = String(options.contentType || '').indexOf('application/json') !== -1 ||
++            (typeof options.data === 'string' && options.data.trim().startsWith('{'));
++        if (isJson) {
++            const params = typeof options.data === 'string' ? JSON.parse(options.data || '{}') : (options.data || {});
++            params.validFrom = cutoff;
++            options.data = JSON.stringify(params);
++        } else {
++            const params = new URLSearchParams(options.data || "");
++            params.set("validFrom", cutoff);
++            options.data = params.toString();
++        }
+     }
+     options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
+ });
+--- a/opnsense/scripts/opncell/query_log.py
++++ b/opnsense/scripts/opncell/query_log.py
+@@ -1,22 +1,48 @@
+ #!/usr/local/bin/python3.13
+-"""Use the platform log parser with the actual cellular daemon destination."""
++"""Use the platform parser with exact filtered counts and consistent pagination."""
++import argparse
++from datetime import datetime
+ import json
+-from pathlib import Path
+-import argparse
+ import sys
+ from log_source import resolve_log
+ 
+-if len(sys.argv) == 3 and sys.argv[1] == "--source":
+-    print(json.dumps({"path": str(resolve_log(sys.argv[2]))}))
+-else:
+-    sys.path.insert(0, "/usr/local/opnsense/scripts/syslog")
++
++def matching_time(record, since):
++    if not since:
++        return True
++    try:
++        return datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00')).timestamp() >= since
++    except (KeyError, TypeError, ValueError, AttributeError):
++        return False
++
++
++def page_records(records, limit, offset, since=0, emit=None):
++    rows, total = [], 0
++    for record in records:
++        # The platform generator yields its first older record before stopping.
++        # Exclude that boundary record before counting or paginating matches.
++        if not matching_time(record, since):
++            continue
++        index = total
++        total += 1
++        if index >= offset and (limit == 0 or index < offset + limit):
++            if emit is None:
++                rows.append(record)
++            else:
++                emit(record)
++    return rows, total
++
++
++def main():
++    if len(sys.argv) == 3 and sys.argv[1] == '--source':
++        print(json.dumps({'path': str(resolve_log(sys.argv[2]))}))
++        return
++    sys.path.insert(0, '/usr/local/opnsense/scripts/syslog')
+     from log_matcher import LogMatcher
+     original = LogMatcher.fetch_log_filenames
+ 
+     def filenames(filename, module):
+-        if module == "opncell":
+-            return [str(resolve_log(filename))]
+-        return original(filename, module)
++        return [str(resolve_log(filename))] if module == 'opncell' else original(filename, module)
+ 
+     LogMatcher.fetch_log_filenames = staticmethod(filenames)
+     parser = argparse.ArgumentParser()
+@@ -25,16 +51,14 @@
+                           ('severity', ''), ('valid_from', '0')):
+         parser.add_argument('--' + name, default=default)
+     args = parser.parse_args()
+-    limit = max(0, int(args.limit))
+-    offset = max(0, int(args.offset))
+-    result = {'filters': args.filter, 'rows': [], 'total_rows': 0, 'origin': args.filename}
++    limit, offset, since = max(0, int(args.limit)), max(0, int(args.offset)), float(args.valid_from)
+     matcher = LogMatcher(args.filter, args.filename, args.module, args.severity)
+-    for index, record in enumerate(matcher.match_records(float(args.valid_from))):
+-        result['total_rows'] += 1
+-        if index >= offset and (limit == 0 or index < offset + limit):
+-            if args.output == 'json':
+-                result['rows'].append(record)
+-            else:
+-                print("%(timestamp)s\t%(severity)s\t%(process_name)s\t%(line)s" % record)
++    emit = None if args.output == 'json' else lambda record: print(
++        '%(timestamp)s\t%(severity)s\t%(process_name)s\t%(line)s' % record)
++    rows, total = page_records(matcher.match_records(since), limit, offset, since, emit)
+     if args.output == 'json':
+-        print(json.dumps(result))
++        print(json.dumps({'filters': args.filter, 'rows': rows, 'total_rows': total, 'origin': args.filename}))
++
++
++if __name__ == '__main__':
++    main()

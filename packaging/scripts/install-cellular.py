@@ -237,10 +237,28 @@ def install_candidate(selected_repo, repos_dir, candidate):
     run(["/usr/local/bin/mongod", "--version"])
 
 
+def upgrade_existing(args):
+    from types import SimpleNamespace
+    spec = importlib.util.spec_from_file_location('cellular_upgrade', Path(__file__).with_name('upgrade-cellular.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    api = SimpleNamespace(**{name: globals()[name] for name in [
+        'require', 'run', 'migration', 'configuration', 'candidate_repository', 'preflight_binary',
+        'pkg_command', 'install_candidate', 'persist_repository']})
+    return module.upgrade(args, api)
+
+
 def install(args):
     require(os.geteuid() == 0, "Run the installer as root")
     require(run(["freebsd-version", "-u"]).startswith("15."),
             "Complete the supported OPNsense/FreeBSD 15 upgrade before running this installer")
+    existing = subprocess.run(['pkg-static', 'query', '%v', 'mongodb80'], capture_output=True, text=True)
+    require(existing.returncode in (0, 1), 'Cannot inspect installed MongoDB package')
+    if existing.returncode == 0 and existing.stdout.strip():
+        return upgrade_existing(args)
+    if getattr(args, 'plan_only', False):
+        print('Mode: fresh installation or prepared MongoDB 5 migration; CPU/package preflight only.', flush=True)
+        return preflight_only(args)
     probe = subprocess.run(["pgrep", "-lx", "open5gs-.*|mongod"], capture_output=True, text=True)
     require(probe.returncode == 1, "Stop all Open5GS and mongod processes before installation")
     bundle = Path(args.migration_bundle).resolve(strict=True) if args.migration_bundle else None
@@ -350,7 +368,7 @@ def main():
     os.umask(0o077)
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--migration-bundle")
-    p.add_argument("--target-dbpath", default="/var/db/opncell-mongodb80")
+    p.add_argument("--target-dbpath", default="/var/db/opncell-mongodb80", help="New database path for fresh/5-to-8 installs; existing MongoDB 8 paths are preserved")
     p.add_argument("--recovery-dir", help="New private directory for configuration backup and report")
     p.add_argument("--repository", default="OPNcell", help="Repository name for the selected catalog")
     p.add_argument("--repository-base-url", default="http://repo.opncell.io/OPNcell-repo",
@@ -358,6 +376,7 @@ def main():
     p.add_argument("--repos-dir", default="/usr/local/etc/pkg/repos", help="Where successful installs persist OPNcell.conf")
     modes = p.add_mutually_exclusive_group()
     modes.add_argument("--preflight-only", action="store_true", help="Download and execute the candidate without installing")
+    modes.add_argument("--plan-only", action="store_true", help="Inspect the selected install/upgrade path without changing packages or service settings")
     modes.add_argument("--cpu-info", action="store_true", help="Instant CPU/flavor check; no catalog query or download")
     p.add_argument("--avx-repository", help="Full-stack repository with a tested AVX2 MongoDB build")
     p.add_argument("--noavx-repository", help="Full-stack NOAVX repository (defaults to --repository)")
@@ -371,7 +390,9 @@ def main():
         cpu_info(args)
         return
     if not args.recovery_dir:
-        p.error('--recovery-dir is required for installation or full preflight')
+        from datetime import datetime, timezone
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+        args.recovery_dir = '/root/opncell-recovery-' + stamp + '-' + str(os.getpid())
     preflight_only(args) if args.preflight_only else install(args)
 
 

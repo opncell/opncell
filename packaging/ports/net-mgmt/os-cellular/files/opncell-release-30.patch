@@ -1,0 +1,226 @@
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/HnetController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/HnetController.php
+@@ -58,6 +58,7 @@
+          $result = array();
+              $mdlHnet = new Hnet();
+              $result['hnet'] = $mdlHnet->getNodes();
++             $result['hnet']['filepath'] = '/usr/local/etc/open5gs/hnet/public/';
+              return $result;
+      }
+ 
+@@ -72,6 +73,7 @@
+                $mdlHnet = new Hnet();
+                $this->request = new Request();
+                $mdlHnet->setNodes($this->request->getPost("hnet"));
++               $mdlHnet->filepath->setValue('/usr/local/etc/open5gs/hnet/public/');
+ 
+                $valMsgs = $mdlHnet->performValidation();
+ 
+@@ -140,7 +142,7 @@
+         }
+     }
+ 
+-   $pubkeyPath = rtrim($hnetData['filepath'], '/').'/hnet_pubkey_';
++   $pubkeyPath = '/usr/local/etc/open5gs/hnet/public/hnet_pubkey_';
+ 
+     return [ 'id'   => (int)$hnetData['id'],
+         'scheme'      => $scheme,
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/forms/hnet.xml
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/forms/hnet.xml
+@@ -10,8 +10,8 @@
+         <id>hnet.filepath</id>
+         <label>File path for the public key</label>
+         <type>text</type>
+-        <allownew>true</allownew>
+-        <help>A desired path to store the public key if default is not used</help>
++        <readonly>true</readonly>
++        <help>Persistent public-key export directory. Missing exports are rebuilt from the existing private keys when listing Hnet keys.</help>
+     </field>
+ 
+ </form>
+--- a/opnsense/mvc/app/models/OPNsense/OPNCell/Hnet.xml
++++ b/opnsense/mvc/app/models/OPNsense/OPNCell/Hnet.xml
+@@ -15,7 +15,7 @@
+ 
+                 <filepath type="TextField">
+                     <Required>Y</Required>
+-                    <default>/tmp/pub_hnet/</default>
++                    <default>/usr/local/etc/open5gs/hnet/public/</default>
+                     <mask>/^\/[a-zA-Z0-9\/._-]+$/</mask>
+                     <ValidationMessage>Enter a valid absolute file path</ValidationMessage>
+                 </filepath>
+--- a/opnsense/scripts/opncell/generate_hnet.py
++++ b/opnsense/scripts/opncell/generate_hnet.py
+@@ -10,6 +10,7 @@
+ import os
+ 
+ from atomic_yaml import replace_yaml
++from list_hnet import derive_public_key, PUBLIC_DIRECTORY
+ 
+ 
+ response = {}
+@@ -80,17 +81,13 @@
+             raise ValueError("Invalid Hnet scheme")
+         hnet_id = allocate_hnet_id(UDM_YAML)
+ 
+-        path_str = data.get("pubkey_path") or data.get("filepath")
+-        if not path_str:
+-            print("Error: pubkey_path is required", file=sys.stderr)
+-            sys.exit(1)
+-
+-        pubkey_path = path_str.replace("\\/", "/")
+-        pubkey_path = f"{pubkey_path}{hnet_id}.pub"
+-        dir_path = os.path.dirname(pubkey_path)
+-
+-        os.makedirs(dir_path, mode=0o755, exist_ok=True)
+-
++        if not 1 <= hnet_id <= 255:
++            raise ValueError("No Hnet key IDs available (valid range is 1–255)")
++        # Public exports must survive reboot, regardless of legacy UI settings.
++        pubkey_path = str(PUBLIC_DIRECTORY / f"hnet_pubkey_{hnet_id}.pub")
++        if PUBLIC_DIRECTORY.is_symlink():
++            raise ValueError("Public key directory must not be a symbolic link")
++        PUBLIC_DIRECTORY.mkdir(mode=0o755, parents=True, exist_ok=True)
+ 
+     except Exception as e:
+         print(json.dumps({
+@@ -128,55 +125,10 @@
+         created_files.append(priv_key_path)
+         key.write(private_key)
+ 
+-    # Generate public key PEM... rare case it's needed but, leave no stone unturned :)
+-
+-    if scheme == 1:
+-        pub_pem = run_command([
+-            "openssl", "pkey",
+-            "-in", str(priv_key_path),
+-            "-pubout"
+-        ])
+-    else:
+-        pub_pem = run_command([
+-            "openssl", "ec",
+-            "-in", str(priv_key_path),
+-            "-pubout",
+-            "-conv_form", "compressed"
+-        ])
+-
+-    try:
+-        with pub_key_path.open("x", encoding="utf-8") as public_key:
+-            created_files.append(pub_key_path)
+-            public_key.write(pub_pem)
+-
+-    except Exception as e:
+-        print(json.dumps({
+-            "result": "Failed",
+-            "error": repr(e)
+-        }))
+-        return
+-
+-    # Generate HEX public key
+-    if scheme == 1:
+-        der = run_command([
+-            "openssl", "pkey",
+-            "-in", str(priv_key_path),
+-            "-pubout",
+-            "-outform", "DER"
+-        ], binary=True)
+-
+-        hex_pub = der[-32:].hex()
+-
+-    else:
+-        der = run_command([
+-            "openssl", "ec",
+-            "-in", str(priv_key_path),
+-            "-pubout",
+-            "-outform", "DER"
+-        ], binary=True)
+-
+-        hex_pub = der[-33:].hex()
+-
++    pub_pem, hex_pub = derive_public_key(str(priv_key_path), scheme)
++    with pub_key_path.open("x", encoding="utf-8") as public_key:
++        created_files.append(pub_key_path)
++        public_key.write(pub_pem)
+     hex_path = pub_key_path.with_suffix(".pub.hex")
+     with hex_path.open("x", encoding="utf-8") as public_hex:
+         created_files.append(hex_path)
+--- a/opnsense/scripts/opncell/list_hnet.py
++++ b/opnsense/scripts/opncell/list_hnet.py
+@@ -2,7 +2,11 @@
+ 
+ import json
+ import subprocess
+-import yaml
++import os
++import tempfile
++from pathlib import Path
++
++PUBLIC_DIRECTORY = Path("/usr/local/etc/open5gs/hnet/public")
+ 
+ UDM_YAML = "/usr/local/etc/open5gs/udm.yaml"
+ 
+@@ -13,19 +17,47 @@
+ 
+ 
+ def derive_public_key(priv_key_path, scheme):
++    if scheme not in (1, 2):
++        raise ValueError("Unsupported Hnet scheme")
+     if scheme == 1:
+         pub_pem = run_command(["openssl", "pkey", "-in", priv_key_path, "-pubout"])
+         der = run_command(["openssl", "pkey", "-in", priv_key_path, "-pubout", "-outform", "DER"], binary=True)
+         hex_pub = der[-32:].hex()
+     else:
+         pub_pem = run_command(["openssl", "ec", "-in", priv_key_path, "-pubout", "-conv_form", "compressed"])
+-        der = run_command(["openssl", "ec", "-in", priv_key_path, "-pubout", "-outform", "DER"], binary=True)
++        der = run_command(["openssl", "ec", "-in", priv_key_path, "-pubout", "-conv_form", "compressed", "-outform", "DER"], binary=True)
+         hex_pub = der[-33:].hex()
+ 
+     return pub_pem, hex_pub
+ 
+ 
++def store_public_keys(hnet_id, pub_pem, hex_pub, directory=None):
++    directory = Path(directory) if directory is not None else PUBLIC_DIRECTORY
++    if directory.is_symlink():
++        raise ValueError("Public key directory must not be a symbolic link")
++    directory.mkdir(mode=0o755, parents=True, exist_ok=True)
++    hnet_id = int(hnet_id)
++    if not 1 <= hnet_id <= 255:
++        raise ValueError("Hnet key ID must be between 1 and 255")
++    pem = directory / f'hnet_pubkey_{hnet_id}.pub'
++    hex_path = pem.with_suffix('.pub.hex')
++    for target, content in ((pem, pub_pem), (hex_path, hex_pub)):
++        with tempfile.NamedTemporaryFile(mode='w', dir=directory, delete=False) as stream:
++            temporary = Path(stream.name)
++            try:
++                os.fchmod(stream.fileno(), 0o644)
++                stream.write(content)
++                stream.flush()
++                os.fsync(stream.fileno())
++                stream.close()
++                os.replace(temporary, target)
++            finally:
++                temporary.unlink(missing_ok=True)
++    return pem, hex_path
++
++
+ def main():
++    import yaml
+     try:
+         with open(UDM_YAML, "r") as f:
+             config = yaml.safe_load(f) or {}
+@@ -47,10 +79,13 @@
+ 
+         try:
+             pub_pem, hex_pub = derive_public_key(priv_key_path, scheme)
++            pem, hex_path = store_public_keys(entry.get("id"), pub_pem, hex_pub)
++            item["public_key_path"] = str(pem)
++            item["public_key_hex_path"] = str(hex_path)
+             item["public_key_pem"] = pub_pem
+             item["public_key_hex"] = hex_pub
+-        except (subprocess.CalledProcessError, FileNotFoundError, TypeError) as e:
+-            item["error"] = f"Could not read private key: {e}"
++        except (subprocess.CalledProcessError, OSError, TypeError, ValueError) as e:
++            item["error"] = f"Could not prepare public key: {e}"
+ 
+         entries.append(item)
+ 

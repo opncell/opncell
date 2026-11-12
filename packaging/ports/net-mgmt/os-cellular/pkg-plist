@@ -64,6 +64,7 @@ opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
 opnsense/mvc/app/views/OPNsense/OPNCell/hnet.volt
 opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
 opnsense/mvc/app/views/OPNsense/OPNCell/user.volt
+opnsense/mvc/app/views/OPNsense/OPNCell/hnet_management.volt
 opnsense/scripts/opncell/atomic_yaml.py
 opnsense/scripts/opncell/deleteUser.py
 opnsense/scripts/opncell/editSingleService.py
@@ -89,6 +90,7 @@ opnsense/scripts/opncell/getUser.py
 opnsense/scripts/opncell/hss.sh
 opnsense/scripts/opncell/install_vips.php
 opnsense/scripts/opncell/list_hnet.py
+opnsense/scripts/opncell/hnet_management.py
 opnsense/scripts/opncell/opncell_db.sh
 opnsense/scripts/opncell/processNames.py
 opnsense/scripts/opncell/reconfigure.py
@@ -175,3 +177,4 @@ opnsense/scripts/opncell/active_logs.py
 opnsense/mvc/app/views/OPNsense/OPNCell/diagnostics.volt
 opnsense/scripts/opncell/export_subscribers.py
 opnsense/scripts/opncell/read_subscriber.py
+share/opncell/installer/upgrade-cellular.py

@@ -6,6 +6,23 @@ import ujson
 import sys
 import json
 
+def listening_ports(output):
+    """Group active Internet listeners by PID, deduplicating IPv4/IPv6 sockets."""
+    listeners = {}
+    for line in output.splitlines():
+        fields = line.split()
+        if len(fields) < 7 or not fields[2].isdigit():
+            continue
+        protocol = fields[4].rstrip('46').lower()
+        if protocol not in ('tcp', 'udp', 'sctp'):
+            continue
+        port = fields[5].rsplit(':', 1)[-1]
+        if port.isdigit():
+            listeners.setdefault(fields[2], set()).add((protocol.upper(), int(port)))
+    return {pid: ', '.join(f'{protocol} {port}' for protocol, port in sorted(ports))
+            for pid, ports in listeners.items()}
+
+
 def main():
     network = ""
 
@@ -98,6 +115,16 @@ def main():
             process_names.append({"PID": "Stopped", "Name": process})
     except:
         pass
+
+    # One socket snapshot for the whole table, rather than a command per daemon.
+    try:
+        ports = listening_ports(subprocess.check_output(
+            ['/usr/bin/sockstat', '-46l'], text=True, timeout=5))
+    except (OSError, subprocess.SubprocessError):
+        ports = None
+    for process in process_names:
+        process['listening_ports'] = (ports.get(str(process['PID']), '—')
+                                      if ports is not None else 'Unavailable')
 
     print(ujson.dumps(process_names))
 

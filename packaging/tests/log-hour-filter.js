@@ -33,4 +33,13 @@ timeframe = 'day';
 const day = {url:'/api/diagnostics/log/opncell/mme', data:'validFrom=1799913600'};
 prefilter(day);
 assert.equal(day.data, 'validFrom=1799913600');
-console.log('SUCCESS: hour cutoff, existing filters, routing and day cutoff preserved');
+timeframe = 'hour';
+for (const count of [100, 5000, -1]) {
+    const original = {rowCount:count,current:3,severity:['Informational'],searchPhrase:'UE',sort:{timestamp:'desc'}};
+    const json = {url:'/api/diagnostics/log/opncell/amf',contentType:'application/json',data:JSON.stringify(original)};
+    prefilter(json);
+    const result = JSON.parse(json.data);
+    assert.deepEqual(result, {...original,validFrom:1799996400});
+    assert.equal(json.url, '/api/opncell/log/query/amf');
+}
+console.log('SUCCESS: JSON and form hour requests preserve page size, All, page, search and severity');

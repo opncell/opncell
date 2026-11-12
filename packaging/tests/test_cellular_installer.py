@@ -177,6 +177,15 @@ class InstallerTests(unittest.TestCase):
                 i.install(self.args)
         probe.assert_not_called()
 
+    def test_running_mongodb8_dispatches_to_upgrade_without_requiring_stopped_daemons(self):
+        with patch.object(i.os, 'geteuid', return_value=0), \
+             patch.object(i, 'run', return_value='15.1-RELEASE'), \
+             patch.object(i.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '8.0.29\n', '')) as process, \
+             patch.object(i, 'upgrade_existing') as upgrade:
+            i.install(self.args)
+        upgrade.assert_called_once_with(self.args)
+        self.assertFalse(any(call.args[0][0] == 'pgrep' for call in process.call_args_list))
+
     def test_unknown_dependents_block_removal(self):
         with patch.object(i.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "unrelated-app\n", "")):
             with self.assertRaisesRegex(i.migration.MigrationError, "unrelated"):

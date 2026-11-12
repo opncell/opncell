@@ -1,14 +1,10 @@
 # OPNcell packaging
 
-The current appliance-tested plugin is **26.7.2_26**. **26.7.2_27** freezes that functionality with the Subscriber List spacing correction for upgrade acceptance on three existing FreeBSD 15 installations. Revision **26.7.2_18** remains the published CPU-routing release for OPNsense 26.7 on FreeBSD 15 amd64. See [release status](../docs/releases/STATUS.md).
+The current published and appliance-tested plugin is **26.7.2_32**. Repository upgrades passed on three FreeBSD 15 appliances; the built-in firmware package action was also verified. One appliance subsequently passed an OPNsense 26.7.9 upgrade and reboot with all selected cellular services running. See [release status](../docs/releases/STATUS.md) and [revision 32 notes](../docs/releases/26.7.2_32.md).
 
-The candidate installer entry point is `scripts/install-cellular.py`, with
-`scripts/migrate-mongodb.py` beside it. Its optional `--migration-bundle` restores
-MongoDB 5 application records into a fresh MongoDB 8.0 directory and verifies them
-before enabling database startup. Prepare the bundle before replacing MongoDB 5.
-See [the migration procedure](../docs/mongodb-installation-migration.md) for scope,
-required tools, supported collection/index definitions, and pending appliance tests.
-CPU-aware installation is published, while full installer/migration acceptance remains pending; ordinary pkg installation does not perform CPU detection.
+The installer entry points are `scripts/install-cellular.sh` and `scripts/install-cellular.py`. Existing MongoDB 8.0 installations use `upgrade-cellular.py` to preserve database paths, service settings and subscriber provisioning. CPU-aware selection chooses the validated NOAVX or AVX2 catalog and checks the candidate binary before installation. Ordinary pkg installation does not perform CPU detection.
+
+The optional `--migration-bundle` restores prepared MongoDB 5 application records into a fresh MongoDB 8.0 directory and verifies them before enabling database startup. Prepare the bundle before replacing MongoDB 5. See [the migration procedure](../docs/mongodb-installation-migration.md) for supported collections/indexes and recovery steps. The legacy logical migration was appliance-tested; arbitrary database layouts and unattended end-to-end major OS migrations are not implied.
 
 | Directory | Contents |
 |---|---|
@@ -28,7 +24,7 @@ python3.12 packaging/scripts/collect-release.py /usr/home/codex/opncell-release/
 
 A missing dependency stops collection before the repository is assembled. Fetch missing package candidates into a separate incoming directory, then rerun with `--incoming PATH`. Inspect `package-audit.txt` before distributing a collected bundle.
 
-The validated scope covers upgrades and local provisioning/service behavior. A full fresh installation still requires configuration sample and certificate provisioning acceptance. The sample-staging helper is prepared for a future Open5GS port build. It is not part of the tested Open5GS 2.8.0_1 binary.
+Fresh-install configuration and certificate provisioning, first topology setup, and subsequent reboot startup were verified on a clean boot-environment clone. The sample-staging helper remains separate from the tested Open5GS 2.8.0_1 binary.
 
 Use a fresh destination for another release. Keep generated packages and working files outside Git.
 

@@ -10,8 +10,8 @@
         <id>hnet.filepath</id>
         <label>File path for the public key</label>
         <type>text</type>
-        <allownew>true</allownew>
-        <help>A desired path to store the public key if default is not used</help>
+        <readonly>true</readonly>
+        <help>Persistent public-key export directory. Missing exports are rebuilt from the existing private keys when listing Hnet keys.</help>
     </field>
 
 </form>

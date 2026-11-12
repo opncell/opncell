@@ -2,7 +2,11 @@
 
 import json
 import subprocess
-import yaml
+import os
+import tempfile
+from pathlib import Path
+
+PUBLIC_DIRECTORY = Path("/usr/local/etc/open5gs/hnet/public")
 
 UDM_YAML = "/usr/local/etc/open5gs/udm.yaml"
 
@@ -13,19 +17,40 @@ def run_command(cmd, binary=False):
 
 
 def derive_public_key(priv_key_path, scheme):
-    if scheme == 1:
-        pub_pem = run_command(["openssl", "pkey", "-in", priv_key_path, "-pubout"])
-        der = run_command(["openssl", "pkey", "-in", priv_key_path, "-pubout", "-outform", "DER"], binary=True)
-        hex_pub = der[-32:].hex()
-    else:
-        pub_pem = run_command(["openssl", "ec", "-in", priv_key_path, "-pubout", "-conv_form", "compressed"])
-        der = run_command(["openssl", "ec", "-in", priv_key_path, "-pubout", "-outform", "DER"], binary=True)
-        hex_pub = der[-33:].hex()
+    from hnet_management import material, number
+    number(scheme, (1, 2))
+    public = material(Path(priv_key_path).read_bytes(), scheme)
+    return public['pem'], public['hex']
 
-    return pub_pem, hex_pub
+
+
+def store_public_keys(hnet_id, pub_pem, hex_pub, directory=None):
+    directory = Path(directory) if directory is not None else PUBLIC_DIRECTORY
+    if directory.is_symlink():
+        raise ValueError("Public key directory must not be a symbolic link")
+    directory.mkdir(mode=0o755, parents=True, exist_ok=True)
+    hnet_id = int(hnet_id)
+    if not 1 <= hnet_id <= 255:
+        raise ValueError("Hnet key ID must be between 1 and 255")
+    pem = directory / f'hnet_pubkey_{hnet_id}.pub'
+    hex_path = pem.with_suffix('.pub.hex')
+    for target, content in ((pem, pub_pem), (hex_path, hex_pub)):
+        with tempfile.NamedTemporaryFile(mode='w', dir=directory, delete=False) as stream:
+            temporary = Path(stream.name)
+            try:
+                os.fchmod(stream.fileno(), 0o644)
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+                stream.close()
+                os.replace(temporary, target)
+            finally:
+                temporary.unlink(missing_ok=True)
+    return pem, hex_path
 
 
 def main():
+    import yaml
     try:
         with open(UDM_YAML, "r") as f:
             config = yaml.safe_load(f) or {}
@@ -38,7 +63,7 @@ def main():
 
     for entry in hnet:
         priv_key_path = entry.get("key")
-        scheme = int(entry.get("scheme", 2))
+        scheme = entry.get("scheme", 2)
         item = {
             "id": entry.get("id"),
             "scheme": scheme,
@@ -46,11 +71,17 @@ def main():
         }
 
         try:
-            pub_pem, hex_pub = derive_public_key(priv_key_path, scheme)
+            from hnet_management import material
+            public = material(Path(priv_key_path).read_bytes(), scheme)
+            pub_pem, hex_pub = public['pem'], public['hex']
+            pem, hex_path = store_public_keys(entry.get("id"), pub_pem, hex_pub)
+            item["public_key_path"] = str(pem)
+            item["public_key_hex_path"] = str(hex_path)
+            item["fingerprint"] = public['fingerprint']
             item["public_key_pem"] = pub_pem
             item["public_key_hex"] = hex_pub
-        except (subprocess.CalledProcessError, FileNotFoundError, TypeError) as e:
-            item["error"] = f"Could not read private key: {e}"
+        except (subprocess.CalledProcessError, OSError, TypeError, ValueError) as e:
+            item["error"] = f"Could not prepare public key: {e}"
 
         entries.append(item)
 

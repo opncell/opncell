@@ -12,6 +12,9 @@ LEGACY = '/usr/ports/open5gs/install'
 
 
 def normalize(text):
+    # Use IPv4 explicitly for the stock local database; preserve custom URIs.
+    text = re.sub(r'(?m)^(\s*db_uri:\s*)mongodb://localhost/open5gs(?=\s*(?:#.*)?$)',
+                  r'\1mongodb://127.0.0.1:27017/open5gs', text)
     return (text.replace(LEGACY + '/etc/', '/usr/local/etc/')
             .replace(LEGACY + '/lib/', '/usr/local/lib/')
             .replace(LEGACY + '/var/log/open5gs/', '/var/log/opncell/')

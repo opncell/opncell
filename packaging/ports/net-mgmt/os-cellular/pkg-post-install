@@ -65,9 +65,10 @@ $descr = 'Required by OPNcell/open5gs SCTP sockets (S1AP/NGAP) - default maxsock
 $mdl = new Tunables();
 $node = null;
 
-foreach ($mdl->item->iterateItems() as $item) {
-    if ((string)$item->tunable === $tunable) {
-        $node = $item;
+// Built-in placeholder entries are virtual; create a persisted override instead.
+foreach ($mdl->item->asRecordSet() as $uuid => $item) {
+    if (($item['tunable'] ?? '') === $tunable) {
+        $node = $mdl->item->$uuid;
         break;
     }
 }
@@ -83,11 +84,11 @@ if ($current !== '' && (int)$current >= $target) {
 if ($node === null) {
     // No placeholder item for this tunable in config.xml - create one
     $node = $mdl->item->Add();
-    $node->tunable = $tunable;
+    $node->tunable->setValue($tunable);
 }
 
-$node->descr = $descr;
-$node->value = (string)$target;
+$node->descr->setValue($descr);
+$node->value->setValue((string)$target);
 
 $validations = $mdl->performValidation();
 if ($validations->count() > 0) {

@@ -169,6 +169,7 @@ class GeneralController extends ApiMutableModelControllerBase
         $item['serviceName'] = $serviceName;
         $item['name'] = $serviceName;
         $item['PID'] = $process['PID'];
+        $item['listening_ports'] = $process['listening_ports'] ?? '—';
 
         if (isset($this->bindAddress[$topic])) {
             $item['mme_add'] = $this->bindAddress[$topic];
@@ -219,6 +220,8 @@ class GeneralController extends ApiMutableModelControllerBase
         $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
 
         $filteredResult = $this->filterResults($result, $searchPhrase);
+        $sort = $this->request->getPost('sort', null, []);
+        $filteredResult = self::sortResults($filteredResult, is_array($sort) ? $sort : []);
         $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
 //        return $filteredResult;
         return [
@@ -227,6 +230,36 @@ class GeneralController extends ApiMutableModelControllerBase
             'current' => $currentPage,
             'rows' => $paginatedResult,
         ];
+    }
+
+    private static function sortResults(array $rows, array $sort): array
+    {
+        $allowed = ['name', 'PID', 'mme_add', 'listening_ports'];
+        $sort = array_intersect_key($sort, array_flip($allowed)) ?: ['name' => 'asc'];
+        usort($rows, static function ($a, $b) use ($sort) {
+            foreach ($sort as $field => $direction) {
+                $left = (string)($a[$field] ?? '');
+                $right = (string)($b[$field] ?? '');
+                // Missing listeners and stopped processes always follow active values.
+                $missingLeft = in_array($left, ['', '—', 'Stopped', 'Unavailable'], true);
+                $missingRight = in_array($right, ['', '—', 'Stopped', 'Unavailable'], true);
+                if ($missingLeft !== $missingRight) {
+                    return $missingLeft ? 1 : -1;
+                }
+                if ($field === 'PID' && ctype_digit($left) && ctype_digit($right)) {
+                    $comparison = (int)$left <=> (int)$right;
+                } elseif ($field === 'mme_add' && @inet_pton($left) !== false && @inet_pton($right) !== false) {
+                    $comparison = strcmp(inet_pton($left), inet_pton($right));
+                } else {
+                    $comparison = strnatcasecmp($left, $right);
+                }
+                if ($comparison !== 0) {
+                    return strtolower((string)$direction) === 'desc' ? -$comparison : $comparison;
+                }
+            }
+            return strnatcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+        });
+        return $rows;
     }
 
     private function filterResults(array $results, string $searchPhrase): array

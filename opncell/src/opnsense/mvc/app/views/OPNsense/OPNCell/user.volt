@@ -190,6 +190,12 @@ POSSIBILITY OF SUCH DAMAGE.
                         <b>{{ lang._('Generate New Key') }}</b>
                         <i id="generateAct_hnet_progress"></i>
                     </button>
+                    <button class="btn btn-default __ml" id="hnet_export_bundle" type="button">
+                        <i class="fa fa-download"></i> {{ lang._('Export keys') }}
+                    </button>
+                    <button class="btn btn-default __ml" id="hnet_import_bundle" type="button">
+                        <i class="fa fa-upload"></i> {{ lang._('Import keys') }}
+                    </button>
                     <button class="btn btn-primary __ml" id="existing_keys" type="button">
                         <b>{{ lang._('Use existing keys') }}</b>
                         <i id="activate_progress"></i>
@@ -286,6 +292,7 @@ POSSIBILITY OF SUCH DAMAGE.
                             <th>{{ lang._('Scheme') }}</th>
                             <th>{{ lang._('Private Key Path') }}</th>
                             <th>{{ lang._('Public Key') }}</th>
+                            <th>{{ lang._('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody id="hnet_list_body"></tbody>
@@ -976,12 +983,17 @@ POSSIBILITY OF SUCH DAMAGE.
                     payload = JSON.parse(payload);
                 }
 
-                const entries = (payload && payload.entries) || [];
+                if (!payload || payload.result !== 'ok' || !Array.isArray(payload.entries)) {
+                    BootstrapDialog.alert("{{ lang._('Unable to load Hnet keys. Check the service and try again.') }}");
+                    return;
+                }
+                const entries = payload.entries;
+                $('#activate_existing_hnet').prop('disabled', entries.length === 0 || entries.some(entry => entry.error));
                 const $body = $("#hnet_list_body");
                 $body.empty();
 
                 if (entries.length === 0) {
-                    $body.append('<tr><td colspan="4">{{ lang._("No Hnet keys have been generated yet.") }}</td></tr>');
+                    $body.append('<tr><td colspan="5">{{ lang._("No Hnet keys have been generated yet.") }}</td></tr>');
                 }
 
                 entries.forEach(function (entry) {
@@ -1012,6 +1024,10 @@ POSSIBILITY OF SUCH DAMAGE.
                         $pubCell.append($hexBtn).append($pemBtn);
                     }
                     $row.append($pubCell);
+                    const $delete = $('<button type="button" class="btn btn-xs btn-danger hnet-delete"><i class="fa fa-trash"></i></button>')
+                        .attr('title', "{{ lang._('Delete Hnet key') }}")
+                        .data('hnet-id', entry.id).data('hnet-fingerprint', entry.fingerprint || 'unavailable');
+                    $row.append($('<td></td>').append($delete));
                     $body.append($row);
                 });
 
@@ -1068,3 +1084,5 @@ POSSIBILITY OF SUCH DAMAGE.
 {{ partial("layout_partials/base_dialog",['fields':formDialogAddUser,'id':'DialogAddUsers','label':lang._('Add Subscriber:'),'hasSaveBtn':'true'])}}
 {{ partial("layout_partials/base_dialog",['fields':formDialogEditProfile,'id':'DialogProfile','label':lang._('Edit Profile Details:'),'hasSaveBtn':'true'])}}
 {{ partial("layout_partials/base_dialog_processing") }}
+
+{{ partial("OPNsense/OPNCell/hnet_management") }}

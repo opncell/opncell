@@ -1,0 +1,189 @@
+diff --git a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/GeneralController.php b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/GeneralController.php
+index 2d8f95a..3752832 100755
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/GeneralController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/GeneralController.php
+@@ -169,6 +169,7 @@ class GeneralController extends ApiMutableModelControllerBase
+         $item['serviceName'] = $serviceName;
+         $item['name'] = $serviceName;
+         $item['PID'] = $process['PID'];
++        $item['listening_ports'] = $process['listening_ports'] ?? '—';
+ 
+         if (isset($this->bindAddress[$topic])) {
+             $item['mme_add'] = $this->bindAddress[$topic];
+@@ -219,6 +220,8 @@ class GeneralController extends ApiMutableModelControllerBase
+         $searchPhrase = $this->request->getPost('searchPhrase', 'string', '');
+ 
+         $filteredResult = $this->filterResults($result, $searchPhrase);
++        $sort = $this->request->getPost('sort', null, []);
++        $filteredResult = self::sortResults($filteredResult, is_array($sort) ? $sort : []);
+         $paginatedResult = array_slice($filteredResult, $offset, $itemsPerPage);
+ //        return $filteredResult;
+         return [
+@@ -229,6 +232,36 @@ class GeneralController extends ApiMutableModelControllerBase
+         ];
+     }
+ 
++    private static function sortResults(array $rows, array $sort): array
++    {
++        $allowed = ['name', 'PID', 'mme_add', 'listening_ports'];
++        $sort = array_intersect_key($sort, array_flip($allowed)) ?: ['name' => 'asc'];
++        usort($rows, static function ($a, $b) use ($sort) {
++            foreach ($sort as $field => $direction) {
++                $left = (string)($a[$field] ?? '');
++                $right = (string)($b[$field] ?? '');
++                // Missing listeners and stopped processes always follow active values.
++                $missingLeft = in_array($left, ['', '—', 'Stopped', 'Unavailable'], true);
++                $missingRight = in_array($right, ['', '—', 'Stopped', 'Unavailable'], true);
++                if ($missingLeft !== $missingRight) {
++                    return $missingLeft ? 1 : -1;
++                }
++                if ($field === 'PID' && ctype_digit($left) && ctype_digit($right)) {
++                    $comparison = (int)$left <=> (int)$right;
++                } elseif ($field === 'mme_add' && @inet_pton($left) !== false && @inet_pton($right) !== false) {
++                    $comparison = strcmp(inet_pton($left), inet_pton($right));
++                } else {
++                    $comparison = strnatcasecmp($left, $right);
++                }
++                if ($comparison !== 0) {
++                    return strtolower((string)$direction) === 'desc' ? -$comparison : $comparison;
++                }
++            }
++            return strnatcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
++        });
++        return $rows;
++    }
++
+     private function filterResults(array $results, string $searchPhrase): array
+     {
+         if ($searchPhrase === '') {
+diff --git a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
+index c6705f7..bc77b13 100644
+--- a/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
++++ b/opnsense/mvc/app/controllers/OPNsense/OPNCell/Api/LogController.php
+@@ -72,6 +72,8 @@ class LogController extends ApiControllerBase
+         }
+         $result['rowCount'] = count($result['rows']);
+         $result['total'] = $result['total_rows'] ?? count($result['rows']);
++        // The platform treats total_rows as an unknown/partial count. Ours is exact.
++        unset($result['total_rows']);
+         $result['current'] = $page;
+         return $result;
+     }
+diff --git a/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt b/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
+index cdc48ae..655f428 100644
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/general.volt
+@@ -56,10 +56,11 @@
+                data-editDialog="DialogServiceConfig">
+             <thead>
+             <tr>
+-                <th data-column-id="name" data-width="20em">{{ lang._('Service') }}</th>
++                <th data-column-id="name" data-width="20em" data-order="asc">{{ lang._('Service') }}</th>
+                 <th data-column-id="PID">{{ lang._('PID') }}</th>
+                 <th data-column-id="mme_add">{{ lang._('Bind') }}</th>
+-                <th data-column-id="commands" data-formatter="commands" data-width="10em">{{ lang._('Status') }}</th>
++                <th data-column-id="listening_ports">{{ lang._('Listening on') }}</th>
++                <th data-column-id="commands" data-formatter="commands" data-width="10em" data-sortable="false">{{ lang._('Status') }}</th>
+             </tr>
+             </thead>
+             <tbody></tbody>
+diff --git a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+index b25f9d7..dcb1bfb 100644
+--- a/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
++++ b/opnsense/mvc/app/views/OPNsense/OPNCell/log.volt
+@@ -5,9 +5,13 @@ $.fn.UIBootgrid = function (settings) {
+     if (this.is('#grid-log') && settings && settings.search === '/api/diagnostics/log/opncell/{{scope}}') {
+         settings.options = settings.options || {};
+         settings.options.rowCount = [50, 100, 200, 500, 1000, 5000, -1];
++        settings.options.labels = settings.options.labels || {};
++        settings.options.labels.infos = "{{ lang._('Showing %s to %s of %s records') | format('{{ctx.start}}', '{{ctx.end}}', '{{ctx.total}}') }}";
+     }
+     return opncellOriginalLogGrid.apply(this, arguments);
+ };
++// Preserve platform properties such as translations on the wrapped plugin.
++Object.assign($.fn.UIBootgrid, opncellOriginalLogGrid);
+ // Register before the platform partial creates its grid and initial request.
+ $(function () {
+     // Add before the platform grid restores its saved timeframe selection.
+diff --git a/opnsense/scripts/opncell/processNames.py b/opnsense/scripts/opncell/processNames.py
+index 2444fe1..56ad37f 100755
+--- a/opnsense/scripts/opncell/processNames.py
++++ b/opnsense/scripts/opncell/processNames.py
+@@ -6,6 +6,23 @@ import ujson
+ import sys
+ import json
+ 
++def listening_ports(output):
++    """Group active Internet listeners by PID, deduplicating IPv4/IPv6 sockets."""
++    listeners = {}
++    for line in output.splitlines():
++        fields = line.split()
++        if len(fields) < 7 or not fields[2].isdigit():
++            continue
++        protocol = fields[4].rstrip('46').lower()
++        if protocol not in ('tcp', 'udp', 'sctp'):
++            continue
++        port = fields[5].rsplit(':', 1)[-1]
++        if port.isdigit():
++            listeners.setdefault(fields[2], set()).add((protocol.upper(), int(port)))
++    return {pid: ', '.join(f'{protocol} {port}' for protocol, port in sorted(ports))
++            for pid, ports in listeners.items()}
++
++
+ def main():
+     network = ""
+ 
+@@ -99,6 +116,16 @@ def main():
+     except:
+         pass
+ 
++    # One socket snapshot for the whole table, rather than a command per daemon.
++    try:
++        ports = listening_ports(subprocess.check_output(
++            ['/usr/bin/sockstat', '-46l'], text=True, timeout=5))
++    except (OSError, subprocess.SubprocessError):
++        ports = None
++    for process in process_names:
++        process['listening_ports'] = (ports.get(str(process['PID']), '—')
++                                      if ports is not None else 'Unavailable')
++
+     print(ujson.dumps(process_names))
+ 
+ if __name__ == "__main__":
+diff --git a/opnsense/scripts/opncell/query_log.py b/opnsense/scripts/opncell/query_log.py
+index 7841799..26381f6 100755
+--- a/opnsense/scripts/opncell/query_log.py
++++ b/opnsense/scripts/opncell/query_log.py
+@@ -2,7 +2,7 @@
+ """Use the platform log parser with the actual cellular daemon destination."""
+ import json
+ from pathlib import Path
+-import runpy
++import argparse
+ import sys
+ from log_source import resolve_log
+ 
+@@ -19,4 +19,22 @@ else:
+         return original(filename, module)
+ 
+     LogMatcher.fetch_log_filenames = staticmethod(filenames)
+-    runpy.run_path("/usr/local/opnsense/scripts/syslog/queryLog.py", run_name="__main__")
++    parser = argparse.ArgumentParser()
++    for name, default in (('output', 'json'), ('filter', ''), ('limit', '0'),
++                          ('offset', '0'), ('filename', ''), ('module', 'opncell'),
++                          ('severity', ''), ('valid_from', '0')):
++        parser.add_argument('--' + name, default=default)
++    args = parser.parse_args()
++    limit = max(0, int(args.limit))
++    offset = max(0, int(args.offset))
++    result = {'filters': args.filter, 'rows': [], 'total_rows': 0, 'origin': args.filename}
++    matcher = LogMatcher(args.filter, args.filename, args.module, args.severity)
++    for index, record in enumerate(matcher.match_records(float(args.valid_from))):
++        result['total_rows'] += 1
++        if index >= offset and (limit == 0 or index < offset + limit):
++            if args.output == 'json':
++                result['rows'].append(record)
++            else:
++                print("%(timestamp)s\t%(severity)s\t%(process_name)s\t%(line)s" % record)
++    if args.output == 'json':
++        print(json.dumps(result))

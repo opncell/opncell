@@ -72,6 +72,8 @@ class LogController extends ApiControllerBase
         }
         $result['rowCount'] = count($result['rows']);
         $result['total'] = $result['total_rows'] ?? count($result['rows']);
+        // The platform treats total_rows as an unknown/partial count. Ours is exact.
+        unset($result['total_rows']);
         $result['current'] = $page;
         return $result;
     }

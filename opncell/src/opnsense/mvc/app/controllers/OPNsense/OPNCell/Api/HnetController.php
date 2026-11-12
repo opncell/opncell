@@ -58,6 +58,7 @@ class HnetController extends ApiMutableModelControllerBase
          $result = array();
              $mdlHnet = new Hnet();
              $result['hnet'] = $mdlHnet->getNodes();
+             $result['hnet']['filepath'] = '/usr/local/etc/open5gs/hnet/public/';
              return $result;
      }
 
@@ -72,6 +73,7 @@ class HnetController extends ApiMutableModelControllerBase
                $mdlHnet = new Hnet();
                $this->request = new Request();
                $mdlHnet->setNodes($this->request->getPost("hnet"));
+               $mdlHnet->filepath->setValue('/usr/local/etc/open5gs/hnet/public/');
 
                $valMsgs = $mdlHnet->performValidation();
 
@@ -115,6 +117,41 @@ class HnetController extends ApiMutableModelControllerBase
          ];
      }
 
+    public function manageAction(): array
+    {
+        if (!(new Request())->isPost()) {
+            return ['result' => 'failed', 'message' => 'POST required'];
+        }
+        $this->request = new Request();
+        $this->response->setHeader('Cache-Control', 'no-store');
+        $raw = $this->request->getPost('payload', null, '');
+        if (!is_string($raw) || strlen($raw) > 2097152) {
+            return ['result' => 'failed', 'message' => 'Hnet request is too large'];
+        }
+        $details = json_decode($raw, true);
+        if (!is_array($details)) {
+            return ['result' => 'failed', 'message' => 'Invalid Hnet request'];
+        }
+        // Keep bundle passphrases and key data out of configd command arguments/logs.
+        $payload = json_encode($details);
+        if ($payload === false || strlen($payload) > 2097152) {
+            return ['result' => 'failed', 'message' => 'Hnet request is too large'];
+        }
+        $file = tempnam('/tmp', 'opncell-hnet-');
+        if ($file === false) {
+            return ['result' => 'failed', 'message' => 'Unable to prepare Hnet request'];
+        }
+        try {
+            if (!chmod($file, 0600) || file_put_contents($file, $payload) !== strlen($payload)) {
+                return ['result' => 'failed', 'message' => 'Unable to prepare private Hnet request'];
+            }
+            $result = json_decode((string)(new Backend())->configdpRun('opncell manageHnet', [$file]), true);
+            return is_array($result) ? $result : ['result' => 'failed', 'message' => 'Hnet service did not return a result'];
+        } finally {
+            unlink($file);
+        }
+    }
+
    public function listAction(): array
      {
          $backend = new Backend();
@@ -140,10 +177,9 @@ private function prepareHnetForKeyGeneration($hnetData)
         }
     }
 
-   $pubkeyPath = rtrim($hnetData['filepath'], '/').'/hnet_pubkey_';
+   $pubkeyPath = '/usr/local/etc/open5gs/hnet/public/hnet_pubkey_';
 
-    return [ 'id'   => (int)$hnetData['id'],
-        'scheme'      => $scheme,
+    return [ 'scheme'      => $scheme,
         'pubkey_path' => $pubkeyPath
     ];
 }

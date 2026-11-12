@@ -48,6 +48,13 @@ class ConfigurationTests(unittest.TestCase):
         private = self.root / 'usr/local/etc/open5gs/tls/hss.key'
         self.assertEqual(private.stat().st_mode & 0o777, 0o600)
 
+    def test_stock_local_database_uri_uses_ipv4(self):
+        for name in ('hss', 'pcrf', 'pcf', 'udr'):
+            self.assertEqual(c.normalize('db_uri: mongodb://localhost/open5gs\n' + name + ': {}\n'),
+                             'db_uri: mongodb://127.0.0.1:27017/open5gs\n' + name + ': {}\n')
+        custom = 'db_uri: mongodb://database.example:27018/custom\n'
+        self.assertEqual(c.normalize(custom), custom)
+
     def test_existing_configuration_wins(self):
         c.preserve(self.recovery, root=self.root)
         target = self.root / 'usr/local/etc/freeDiameter/hss.conf'

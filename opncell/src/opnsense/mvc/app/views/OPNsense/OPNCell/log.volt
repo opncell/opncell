@@ -5,9 +5,13 @@ $.fn.UIBootgrid = function (settings) {
     if (this.is('#grid-log') && settings && settings.search === '/api/diagnostics/log/opncell/{{scope}}') {
         settings.options = settings.options || {};
         settings.options.rowCount = [50, 100, 200, 500, 1000, 5000, -1];
+        settings.options.labels = settings.options.labels || {};
+        settings.options.labels.infos = "{{ lang._('Showing %s to %s of %s records') | format('{{ctx.start}}', '{{ctx.end}}', '{{ctx.total}}') }}";
     }
     return opncellOriginalLogGrid.apply(this, arguments);
 };
+// Preserve platform properties such as translations on the wrapped plugin.
+Object.assign($.fn.UIBootgrid, opncellOriginalLogGrid);
 // Register before the platform partial creates its grid and initial request.
 $(function () {
     // Add before the platform grid restores its saved timeframe selection.
@@ -24,9 +28,18 @@ $.ajaxPrefilter(function (options) {
     const cellularLog = options.url.indexOf('/api/diagnostics/log/opncell/') !== -1;
     if (cellularLog && $("#validFrom_filter").val() === "hour") {
         // The platform request handler only knows day/week/month.
-        const params = new URLSearchParams(options.data || "");
-        params.set("validFrom", Math.floor(Date.now() / 1000) - 3600);
-        options.data = params.toString();
+        const cutoff = Math.floor(Date.now() / 1000) - 3600;
+        const isJson = String(options.contentType || '').indexOf('application/json') !== -1 ||
+            (typeof options.data === 'string' && options.data.trim().startsWith('{'));
+        if (isJson) {
+            const params = typeof options.data === 'string' ? JSON.parse(options.data || '{}') : (options.data || {});
+            params.validFrom = cutoff;
+            options.data = JSON.stringify(params);
+        } else {
+            const params = new URLSearchParams(options.data || "");
+            params.set("validFrom", cutoff);
+            options.data = params.toString();
+        }
     }
     options.url = options.url.replace('/api/diagnostics/log/opncell/', '/api/opncell/log/query/');
 });

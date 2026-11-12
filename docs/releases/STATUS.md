@@ -1,5 +1,9 @@
 # Release status
 
+- **Current public release: 26.7.2_32**, activated 2026-11-11. Three appliance repository upgrades passed. The built-in firmware package action upgraded revision 31 to 32; a subsequent OPNsense 26.7.9 upgrade/reboot retained working 5G SA services, MongoDB access and Hnet configuration. Package integrity, 89 automated tests and 116 staged HTTP file hashes passed. Revision 27 is retained for rollback and the FreeBSD 14 route is preserved. See [release 32](26.7.2_32.md).
+
+The entries below are historical checkpoints; their pending status describes that checkpoint, not the current release.
+
 - 26.7.2_26: OPNcell-c acceptance confirmed for fast subscriber edits, integral policy display and successful saves.
 - 26.7.2_27: frozen under Git tag release-26.7.2_27. Three existing FreeBSD 15 installations upgraded successfully directly from the versioned HTTP repository. Backend checks passed for data consistency, editing, export, active diagnostics, package integrity and boot settings. Host-specific evidence remains private. Public staging passed 117 HTTP hash checks and both CPU-route preflights. Live activation, GUI spacing confirmation and reboot testing remain separate. Changes after the freeze require a new revision.
 

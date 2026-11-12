@@ -56,10 +56,11 @@
                data-editDialog="DialogServiceConfig">
             <thead>
             <tr>
-                <th data-column-id="name" data-width="20em">{{ lang._('Service') }}</th>
+                <th data-column-id="name" data-width="20em" data-order="asc">{{ lang._('Service') }}</th>
                 <th data-column-id="PID">{{ lang._('PID') }}</th>
                 <th data-column-id="mme_add">{{ lang._('Bind') }}</th>
-                <th data-column-id="commands" data-formatter="commands" data-width="10em">{{ lang._('Status') }}</th>
+                <th data-column-id="listening_ports">{{ lang._('Listening on') }}</th>
+                <th data-column-id="commands" data-formatter="commands" data-width="10em" data-sortable="false">{{ lang._('Status') }}</th>
             </tr>
             </thead>
             <tbody></tbody>

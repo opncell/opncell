@@ -15,7 +15,7 @@
 
                 <filepath type="TextField">
                     <Required>Y</Required>
-                    <default>/tmp/pub_hnet/</default>
+                    <default>/usr/local/etc/open5gs/hnet/public/</default>
                     <mask>/^\/[a-zA-Z0-9\/._-]+$/</mask>
                     <ValidationMessage>Enter a valid absolute file path</ValidationMessage>
                 </filepath>
